@@ -115,7 +115,7 @@ const Register = () => {
                             <div className="p-2 text-center bg-gradient-to-br from-blue-400 to-gray-300 rounded-t-2xl">
                                 <img
                                     src="https://upload.wikimedia.org/wikipedia/commons/6/68/Logo_FPT_Education.png"
-                                    alt="Simes Logo"
+                                    alt="Logo"
                                     className="w-40 h-20 mx-auto mb-6 drop-shadow-md"
                                 />
                                 <h2 className="text-3xl font-bold text-gray-800 mb-2">Register Simes Account</h2>

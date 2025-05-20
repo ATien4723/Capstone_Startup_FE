@@ -1,44 +1,66 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 
 const PublicProfile = () => {
+    const [showPostModal, setShowPostModal] = useState(false);
+
     return (
         <div className="bg-gray-100 min-h-screen">
             <Navbar />
 
-            {/* Profile Cover */}
-            <div className=" mt-10 bg-blue-600">
-                <div className=" inset-0 bg-black/20"></div>
-                <button className="absolute top-3 right-3 bg-white px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-all z-10">
-                    <FontAwesomeIcon icon={faEdit} className="mr-1" /> Edit Cover
+            {/* Cover Image Section */}
+            <div className="container mb-2 mx-auto rounded-bl-lg rounded-br-lg  relative h-60 bg-gray-400 rounded-b-lg mt-4">
+                <img
+                    src=""
+                    alt="Cover"
+                    className="w-full h-full object-cover"
+                />
+                {/* Gradient shadow bottom */}
+                {/* <div className="absolute left-0 right-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div> */}
+                {/* Edit Cover Button */}
+                <button className="absolute bottom-4 right-8 bg-white px-4 py-2 rounded-lg text-gray-800 font-medium shadow flex items-center gap-2 hover:bg-gray-100 z-10">
+                    <FontAwesomeIcon icon={faCamera} /> Edit cover
                 </button>
             </div>
 
-            <div className="container mx-auto pt-8 px-4">
+            {/* Profile Info under cover */}
+            {/* Main Content Grid */}
+            <div className="container mx-auto mb-5 px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
                     {/* Left Column - Profile Info */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-lg shadow-md">
                             <div className="text-center p-4 relative">
-                                <div className="relative">
-                                    <img
-                                        src="/api/placeholder/150/150"
-                                        alt="Profile Picture"
-                                        className="w-32 h-32 rounded-full border-4 border-white mx-auto object-cover"
-                                    />
-                                    <button className="absolute bottom-0 right-1/3 bg-white p-2 rounded-full text-gray-700 hover:bg-gray-100 transition-all">
-                                        <FontAwesomeIcon icon={faCamera} />
-                                    </button>
+                                <div className="flex justify-center">
+                                    <div className="-mt-20">
+                                        <div className="relative">
+                                            <img
+                                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                                alt="Avatar"
+                                                className="w-40 h-40 rounded-full border-4 border-white bg-gray-200 object-cover shadow"
+                                            />
+                                            <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full text-gray-700 shadow hover:bg-gray-100">
+                                                <FontAwesomeIcon icon={faCamera} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h4 className="mt-3 font-bold text-xl">John Doe</h4>
+                                {/* Avatar removed from here */}
+                                <h4 className="font-bold text-xl">John Doe</h4>
                                 <p className="text-gray-600 mb-3">Software Developer</p>
                                 <p className="text-gray-600 mb-3">
                                     <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> Country
                                 </p>
+                                <div className="flex flex-wrap gap-3 justify-center mb-4">
+                                    <button className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-sm focus:outline-none">All Post</button>
+                                    <button className="px-6 py-2 border-2 border-blue-600 text-blue-600 font-semibold rounded-full shadow-sm bg-white hover:bg-blue-50 focus:outline-none">Media</button>
+                                </div>
                                 <div className="grid grid-cols-3 mb-4">
                                     <div className="text-center">
                                         <h6 className="font-semibold">Posts</h6>
@@ -79,6 +101,8 @@ const PublicProfile = () => {
 
                     {/* Right Column - Posts */}
                     <div className="lg:col-span-2">
+                        {/* Posts Filter */}
+
                         {/* Create Post Card */}
                         <div className="bg-white rounded-lg shadow-md mb-6">
                             <div className="p-4">
@@ -89,11 +113,12 @@ const PublicProfile = () => {
                                         className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
                                     />
                                     <div className="flex-grow">
-                                        <textarea
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                                            placeholder="Share your thoughts..."
-                                            rows="3"
-                                        />
+                                        <button
+                                            className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
+                                            onClick={() => setShowPostModal(true)}
+                                        >
+                                            Bạn muốn nói về chủ đề gì?
+                                        </button>
                                         <div className="flex justify-between items-center mt-2">
                                             <div className="space-x-2">
                                                 <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
@@ -112,23 +137,7 @@ const PublicProfile = () => {
                             </div>
                         </div>
 
-                        {/* Posts Filter */}
-                        <div className="bg-white rounded-lg shadow-md mb-6">
-                            <div className="p-4">
-                                <div className="flex flex-wrap gap-2">
-                                    {['All Posts', 'Articles', 'Projects', 'Media'].map((tab, index) => (
-                                        <Link
-                                            key={index}
-                                            to="#"
-                                            className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all ${index === 0 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {tab}
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+
 
                         {/* Posts List */}
                         <div className="bg-white rounded-lg shadow-md mb-6">
@@ -187,6 +196,50 @@ const PublicProfile = () => {
                     </div>
                 </div>
             </div>
+
+            {showPostModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-lg w-full max-w-xl shadow-lg relative">
+                        {/* Nút đóng */}
+                        <button
+                            className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowPostModal(false)}
+                        >
+                            &times;
+                        </button>
+                        {/* Header */}
+                        <div className="flex items-center gap-3 p-6 border-b">
+                            <img
+                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                alt="Avatar"
+                                className="w-12 h-12 rounded-full"
+                            />
+                            <div>
+                                <div className="font-semibold">Anh Tiến Lê</div>
+                                <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
+                            </div>
+                        </div>
+                        {/* Nội dung */}
+                        <div className="p-6">
+                            <textarea
+                                className="w-full border-none outline-none resize-none text-lg"
+                                rows={4}
+                                placeholder="Bạn muốn nói về chủ đề gì?"
+                            />
+                            {/* Các nút icon, hình ảnh, emoji... */}
+                            <div className="flex items-center gap-3 mt-4">
+                                <FontAwesomeIcon icon={faSmile} />
+                            </div>
+                        </div>
+                        {/* Footer */}
+                        <div className="flex justify-end p-4 border-t">
+                            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold" onClick={() => setShowPostModal(false)}>
+                                Đăng bài
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

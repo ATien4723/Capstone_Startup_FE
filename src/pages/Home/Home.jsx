@@ -220,8 +220,8 @@ const Home = () => {
                                 <div className="flex justify-between items-center mb-3">
                                     <div className="flex items-center">
                                         <img
-                                            src="/api/placeholder/40/40"
-                                            alt="John Doe"
+                                            src=""
+                                            alt="aaaa"
                                             className="w-9 h-9 rounded-full border-2 border-white/20 object-cover mr-3"
                                         />
                                         <div>

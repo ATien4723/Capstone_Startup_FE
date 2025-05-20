@@ -1,14 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { login } from "@/apis/authService";
 import { toast } from 'react-toastify';
+import Cookies from 'js-cookie';
 
 const Login = () => {
 
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Check if user is already logged in by checking the accessToken cookie
+        const accessToken = Cookies.get('accessToken');
+        if (accessToken) {
+            navigate('/home');
+        }
+    }, [navigate]);
 
     // Validation schema
     const validationSchema = Yup.object({
@@ -22,7 +31,7 @@ const Login = () => {
             const response = await login(values);
             if (response) {
                 toast.success('Đăng nhập thành công!');
-                navigate('/home'); // Chuyển hướng về trang chủ sau khi đăng nhập
+                navigate('/home');
             }
         } catch (error) {
             toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
