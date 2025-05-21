@@ -11,6 +11,7 @@ const Register = () => {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
     const [isFocused, setIsFocused] = useState(false);
 
@@ -51,6 +52,7 @@ const Register = () => {
         }),
         onSubmit: async (values) => {
             try {
+                setIsCheckingEmail(true);
                 const userData = {
                     firstName: values.firstName,
                     lastName: values.lastName,
@@ -67,14 +69,35 @@ const Register = () => {
                     navigate('/verify-otp', { state: { email: values.email } });
                 }
             } catch (error) {
-                console.error('Registration error:', error);
-                if (error.response?.data?.errors) {
-                    // Handle specific validation errors
-                    const errorMessages = Object.values(error.response.data.errors).flat();
-                    errorMessages.forEach(message => toast.error(message));
-                } else {
-                    toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+                // console.error('Registration error:', error);
+                // console.log('Full error object:', error);
+
+                // Kiểm tra nếu error là một object và có message
+                if (error.message) {
+                    if (error.message.toLowerCase().includes('email')) {
+                        toast.error('This email is already registered. Please use a different email or login.');
+                        formik.setFieldError('email', 'Email already exists');
+                    } else {
+                        toast.error(error.message);
+                    }
                 }
+                // Kiểm tra nếu có response từ API
+                else if (error.response) {
+                    if (error.response.data?.message) {
+                        toast.error(error.response.data.message);
+                    } else if (error.response.data?.errors) {
+                        const errorMessages = Object.values(error.response.data.errors).flat();
+                        errorMessages.forEach(message => toast.error(message));
+                    } else {
+                        toast.error('Registration failed. Please try again.');
+                    }
+                }
+                // Nếu không có response và không có message
+                else {
+                    toast.error('Unable to connect to server. Please try again later.');
+                }
+            } finally {
+                setIsCheckingEmail(false);
             }
         },
     });
@@ -308,9 +331,10 @@ const Register = () => {
 
                                     <button
                                         type="submit"
-                                        className="w-full bg-gradient-to-br from-indigo-600 to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:-translate-y-0.5 hover:shadow-lg"
+                                        disabled={isCheckingEmail}
+                                        className={`w-full bg-gradient-to-br from-indigo-600 to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:-translate-y-0.5 hover:shadow-lg ${isCheckingEmail ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
-                                        Register
+                                        {isCheckingEmail ? 'Checking...' : 'Register'}
                                     </button>
                                 </form>
                             </div>
