@@ -7,6 +7,7 @@ const OTPVerification = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes in seconds
     const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
     const email = location.state?.email;
 
@@ -16,6 +17,28 @@ const OTPVerification = () => {
             toast.error('Please register first');
         }
     }, [email, navigate]);
+
+    // Countdown timer effect
+    useEffect(() => {
+        if (timeLeft <= 0) {
+            toast.error('OTP has expired. Please request a new one.');
+            navigate('/register');
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft((prevTime) => prevTime - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [timeLeft, navigate]);
+
+    // Format time as MM:SS
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
 
     const handleChange = (index, value) => {
         if (isNaN(value)) return;
@@ -77,6 +100,9 @@ const OTPVerification = () => {
                     <p className="text-gray-600">
                         Please enter the 6-digit code sent to<br />
                         <span className="font-medium text-indigo-600">{email}</span>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                        Time remaining: <span className="font-medium text-indigo-600">{formatTime(timeLeft)}</span>
                     </p>
                 </div>
 
