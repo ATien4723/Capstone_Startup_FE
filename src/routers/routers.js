@@ -4,10 +4,8 @@ import Home from '@/pages/Home/Home';
 import PublicProfile from '@/pages/PublicProfile/PublicProfile';
 import Startups from '@/pages/Startups/Startups';
 import Register from '@/pages/Register/Register';
+import Settings from '@/pages/Settings/Setting';
 import OTPVerification from '@/components/OTPVerification/OTPVerification'
-
-
-
 
 
 const routers = [
@@ -24,7 +22,7 @@ const routers = [
         component: Home
     },
     {
-        path: "/profile",
+        path: "/profile/:id",
         component: PublicProfile
     },
     {
@@ -38,6 +36,10 @@ const routers = [
     {
         path: '/verify-otp',
         component: OTPVerification
+    },
+    {
+        path: '/settings/:accountId',
+        component: Settings
     }
 ];
 export default routers;

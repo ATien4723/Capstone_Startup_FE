@@ -1,22 +1,161 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile } from '@fortawesome/free-solid-svg-icons';
-import { faLinkedin } from '@fortawesome/free-brands-svg-icons';
+import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
+import { getAccountInfo, getFollowing, getFollowers, updateProfile, updateBio } from '@/apis/accountService';
+import { toast } from 'react-toastify';
+
+// Modal component
+const Modal = ({ children, onClose }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-lg w-full max-w-lg shadow-lg relative p-6">
+            <button
+                className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
+                onClick={onClose}
+            >
+                &times;
+            </button>
+            {children}
+        </div>
+    </div>
+);
 
 const PublicProfile = () => {
+    const { id } = useParams();
     const [showPostModal, setShowPostModal] = useState(false);
+    const [profileData, setProfileData] = useState(null);
+    const [following, setFollowing] = useState([]);
+    const [followers, setFollowers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [newBio, setNewBio] = useState('');
+    const [editProfile, setEditProfile] = useState(false);
+    const [editBio, setEditBio] = useState(false);
+    // Gộp formData
+    const [formData, setFormData] = useState({
+        // Profile fields
+        firstName: '',
+        lastName: '',
+        gender: '',
+        dob: '',
+        address: '',
+        phoneNumber: '',
+        avatarUrl: '',
+        // Bio fields
+        introTitle: '',
+        position: '',
+        workplace: '',
+        facebookUrl: '',
+        linkedinUrl: '',
+        githubUrl: '',
+        portfolioUrl: '',
+        country: '',
+    });
+
+    useEffect(() => {
+        const fetchProfileData = async () => {
+            try {
+                setIsLoading(true);
+                const [accountInfo, followingData, followersData] = await Promise.all([
+                    getAccountInfo(id),
+                    getFollowing(id),
+                    getFollowers(id)
+                ]);
+                setProfileData(accountInfo);
+                setFollowing(followingData);
+                setFollowers(followersData);
+                setNewBio(accountInfo.bio || '');
+                setFormData({
+                    firstName: accountInfo?.firstName || '',
+                    lastName: accountInfo?.lastName || '',
+                    gender: accountInfo?.gender || '',
+                    dob: accountInfo?.dob || '',
+                    address: accountInfo?.address || '',
+                    phoneNumber: accountInfo?.phoneNumber || '',
+                    avatarUrl: accountInfo?.avatarUrl || '',
+                    introTitle: accountInfo?.bio?.introTitle || '',
+                    position: accountInfo?.bio?.position || '',
+                    workplace: accountInfo?.bio?.workplace || '',
+                    facebookUrl: accountInfo?.facebookUrl || '',
+                    linkedinUrl: accountInfo?.linkedinUrl || '',
+                    githubUrl: accountInfo?.githubUrl || '',
+                    portfolioUrl: accountInfo?.portfolioUrl || '',
+                    country: accountInfo?.bio?.country || '',
+                });
+            } catch (error) {
+                toast.error('Failed to load profile data');
+                console.error('Error fetching profile data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchProfileData();
+        }
+    }, [id]);
+
+    // Chỉ lấy các trường profile để gửi API
+    const getProfileFields = (data) => {
+        const { firstName, lastName, gender, dob, address, phoneNumber, avatarUrl } = data;
+        return { firstName, lastName, gender, dob, address, phoneNumber, avatarUrl };
+    };
+    // Chỉ lấy các trường bio để gửi API
+    const getBioFields = (data) => {
+        const { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country } = data;
+        return { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country };
+    };
+
+    const handleUpdateProfile = async () => {
+        try {
+            const updatedProfile = await updateProfile(id, getProfileFields(formData));
+            setProfileData(updatedProfile);
+            toast.success('Profile updated successfully');
+        } catch (error) {
+            toast.error('Failed to update profile');
+        }
+    };
+
+    const handleUpdateBio = async () => {
+        try {
+            const updatedProfile = await updateBio(id, getBioFields(formData));
+            setProfileData(updatedProfile);
+            toast.success('Bio updated successfully');
+        } catch (error) {
+            toast.error('Failed to update bio');
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!profileData) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-800">Profile not found</h2>
+                    <p className="text-gray-600 mt-2">The profile you're looking for doesn't exist.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-100 min-h-screen">
             <Navbar />
 
             {/* Cover Image Section */}
-            <div className="container mb-2 mx-auto rounded-bl-lg rounded-br-lg  relative h-60 bg-gray-400 rounded-b-lg mt-4">
+            <div className="container mb-2 mx-auto rounded-bl-lg rounded-br-lg relative h-60 bg-gray-400 rounded-b-lg mt-4">
                 <img
-                    src=""
+                    src={profileData.coverImage || ""}
                     alt="Cover"
                     className="w-full h-full object-cover"
                 />
@@ -33,7 +172,6 @@ const PublicProfile = () => {
             <div className="container mx-auto mb-5 px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {/* Left Column - Profile Info */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-lg shadow-md">
                             <div className="text-center p-4 relative">
@@ -41,7 +179,7 @@ const PublicProfile = () => {
                                     <div className="-mt-20">
                                         <div className="relative">
                                             <img
-                                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                                src={profileData.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                 alt="Avatar"
                                                 className="w-40 h-40 rounded-full border-4 border-white bg-gray-200 object-cover shadow"
                                             />
@@ -51,11 +189,10 @@ const PublicProfile = () => {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Avatar removed from here */}
-                                <h4 className="font-bold text-xl">John Doe</h4>
-                                <p className="text-gray-600 mb-3">Software Developer</p>
+                                <h4 className="font-bold text-xl">{profileData.firstName}</h4>
+                                <p className="text-gray-600 mb-3">{profileData.jobTitle}</p>
                                 <p className="text-gray-600 mb-3">
-                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> Country
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> {profileData.location}
                                 </p>
                                 <div className="flex flex-wrap gap-3 justify-center mb-4">
                                     <button className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-sm focus:outline-none">All Post</button>
@@ -64,36 +201,110 @@ const PublicProfile = () => {
                                 <div className="grid grid-cols-3 mb-4">
                                     <div className="text-center">
                                         <h6 className="font-semibold">Posts</h6>
-                                        <span>245</span>
+                                        <span>{profileData.postCount || 0}</span>
                                     </div>
                                     <div className="text-center">
                                         <h6 className="font-semibold">Following</h6>
-                                        <span>534</span>
+                                        <span>{following.length}</span>
                                     </div>
                                     <div className="text-center">
                                         <h6 className="font-semibold">Followers</h6>
-                                        <span>845</span>
+                                        <span>{followers.length}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Link to="#" target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
-                                        <FontAwesomeIcon icon={faFileAlt} className="mr-2" /> CV Link
-                                    </Link>
-                                    <Link to="#" target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
-                                        <FontAwesomeIcon icon={faGlobe} className="mr-2" /> Personal Website
-                                    </Link>
-                                    <Link to="#" target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
-                                        <FontAwesomeIcon icon={faBriefcase} className="mr-2" /> Portfolio
-                                    </Link>
-                                    <Link to="#" target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
-                                        <FontAwesomeIcon icon={faLinkedin} className="mr-2" /> LinkedIn
-                                    </Link>
+                                    {profileData.facebookUrl && (
+                                        <a href={profileData.facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
+                                            <FontAwesomeIcon icon={faFacebook} className="mr-2" /> Facebook
+                                        </a>
+                                    )}
+                                    {profileData.githubUrl && (
+                                        <Link to={profileData.githubUrl} target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
+                                            <FontAwesomeIcon icon={faGithub} className="mr-2" /> Github
+                                        </Link>
+                                    )}
+                                    {profileData.portfolioUrl && (
+                                        <Link to={profileData.portfolioUrl} target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
+                                            <FontAwesomeIcon icon={faBriefcase} className="mr-2" /> Portfolio
+                                        </Link>
+                                    )}
+                                    {profileData.linkedinUrl && (
+                                        <Link to={profileData.linkedinUrl} target="_blank" className="flex items-center text-gray-600 hover:text-blue-600 transition-all">
+                                            <FontAwesomeIcon icon={faLinkedin} className="mr-2" /> LinkedIn
+                                        </Link>
+                                    )}
                                 </div>
                                 <div className="mt-4 text-left">
-                                    <h6 className="font-semibold mb-3">About Me</h6>
-                                    <p className="text-gray-600">
-                                        Short introduction about the user goes here. This can be a brief description of their professional background and interests.
-                                    </p>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h6 className="font-semibold">About Me</h6>
+                                    </div>
+                                </div>
+                                {/* Update Profile Button and Modal */}
+                                <div>
+                                    <button
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
+                                        onClick={() => setEditProfile(true)}
+                                    >
+                                        Update Profile
+                                    </button>
+                                    {editProfile && (
+                                        <Modal onClose={() => setEditProfile(false)}>
+                                            <h2 className="text-xl font-bold mb-4">Update Profile</h2>
+                                            <input value={formData.firstName} onChange={e => setFormData(f => ({ ...f, firstName: e.target.value }))} placeholder="First Name" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.lastName} onChange={e => setFormData(f => ({ ...f, lastName: e.target.value }))} placeholder="Last Name" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.gender} onChange={e => setFormData(f => ({ ...f, gender: e.target.value }))} placeholder="Gender" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.dob} onChange={e => setFormData(f => ({ ...f, dob: e.target.value }))} placeholder="Date of Birth" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.address} onChange={e => setFormData(f => ({ ...f, address: e.target.value }))} placeholder="Address" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.phoneNumber} onChange={e => setFormData(f => ({ ...f, phoneNumber: e.target.value }))} placeholder="Phone Number" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.avatarUrl} onChange={e => setFormData(f => ({ ...f, avatarUrl: e.target.value }))} placeholder="Avatar URL" className="input mb-2 w-full border p-2 rounded" />
+                                            <div className="flex gap-2 mt-4">
+                                                <button
+                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+                                                    onClick={async () => {
+                                                        await handleUpdateProfile();
+                                                        setEditProfile(false);
+                                                    }}
+                                                >
+                                                    Save Profile
+                                                </button>
+                                                <button className="px-4 py-2" onClick={() => setEditProfile(false)}>Cancel</button>
+                                            </div>
+                                        </Modal>
+                                    )}
+                                </div>
+                                {/* Update Bio Button and Modal */}
+                                <div>
+                                    <button
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
+                                        onClick={() => setEditBio(true)}
+                                    >
+                                        Update Bio
+                                    </button>
+                                    {editBio && (
+                                        <Modal onClose={() => setEditBio(false)}>
+                                            <h2 className="text-xl font-bold mb-4">Update Bio</h2>
+                                            <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.workplace} onChange={e => setFormData(f => ({ ...f, workplace: e.target.value }))} placeholder="Workplace" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.facebookUrl} onChange={e => setFormData(f => ({ ...f, facebookUrl: e.target.value }))} placeholder="Facebook URL" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.linkedinUrl} onChange={e => setFormData(f => ({ ...f, linkedinUrl: e.target.value }))} placeholder="LinkedIn URL" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.githubUrl} onChange={e => setFormData(f => ({ ...f, githubUrl: e.target.value }))} placeholder="GitHub URL" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.portfolioUrl} onChange={e => setFormData(f => ({ ...f, portfolioUrl: e.target.value }))} placeholder="Portfolio URL" className="input mb-2 w-full border p-2 rounded" />
+                                            <input value={formData.country} onChange={e => setFormData(f => ({ ...f, country: e.target.value }))} placeholder="Country" className="input mb-2 w-full border p-2 rounded" />
+                                            <div className="flex gap-2 mt-4">
+                                                <button
+                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+                                                    onClick={async () => {
+                                                        await handleUpdateBio();
+                                                        setEditBio(false);
+                                                    }}
+                                                >
+                                                    Save Bio
+                                                </button>
+                                                <button className="px-4 py-2" onClick={() => setEditBio(false)}>Cancel</button>
+                                            </div>
+                                        </Modal>
+                                    )}
                                 </div>
                             </div>
                         </div>
