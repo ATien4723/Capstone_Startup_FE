@@ -6,6 +6,7 @@ import Startups from '@/pages/Startups/Startups';
 import Register from '@/pages/Register/Register';
 import Settings from '@/pages/Settings/Setting';
 import OTPVerification from '@/components/OTPVerification/OTPVerification'
+import FortgetPassword from '@/components/ForgetPassword/ForgetPassword'
 
 
 const routers = [
@@ -40,6 +41,10 @@ const routers = [
     {
         path: '/settings/:accountId',
         component: Settings
+    },
+    {
+        path: '/forget-password',
+        component: FortgetPassword
     }
 ];
 export default routers;

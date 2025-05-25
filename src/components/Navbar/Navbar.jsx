@@ -29,6 +29,7 @@ export default function Navbar() {
     const dropdownRef = useRef(null);
     const timeoutRef = useRef(null);
     const isAuthenticated = !!Cookies.get("accessToken");
+    const currentUserId = localStorage.getItem("userId");
 
     // Đóng dropdown khi click ra ngoài
     useEffect(() => {

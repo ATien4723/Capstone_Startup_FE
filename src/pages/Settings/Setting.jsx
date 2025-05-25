@@ -13,7 +13,7 @@ const tabs = [
         label: "Profile"
     },
     {
-        label: "Đăng nhập và bảo mật",
+        label: "Login & Security",
     },
 ];
 
@@ -34,13 +34,14 @@ const Setting = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
-    const [activeTab, setActiveTab] = useState(0); // 0: Đăng nhập và bảo mật
+    const [activeTab, setActiveTab] = useState(0); // 0: Login & Security
     const [profile, setProfile] = useState(null);
     const [profileMsg, setProfileMsg] = useState("");
     const [profileLoading, setProfileLoading] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const [fileError, setFileError] = useState("");
     const fileInputRef = useRef();
+    const [showCCCDVerify, setShowCCCDVerify] = useState(false);
     // Tự động lấy accountId từ localStorage
     const { accountId } = useParams();
 
@@ -183,6 +184,7 @@ const Setting = () => {
                                                 Address: profile.address || '',
                                                 PhoneNumber: profile.phoneNumber || '',
                                                 AvatarUrl: avatarPreview || profile.avatarUrl || '',
+                                                CCCDNumber: profile.cccd || '012345678910',
                                             }}
                                             validationSchema={profileSchema}
                                             enableReinitialize
@@ -190,9 +192,9 @@ const Setting = () => {
                                                 setProfileMsg('');
                                                 try {
                                                     await updateProfile(accountId, values);
-                                                    setProfileMsg('Cập nhật thành công!');
+                                                    setProfileMsg('Update successful!');
                                                 } catch (err) {
-                                                    setProfileMsg('Cập nhật thất bại!');
+                                                    setProfileMsg('Update failed!');
                                                 }
                                                 setSubmitting(false);
                                             }}
@@ -235,6 +237,14 @@ const Setting = () => {
                                                         <ErrorMessage name="PhoneNumber" component="div" className="text-red-500 text-sm" />
                                                     </div>
                                                     <div className="flex flex-col md:col-span-2">
+                                                        <label className="font-medium mb-1">ID Card Number</label>
+                                                        <Field
+                                                            name="CCCDNumber"
+                                                            className="bg-gray-100 border rounded px-3 py-2 text-black opacity-70"
+                                                            disabled
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col md:col-span-2">
                                                         <label className="font-medium mb-1">Avatar URL</label>
                                                         <Field name="AvatarUrl" className="bg-white border rounded px-3 py-2" />
                                                         <ErrorMessage name="AvatarUrl" component="div" className="text-red-500 text-sm" />
@@ -245,7 +255,7 @@ const Setting = () => {
                                                     </div>
                                                     <div className="md:col-span-2 flex gap-2 mt-2">
                                                         <button type="submit" disabled={isSubmitting} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                                                            {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+                                                            {isSubmitting ? 'Saving...' : 'Save'}
                                                         </button>
                                                         {profileMsg && <div className="text-sm text-green-600 mt-2">{profileMsg}</div>}
                                                     </div>
@@ -258,54 +268,90 @@ const Setting = () => {
                                 </div>
                             </div>
                         )}
-                        {/* Đăng nhập và bảo mật */}
-                        {activeTab === 1 && !showChangePassword && (
+                        {/* Login & Security */}
+                        {activeTab === 1 && !showChangePassword && !showCCCDVerify && (
                             <>
-                                <h2 className="text-xl sm:text-2xl font-semibold mb-6 text-center md:text-left">Quyền truy cập vào tài khoản</h2>
+                                <h2 className="text-xl sm:text-2xl font-semibold mb-6 text-center md:text-left">Account Access</h2>
                                 <ul className="divide-y divide-gray-200">
                                     <li className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-2">
-                                        <span>Địa chỉ email</span>
+                                        <span>Email Address</span>
                                         <span className="text-gray-500 break-all">tienlahe176488@fpt.edu.vn</span>
                                     </li>
                                     <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50">
-                                        <span>Số điện thoại</span>
+                                        <span>Phone Number</span>
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </li>
                                     <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => setShowChangePassword(true)}>
-                                        <span>Mật khẩu</span>
+                                        <span>Password</span>
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </li>
-                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50">
-                                        <span>Xác thực</span>
+                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => setShowCCCDVerify(true)}>
+                                        <span>Identity Verification</span>
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </li>
                                 </ul>
                             </>
                         )}
+                        {/* Giao diện xác thực CCCD */}
+                        {activeTab === 1 && showCCCDVerify && (
+                            <div className="flex flex-col items-center justify-center gap-8 py-8">
+                                <button
+                                    type="button"
+                                    className="flex items-center text-gray-600 hover:text-green-600 mb-6"
+                                    onClick={() => setShowCCCDVerify(false)}
+                                >
+                                    <FontAwesomeIcon icon={faArrowLeft} className="mr-1" />
+                                    <span className="text-base font-medium">Back</span>
+                                </button>
+                                <div className="flex flex-col md:flex-row gap-8 w-full justify-center">
+                                    {/* Upload front side */}
+                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-8 w-80 cursor-pointer hover:border-blue-400 transition">
+                                        <svg width="64" height="64" fill="none" className="mb-4 text-blue-400" viewBox="0 0 24 24">
+                                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                                            <circle cx="8" cy="12" r="2" stroke="currentColor" strokeWidth="2" />
+                                            <path d="M15 11h2M15 15h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
+                                        <span className="font-semibold text-center mb-1">Upload front side of ID card</span>
+                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, less than 10MB)</span>
+                                        <input type="file" accept="image/png, image/jpeg" className="hidden" />
+                                    </div>
+                                    {/* Upload back side */}
+                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-8 w-80 cursor-pointer hover:border-blue-400 transition">
+                                        <svg width="64" height="64" fill="none" className="mb-4 text-blue-400" viewBox="0 0 24 24">
+                                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                                            <path d="M8 15h8M8 11h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
+                                        <span className="font-semibold text-center mb-1">Upload back side of ID card</span>
+                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, less than 10MB)</span>
+                                        <input type="file" accept="image/png, image/jpeg" className="hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {/* Đổi mật khẩu */}
-                        {activeTab === 1 && showChangePassword && (
+                        {activeTab === 1 && showChangePassword && !showCCCDVerify && (
                             <>
                                 <div className="flex items-center mb-6">
                                     <button type="button" className="flex items-center text-gray-600 hover:text-green-600" onClick={() => setShowChangePassword(false)}>
                                         <FontAwesomeIcon icon={faArrowLeft} className="mr-1" />
-                                        <span className="text-base font-medium">Trở lại</span>
+                                        <span className="text-base font-medium">Back</span>
                                     </button>
                                 </div>
                                 <form className="space-y-4" onSubmit={handleChangePassword}>
                                     <div>
-                                        <label className="block">Mật khẩu cũ</label>
+                                        <label className="block">Old Password</label>
                                         <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={oldPassword} onChange={e => setOldPassword(e.target.value)} required />
                                     </div>
                                     <div>
-                                        <label className="block">Mật khẩu mới</label>
+                                        <label className="block">New Password</label>
                                         <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
                                     </div>
                                     <div>
-                                        <label className="block">Xác nhận mật khẩu mới</label>
+                                        <label className="block">Confirm New Password</label>
                                         <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                                     </div>
                                     <div className="flex gap-2 items-center">
-                                        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto" disabled={loading}>{loading ? "Đang đổi..." : "Đổi mật khẩu"}</button>
+                                        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto" disabled={loading}>{loading ? "Changing..." : "Change Password"}</button>
                                     </div>
                                     {message && <div className="text-sm mt-2 text-red-500">{message}</div>}
                                 </form>
