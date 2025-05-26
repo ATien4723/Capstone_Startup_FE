@@ -6,6 +6,7 @@ import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-i
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getAccountInfo, getFollowing, getFollowers, updateProfile, updateBio } from '@/apis/accountService';
+import { getPostsByAccountId, createPost, likePost, unlikePost, getPostLikeCount, getPostCommentCount, isPostLiked } from '@/apis/postService';
 import { toast } from 'react-toastify';
 
 // Modal component
@@ -34,6 +35,14 @@ const PublicProfile = () => {
     const [newBio, setNewBio] = useState('');
     const [editProfile, setEditProfile] = useState(false);
     const [editBio, setEditBio] = useState(false);
+    // Thêm state cho bài viết
+    const [posts, setPosts] = useState([]);
+    const [newPost, setNewPost] = useState({
+        content: '',
+        files: []
+    });
+    const [postLikes, setPostLikes] = useState({});
+    const [postComments, setPostComments] = useState({});
     // Gộp formData
     const [formData, setFormData] = useState({
         // Profile fields
@@ -54,20 +63,25 @@ const PublicProfile = () => {
         portfolioUrl: '',
         country: '',
     });
+    const [activeButton, setActiveButton] = useState('all'); // 'all', 'media', 'bio'
+    const [previousActiveButton, setPreviousActiveButton] = useState('all');
 
     useEffect(() => {
         const fetchProfileData = async () => {
             try {
                 setIsLoading(true);
-                const [accountInfo, followingData, followersData] = await Promise.all([
+                const [accountInfo, followingData, followersData, postsData] = await Promise.all([
                     getAccountInfo(id),
                     getFollowing(id),
-                    getFollowers(id)
+                    getFollowers(id),
+                    getPostsByAccountId(id)
                 ]);
                 setProfileData(accountInfo);
                 setFollowing(followingData);
                 setFollowers(followersData);
+                setPosts(postsData);
                 setNewBio(accountInfo.bio || '');
+
                 setFormData({
                     firstName: accountInfo?.firstName || '',
                     lastName: accountInfo?.lastName || '',
@@ -76,14 +90,14 @@ const PublicProfile = () => {
                     address: accountInfo?.address || '',
                     phoneNumber: accountInfo?.phoneNumber || '',
                     avatarUrl: accountInfo?.avatarUrl || '',
-                    introTitle: accountInfo?.bio?.introTitle || '',
-                    position: accountInfo?.bio?.position || '',
-                    workplace: accountInfo?.bio?.workplace || '',
+                    introTitle: accountInfo?.introTitle || '',
+                    position: accountInfo?.position || '',
+                    workplace: accountInfo?.workplace || '',
                     facebookUrl: accountInfo?.facebookUrl || '',
                     linkedinUrl: accountInfo?.linkedinUrl || '',
                     githubUrl: accountInfo?.githubUrl || '',
                     portfolioUrl: accountInfo?.portfolioUrl || '',
-                    country: accountInfo?.bio?.country || '',
+                    country: accountInfo?.country || '',
                 });
             } catch (error) {
                 toast.error('Failed to load profile data');
@@ -109,15 +123,15 @@ const PublicProfile = () => {
         return { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country };
     };
 
-    const handleUpdateProfile = async () => {
-        try {
-            const updatedProfile = await updateProfile(id, getProfileFields(formData));
-            setProfileData(updatedProfile);
-            toast.success('Profile updated successfully');
-        } catch (error) {
-            toast.error('Failed to update profile');
-        }
-    };
+    // const handleUpdateProfile = async () => {
+    //     try {
+    //         const updatedProfile = await updateProfile(id, getProfileFields(formData));
+    //         setProfileData(updatedProfile);
+    //         toast.success('Profile updated successfully');
+    //     } catch (error) {
+    //         toast.error('Failed to update profile');
+    //     }
+    // };
 
     const handleUpdateBio = async () => {
         try {
@@ -127,6 +141,64 @@ const PublicProfile = () => {
         } catch (error) {
             toast.error('Failed to update bio');
         }
+    };
+
+    // Hàm xử lý tạo bài viết mới
+    const handleCreatePost = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('content', newPost.content);
+            newPost.files.forEach(file => {
+                formData.append('files', file);
+            });
+            formData.append('accountId', id);
+
+            const result = await createPost(formData);
+            setPosts(prevPosts => [result, ...prevPosts]);
+            setNewPost({ content: '', files: [] });
+            setShowPostModal(false);
+            toast.success('Post created successfully');
+        } catch (error) {
+            toast.error('Failed to create post');
+            console.error('Error creating post:', error);
+        }
+    };
+
+    // Hàm xử lý thích/bỏ thích bài viết
+    const handleLikePost = async (postId) => {
+        try {
+            const likeData = {
+                postId,
+                accountId: id
+            };
+
+            const isLiked = await isPostLiked(likeData);
+            if (isLiked) {
+                await unlikePost(likeData);
+                setPostLikes(prev => ({
+                    ...prev,
+                    [postId]: (prev[postId] || 0) - 1
+                }));
+            } else {
+                await likePost(likeData);
+                setPostLikes(prev => ({
+                    ...prev,
+                    [postId]: (prev[postId] || 0) + 1
+                }));
+            }
+        } catch (error) {
+            toast.error('Failed to update like');
+            console.error('Error updating like:', error);
+        }
+    };
+
+    // Hàm xử lý upload file
+    const handleFileUpload = (event) => {
+        const files = Array.from(event.target.files);
+        setNewPost(prev => ({
+            ...prev,
+            files: [...prev.files, ...files]
+        }));
     };
 
     if (isLoading) {
@@ -183,20 +255,49 @@ const PublicProfile = () => {
                                                 alt="Avatar"
                                                 className="w-40 h-40 rounded-full border-4 border-white bg-gray-200 object-cover shadow"
                                             />
-                                            <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full text-gray-700 shadow hover:bg-gray-100">
+                                            {/* <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full text-gray-700 shadow hover:bg-gray-100">
                                                 <FontAwesomeIcon icon={faCamera} />
-                                            </button>
+                                            </button> */}
                                         </div>
                                     </div>
                                 </div>
                                 <h4 className="font-bold text-xl">{profileData.firstName}</h4>
                                 <p className="text-gray-600 mb-3">{profileData.jobTitle}</p>
                                 <p className="text-gray-600 mb-3">
-                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> {profileData.location}
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> {profileData.position}
                                 </p>
                                 <div className="flex flex-wrap gap-3 justify-center mb-4">
-                                    <button className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-sm focus:outline-none">All Post</button>
-                                    <button className="px-6 py-2 border-2 border-blue-600 text-blue-600 font-semibold rounded-full shadow-sm bg-white hover:bg-blue-50 focus:outline-none">Media</button>
+                                    <button
+                                        className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'all'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                                            }`}
+                                        onClick={() => setActiveButton('all')}
+                                    >
+                                        All Post
+                                    </button>
+                                    <button
+                                        className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'media'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                                            }`}
+                                        onClick={() => setActiveButton('media')}
+                                    >
+                                        Media
+                                    </button>
+                                    <button
+                                        className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'bio'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                                            }`}
+                                        onClick={() => {
+                                            setPreviousActiveButton(activeButton);
+                                            setActiveButton('bio');
+                                            setEditBio(true);
+                                        }}
+                                    >
+                                        Update Bio
+                                    </button>
                                 </div>
                                 <div className="grid grid-cols-3 mb-4">
                                     <div className="text-center">
@@ -238,50 +339,15 @@ const PublicProfile = () => {
                                     <div className="flex justify-between items-center mb-3">
                                         <h6 className="font-semibold">About Me</h6>
                                     </div>
-                                </div>
-                                {/* Update Profile Button and Modal */}
-                                <div>
-                                    <button
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
-                                        onClick={() => setEditProfile(true)}
-                                    >
-                                        Update Profile
-                                    </button>
-                                    {editProfile && (
-                                        <Modal onClose={() => setEditProfile(false)}>
-                                            <h2 className="text-xl font-bold mb-4">Update Profile</h2>
-                                            <input value={formData.firstName} onChange={e => setFormData(f => ({ ...f, firstName: e.target.value }))} placeholder="First Name" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.lastName} onChange={e => setFormData(f => ({ ...f, lastName: e.target.value }))} placeholder="Last Name" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.gender} onChange={e => setFormData(f => ({ ...f, gender: e.target.value }))} placeholder="Gender" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.dob} onChange={e => setFormData(f => ({ ...f, dob: e.target.value }))} placeholder="Date of Birth" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.address} onChange={e => setFormData(f => ({ ...f, address: e.target.value }))} placeholder="Address" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.phoneNumber} onChange={e => setFormData(f => ({ ...f, phoneNumber: e.target.value }))} placeholder="Phone Number" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.avatarUrl} onChange={e => setFormData(f => ({ ...f, avatarUrl: e.target.value }))} placeholder="Avatar URL" className="input mb-2 w-full border p-2 rounded" />
-                                            <div className="flex gap-2 mt-4">
-                                                <button
-                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
-                                                    onClick={async () => {
-                                                        await handleUpdateProfile();
-                                                        setEditProfile(false);
-                                                    }}
-                                                >
-                                                    Save Profile
-                                                </button>
-                                                <button className="px-4 py-2" onClick={() => setEditProfile(false)}>Cancel</button>
-                                            </div>
-                                        </Modal>
-                                    )}
+                                    <p className="text-gray-600">{profileData.introTitle}</p>
                                 </div>
                                 {/* Update Bio Button and Modal */}
                                 <div>
-                                    <button
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
-                                        onClick={() => setEditBio(true)}
-                                    >
-                                        Update Bio
-                                    </button>
                                     {editBio && (
-                                        <Modal onClose={() => setEditBio(false)}>
+                                        <Modal onClose={() => {
+                                            setEditBio(false);
+                                            setActiveButton(previousActiveButton);
+                                        }}>
                                             <h2 className="text-xl font-bold mb-4">Update Bio</h2>
                                             <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
                                             <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
@@ -297,11 +363,20 @@ const PublicProfile = () => {
                                                     onClick={async () => {
                                                         await handleUpdateBio();
                                                         setEditBio(false);
+                                                        setActiveButton(previousActiveButton);
                                                     }}
                                                 >
                                                     Save Bio
                                                 </button>
-                                                <button className="px-4 py-2" onClick={() => setEditBio(false)}>Cancel</button>
+                                                <button
+                                                    className="px-4 py-2"
+                                                    onClick={() => {
+                                                        setEditBio(false);
+                                                        setActiveButton(previousActiveButton);
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
                                             </div>
                                         </Modal>
                                     )}
@@ -348,109 +423,156 @@ const PublicProfile = () => {
                             </div>
                         </div>
 
-
-
-                        {/* Posts List */}
-                        <div className="bg-white rounded-lg shadow-md mb-6">
-                            <div className="p-4">
-                                <div className="flex justify-between mb-3">
-                                    <div className="flex gap-3">
+                        {showPostModal && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                                <div className="bg-white rounded-lg w-full max-w-xl shadow-lg relative">
+                                    <button
+                                        className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
+                                        onClick={() => setShowPostModal(false)}
+                                    >
+                                        &times;
+                                    </button>
+                                    <div className="flex items-center gap-3 p-6 border-b">
                                         <img
-                                            src="/api/placeholder/40/40"
-                                            alt="Profile"
-                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                            alt="Avatar"
+                                            className="w-12 h-12 rounded-full"
                                         />
                                         <div>
-                                            <h6 className="font-semibold mb-0">John Doe</h6>
-                                            <small className="text-gray-600">Posted 3 hours ago</small>
+                                            <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
+                                            <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
                                         </div>
                                     </div>
-                                    <div className="relative">
-                                        <button className="text-gray-600 hover:text-blue-600 transition-all">
-                                            <FontAwesomeIcon icon={faEllipsisH} />
-                                        </button>
-                                        {/* Dropdown menu (simplified for demo) */}
-                                        <div className="absolute top-8 right-0 w-32 bg-white rounded-lg shadow-lg py-2 hidden">
-                                            <Link to="#" className="block px-4 py-2 text-gray-700 hover:bg-blue-50">Edit</Link>
-                                            <Link to="#" className="block px-4 py-2 text-gray-700 hover:bg-blue-50">Delete</Link>
+                                    <div className="p-6">
+                                        <textarea
+                                            className="w-full border-none outline-none resize-none text-lg"
+                                            rows={4}
+                                            placeholder="Bạn muốn nói về chủ đề gì?"
+                                            value={newPost.content}
+                                            onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                                        />
+                                        {newPost.files.length > 0 && (
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {newPost.files.map((file, index) => (
+                                                    <div key={index} className="relative">
+                                                        <img
+                                                            src={URL.createObjectURL(file)}
+                                                            alt={`Upload ${index + 1}`}
+                                                            className="w-20 h-20 object-cover rounded"
+                                                        />
+                                                        <button
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                                                            onClick={() => setNewPost(prev => ({
+                                                                ...prev,
+                                                                files: prev.files.filter((_, i) => i !== index)
+                                                            }))}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-3 mt-4">
+                                            <label className="cursor-pointer">
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    className="hidden"
+                                                    onChange={handleFileUpload}
+                                                />
+                                                <FontAwesomeIcon icon={faImage} className="text-blue-500" />
+                                            </label>
+                                            <FontAwesomeIcon icon={faSmile} className="text-yellow-500" />
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <h5 className="font-bold text-lg">Sample Post Title</h5>
-                                    <p className="text-gray-600">This is a sample post content. It can contain text, images, or other media.</p>
-                                    <img
-                                        src="/api/placeholder/600/400"
-                                        alt="Post Image"
-                                        className="w-full rounded-lg mt-3"
-                                    />
-                                </div>
-                                <div className="flex justify-between items-center mt-3">
-                                    <div className="flex gap-2">
-                                        <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
-                                            <FontAwesomeIcon icon={farHeart} className="mr-1" /> Like
+                                    <div className="flex justify-end p-4 border-t">
+                                        <button
+                                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold"
+                                            onClick={handleCreatePost}
+                                        >
+                                            Đăng bài
                                         </button>
-                                        <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
-                                            <FontAwesomeIcon icon={farComment} className="mr-1" /> Comment
-                                        </button>
-                                        <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
-                                            <FontAwesomeIcon icon={farShareSquare} className="mr-1" /> Share
-                                        </button>
-                                    </div>
-                                    <div className="text-gray-600 text-sm">
-                                        <FontAwesomeIcon icon={farHeart} className="mr-1" /> 24 likes
-                                        <FontAwesomeIcon icon={farComment} className="ml-2 mr-1" /> 3 comments
                                     </div>
                                 </div>
                             </div>
+                        )}
+
+                        {/* Posts List */}
+                        <div className="space-y-6">
+                            {posts && posts.length > 0 ? (
+                                posts.map((post) => (
+                                    <div key={post.id} className="bg-white rounded-lg shadow-md">
+                                        <div className="p-4">
+                                            <div className="flex justify-between mb-3">
+                                                <div className="flex gap-3">
+                                                    <img
+                                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        alt="Profile"
+                                                        className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                                    />
+                                                    <div>
+                                                        <h6 className="font-semibold mb-0">{profileData?.firstName} {profileData?.lastName}</h6>
+                                                        <small className="text-gray-600">
+                                                            {new Date(post.createdAt).toLocaleDateString()}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div className="relative">
+                                                    <button className="text-gray-600 hover:text-blue-600 transition-all">
+                                                        <FontAwesomeIcon icon={faEllipsisH} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-800">{post.content}</p>
+                                                {post.mediaUrls && post.mediaUrls.length > 0 && (
+                                                    <div className="mt-3 grid grid-cols-2 gap-2">
+                                                        {post.mediaUrls.map((url, index) => (
+                                                            <img
+                                                                key={index}
+                                                                src={url}
+                                                                alt={`Post media ${index + 1}`}
+                                                                className="w-full rounded-lg"
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        onClick={() => handleLikePost(post.id)}
+                                                    >
+                                                        <FontAwesomeIcon
+                                                            icon={postLikes[post.id] ? faHeart : farHeart}
+                                                            className={`mr-1 ${postLikes[post.id] ? 'text-red-500' : ''}`}
+                                                        />
+                                                        {postLikes[post.id] || 0} Like
+                                                    </button>
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                        <FontAwesomeIcon icon={farComment} className="mr-1" />
+                                                        {postComments[post.id] || 0} Comment
+                                                    </button>
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                        <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
+                                                        Share
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                    <p className="text-gray-500 text-lg">Chưa có bài viết nào</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
-
-            {showPostModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-lg w-full max-w-xl shadow-lg relative">
-                        {/* Nút đóng */}
-                        <button
-                            className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
-                            onClick={() => setShowPostModal(false)}
-                        >
-                            &times;
-                        </button>
-                        {/* Header */}
-                        <div className="flex items-center gap-3 p-6 border-b">
-                            <img
-                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                alt="Avatar"
-                                className="w-12 h-12 rounded-full"
-                            />
-                            <div>
-                                <div className="font-semibold">Anh Tiến Lê</div>
-                                <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
-                            </div>
-                        </div>
-                        {/* Nội dung */}
-                        <div className="p-6">
-                            <textarea
-                                className="w-full border-none outline-none resize-none text-lg"
-                                rows={4}
-                                placeholder="Bạn muốn nói về chủ đề gì?"
-                            />
-                            {/* Các nút icon, hình ảnh, emoji... */}
-                            <div className="flex items-center gap-3 mt-4">
-                                <FontAwesomeIcon icon={faSmile} />
-                            </div>
-                        </div>
-                        {/* Footer */}
-                        <div className="flex justify-end p-4 border-t">
-                            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold" onClick={() => setShowPostModal(false)}>
-                                Đăng bài
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,20 @@ const ForgetPassword = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [email, setEmail] = useState('');
+    const [countdown, setCountdown] = useState(60);
+    const [canResend, setCanResend] = useState(false);
+
+    useEffect(() => {
+        let timer;
+        if (step === 2 && countdown > 0) {
+            timer = setInterval(() => {
+                setCountdown((prev) => prev - 1);
+            }, 1000);
+        } else if (countdown === 0) {
+            setCanResend(true);
+        }
+        return () => clearInterval(timer);
+    }, [step, countdown]);
 
     // Validation schemas
     const emailSchema = Yup.object({
@@ -29,11 +43,24 @@ const ForgetPassword = () => {
             .required('Confirm password is required'),
     });
 
+    const handleResendOTP = async () => {
+        try {
+            await sendOTP(email);
+            setCountdown(60);
+            setCanResend(false);
+            toast.success('OTP has been resent to your email!');
+        } catch (error) {
+            toast.error('Error resending OTP');
+        }
+    };
+
     const handleSendOTP = async (values, { setSubmitting }) => {
         try {
-            await sendOTP(values.email);
+            // await sendOTP(values.email);
             setEmail(values.email);
             setStep(2);
+            setCountdown(60);
+            setCanResend(false);
             toast.success('OTP has been sent to your email!');
         } catch (error) {
             toast.error('Email not found or error sending OTP');
@@ -176,6 +203,22 @@ const ForgetPassword = () => {
                                             >
                                                 {isSubmitting ? 'Verifying...' : 'Verify OTP'}
                                             </button>
+
+                                            <div className="mt-4 text-center">
+                                                {!canResend ? (
+                                                    <p className="text-gray-600 text-sm">
+                                                        Resend OTP in {countdown} seconds
+                                                    </p>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleResendOTP}
+                                                        className="text-blue-600 hover:text-gray-800 text-sm font-medium"
+                                                    >
+                                                        Resend OTP
+                                                    </button>
+                                                )}
+                                            </div>
                                         </Form>
                                     )}
                                 </Formik>
