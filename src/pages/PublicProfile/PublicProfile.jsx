@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile } from '@fortawesome/free-solid-svg-icons';
@@ -6,7 +6,7 @@ import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-i
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getAccountInfo, getFollowing, getFollowers, updateProfile, updateBio } from '@/apis/accountService';
-import { getPostsByAccountId, createPost, likePost, unlikePost, getPostLikeCount, getPostCommentCount, isPostLiked } from '@/apis/postService';
+import { getPostsByAccountId, createPost, likePost, unlikePost, getPostLikeCount, getPostCommentCount, isPostLiked, createPostComment, getPostCommentsByPostId } from '@/apis/postService';
 import { toast } from 'react-toastify';
 
 // Modal component
@@ -65,6 +65,15 @@ const PublicProfile = () => {
     });
     const [activeButton, setActiveButton] = useState('all'); // 'all', 'media', 'bio'
     const [previousActiveButton, setPreviousActiveButton] = useState('all');
+    const [pageNumber, setPageNumber] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const observer = useRef();
+    const pageSize = 10;
+    const [showCommentModal, setShowCommentModal] = useState(false);
+    const [selectedPost, setSelectedPost] = useState(null);
+    const [commentContent, setCommentContent] = useState('');
+    const [openCommentPosts, setOpenCommentPosts] = useState([]);
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -76,12 +85,16 @@ const PublicProfile = () => {
                     getFollowers(id),
                     getPostsByAccountId(id)
                 ]);
+                if (!accountInfo || !postsData) {
+                    toast.error('Failed to load profile data');
+                    setIsLoading(false);
+                    return;
+                }
                 setProfileData(accountInfo);
-                setFollowing(followingData);
-                setFollowers(followersData);
+                setFollowing(followingData || []);
+                setFollowers(followersData || []);
                 setPosts(postsData);
                 setNewBio(accountInfo.bio || '');
-
                 setFormData({
                     firstName: accountInfo?.firstName || '',
                     lastName: accountInfo?.lastName || '',
@@ -99,8 +112,14 @@ const PublicProfile = () => {
                     portfolioUrl: accountInfo?.portfolioUrl || '',
                     country: accountInfo?.country || '',
                 });
+                postsData.forEach(async (post) => {
+                    const likeCount = await getPostLikeCount(post.postId);
+                    setPostLikes(prev => ({
+                        ...prev,
+                        [post.postId]: likeCount
+                    }));
+                });
             } catch (error) {
-                toast.error('Failed to load profile data');
                 console.error('Error fetching profile data:', error);
             } finally {
                 setIsLoading(false);
@@ -175,17 +194,15 @@ const PublicProfile = () => {
             const isLiked = await isPostLiked(likeData);
             if (isLiked) {
                 await unlikePost(likeData);
-                setPostLikes(prev => ({
-                    ...prev,
-                    [postId]: (prev[postId] || 0) - 1
-                }));
             } else {
                 await likePost(likeData);
-                setPostLikes(prev => ({
-                    ...prev,
-                    [postId]: (prev[postId] || 0) + 1
-                }));
             }
+            // Sau khi like/unlike, cập nhật lại số lượng like từ backend
+            const likeCount = await getPostLikeCount(postId);
+            setPostLikes(prev => ({
+                ...prev,
+                [postId]: likeCount
+            }));
         } catch (error) {
             toast.error('Failed to update like');
             console.error('Error updating like:', error);
@@ -200,6 +217,104 @@ const PublicProfile = () => {
             files: [...prev.files, ...files]
         }));
     };
+
+    // Hàm fetch posts với phân trang
+    const fetchPosts = async (page) => {
+        try {
+            const response = await getPostsByAccountId(id, page, pageSize);
+            if (response && response.items) {
+                if (page === 1) {
+                    setPosts(response.items);
+                } else {
+                    setPosts(prevPosts => [...prevPosts, ...response.items]);
+                }
+                setHasMore(response.items.length === pageSize);
+            } else {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            setHasMore(false);
+        }
+    };
+
+    // Hàm load more posts
+    const loadMorePosts = useCallback(() => {
+        if (isLoadingMore || !hasMore) return;
+        setIsLoadingMore(true);
+        setPageNumber(prev => prev + 1);
+    }, [isLoadingMore, hasMore]);
+
+    // Observer cho infinite scroll
+    const lastPostElementRef = useCallback(node => {
+        if (isLoadingMore) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                loadMorePosts();
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [isLoadingMore, hasMore, loadMorePosts]);
+
+    // Fetch posts khi component mount hoặc pageNumber thay đổi
+    useEffect(() => {
+        if (pageNumber === 1) {
+            fetchPosts(1);
+        } else {
+            fetchPosts(pageNumber).finally(() => {
+                setIsLoadingMore(false);
+            });
+        }
+    }, [pageNumber, id]);
+
+    // Hàm lấy comments của một bài viết
+    const fetchPostComments = async (postId) => {
+        try {
+            const comments = await getPostCommentsByPostId(postId);
+            setPostComments(prev => ({
+                ...prev,
+                [postId]: comments
+            }));
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        }
+    };
+
+    // Hàm xử lý tạo comment
+    const handleCreateComment = async () => {
+        if (!commentContent.trim()) return;
+
+        try {
+            const commentData = {
+                postId: selectedPost.postId,
+                accountId: id,
+                content: commentContent
+            };
+
+            await createPostComment(commentData);
+            await fetchPostComments(selectedPost.postId);
+            setCommentContent('');
+            setShowCommentModal(false);
+            toast.success('Comment added successfully');
+        } catch (error) {
+            toast.error('Failed to add comment');
+            console.error('Error creating comment:', error);
+        }
+    };
+
+    // Sau khi fetch posts (trong useEffect hoặc fetchPosts)
+    useEffect(() => {
+        if (posts && posts.length > 0) {
+            posts.forEach(async (post) => {
+                const likeCount = await getPostLikeCount(post.postId);
+                setPostLikes(prev => ({
+                    ...prev,
+                    [post.postId]: likeCount
+                }));
+            });
+        }
+    }, [posts]);
 
     if (isLoading) {
         return (
@@ -394,7 +509,7 @@ const PublicProfile = () => {
                             <div className="p-4">
                                 <div className="flex gap-3">
                                     <img
-                                        src="/api/placeholder/40/40"
+                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                         alt="Profile"
                                         className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
                                     />
@@ -403,7 +518,7 @@ const PublicProfile = () => {
                                             className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
                                             onClick={() => setShowPostModal(true)}
                                         >
-                                            Bạn muốn nói về chủ đề gì?
+                                            What would you like to talk about?
                                         </button>
                                         <div className="flex justify-between items-center mt-2">
                                             <div className="space-x-2">
@@ -491,7 +606,7 @@ const PublicProfile = () => {
                                             className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold"
                                             onClick={handleCreatePost}
                                         >
-                                            Đăng bài
+                                            Post
                                         </button>
                                     </div>
                                 </div>
@@ -501,8 +616,12 @@ const PublicProfile = () => {
                         {/* Posts List */}
                         <div className="space-y-6">
                             {posts && posts.length > 0 ? (
-                                posts.map((post) => (
-                                    <div key={post.id} className="bg-white rounded-lg shadow-md">
+                                posts.map((post, index) => (
+                                    <div
+                                        key={`post-${post.postId}-${index}`}
+                                        ref={index === posts.length - 1 ? lastPostElementRef : null}
+                                        className="bg-white rounded-lg shadow-md"
+                                    >
                                         <div className="p-4">
                                             <div className="flex justify-between mb-3">
                                                 <div className="flex gap-3">
@@ -514,7 +633,7 @@ const PublicProfile = () => {
                                                     <div>
                                                         <h6 className="font-semibold mb-0">{profileData?.firstName} {profileData?.lastName}</h6>
                                                         <small className="text-gray-600">
-                                                            {new Date(post.createdAt).toLocaleDateString()}
+                                                            {new Date(post.createAt).toLocaleDateString('vi-VN')}
                                                         </small>
                                                     </div>
                                                 </div>
@@ -526,16 +645,21 @@ const PublicProfile = () => {
                                             </div>
                                             <div>
                                                 <p className="text-gray-800">{post.content}</p>
-                                                {post.mediaUrls && post.mediaUrls.length > 0 && (
+                                                {post.postMedia && post.postMedia.length > 0 && (
                                                     <div className="mt-3 grid grid-cols-2 gap-2">
-                                                        {post.mediaUrls.map((url, index) => (
-                                                            <img
-                                                                key={index}
-                                                                src={url}
-                                                                alt={`Post media ${index + 1}`}
-                                                                className="w-full rounded-lg"
-                                                            />
-                                                        ))}
+                                                        {post.postMedia
+                                                            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                                                            .map((media) => (
+                                                                <img
+                                                                    key={`media-${post.postId}-${media.postMediaId}`}
+                                                                    src={media.mediaUrl}
+                                                                    alt={`Post media ${media.displayOrder || 0}`}
+                                                                    className="w-full rounded-lg object-cover"
+                                                                    onError={(e) => {
+                                                                        e.target.onerror = null;
+                                                                    }}
+                                                                />
+                                                            ))}
                                                     </div>
                                                 )}
                                             </div>
@@ -543,17 +667,28 @@ const PublicProfile = () => {
                                                 <div className="flex gap-2">
                                                     <button
                                                         className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => handleLikePost(post.id)}
+                                                        onClick={() => handleLikePost(post.postId)}
                                                     >
                                                         <FontAwesomeIcon
-                                                            icon={postLikes[post.id] ? faHeart : farHeart}
-                                                            className={`mr-1 ${postLikes[post.id] ? 'text-red-500' : ''}`}
+                                                            icon={postLikes[post.postId] ? faHeart : farHeart}
+                                                            className={`mr-1 ${postLikes[post.postId] ? 'text-red-500' : ''}`}
                                                         />
-                                                        {postLikes[post.id] || 0} Like
+                                                        {postLikes[post.postId] || 0} Like
                                                     </button>
-                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                    <button
+                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        onClick={() => {
+                                                            if (!openCommentPosts.includes(post.postId)) {
+                                                                setOpenCommentPosts([...openCommentPosts, post.postId]);
+                                                                fetchPostComments(post.postId);
+                                                            } else {
+                                                                setOpenCommentPosts(openCommentPosts.filter(id => id !== post.postId));
+                                                            }
+                                                            setSelectedPost(post);
+                                                        }}
+                                                    >
                                                         <FontAwesomeIcon icon={farComment} className="mr-1" />
-                                                        {postComments[post.id] || 0} Comment
+                                                        {postComments[post.postId]?.length || 0} Comment
                                                     </button>
                                                     <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
                                                         <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
@@ -562,11 +697,81 @@ const PublicProfile = () => {
                                                 </div>
                                             </div>
                                         </div>
+                                        {openCommentPosts.includes(post.postId) && (
+                                            <div className="px-6 pb-4">
+                                                {/* Input comment ở trên cùng */}
+                                                <div className="flex items-start gap-3 mb-4">
+                                                    <img
+                                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        alt="Avatar"
+                                                        className="w-10 h-10 rounded-full"
+                                                    />
+                                                    <div className="flex-1 relative">
+                                                        <input
+                                                            type="text"
+                                                            value={selectedPost?.postId === post.postId ? commentContent : ''}
+                                                            onChange={(e) => {
+                                                                setSelectedPost(post);
+                                                                setCommentContent(e.target.value);
+                                                            }}
+                                                            placeholder="Thêm bình luận..."
+                                                            className="w-full p-2 pl-4 pr-20 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
+                                                        />
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2 items-center">
+                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500"><FontAwesomeIcon icon={faSmile} /></button>
+                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500"><FontAwesomeIcon icon={faImage} /></button>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={async () => {
+                                                            setSelectedPost(post);
+                                                            await handleCreateComment();
+                                                            fetchPostComments(post.postId);
+                                                        }}
+                                                        className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700"
+                                                    >
+                                                        Gửi
+                                                    </button>
+                                                </div>
+                                                {/* Most relevant line */}
+                                                <div className="text-sm text-gray-500 font-semibold mb-2">Có liên quan nhất <span className="ml-1">▼</span></div>
+                                                {/* Comment list */}
+                                                <div className="max-h-96 overflow-y-auto mb-2">
+                                                    {postComments[post.postId]?.map((comment) => (
+                                                        <div key={comment.commentId} className="flex gap-3 mb-5 group">
+                                                            <img
+                                                                src={comment.account?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                alt="Avatar"
+                                                                className="w-10 h-10 rounded-full mt-1"
+                                                            />
+                                                            <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-3">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-semibold text-gray-900">{comment.account?.firstName} {comment.account?.lastName}</span>
+                                                                    <span className="text-xs text-gray-500">• Cấp 3+</span>
+                                                                    <span className="text-xs text-gray-500 ml-2">{Math.floor((Date.now() - new Date(comment.createAt)) / (1000 * 60 * 60 * 24 * 30)) || 1}tháng</span>
+                                                                </div>
+                                                                <div className="text-gray-800 mb-2">{comment.content}</div>
+                                                                <div className="flex gap-4 text-xs text-gray-500">
+                                                                    <button className="hover:underline">Thích</button>
+                                                                    <button className="hover:underline">Trả lời</button>
+                                                                </div>
+                                                            </div>
+                                                            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 p-2"><FontAwesomeIcon icon={faEllipsisH} /></button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <p className="text-gray-500 text-lg">Chưa có bài viết nào</p>
+                                </div>
+                            )}
+                            {isLoadingMore && (
+                                <div className="flex justify-center py-4">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                 </div>
                             )}
                         </div>

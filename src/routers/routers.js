@@ -1,13 +1,14 @@
-import StartupDetail from '@/pages/StartupDetails/StartupDetail';
-import Login from '@/pages/Login/Login';
-import Home from '@/pages/Home/Home';
-import PublicProfile from '@/pages/PublicProfile/PublicProfile';
-import Startups from '@/pages/Startups/Startups';
-import Register from '@/pages/Register/Register';
-import Settings from '@/pages/Settings/Setting';
-import OTPVerification from '@/components/OTPVerification/OTPVerification'
-import FortgetPassword from '@/components/ForgetPassword/ForgetPassword'
+import { lazy } from 'react';
 
+const StartupDetail = lazy(() => import('@/pages/StartupDetails/StartupDetail'));
+const Login = lazy(() => import('@/pages/Login/Login'));
+const Home = lazy(() => import('@/pages/Home/Home'));
+const PublicProfile = lazy(() => import('@/pages/PublicProfile/PublicProfile'));
+const Startups = lazy(() => import('@/pages/Startups/Startups'));
+const Register = lazy(() => import('@/pages/Register/Register'));
+const Settings = lazy(() => import('@/pages/Settings/Setting'));
+const OTPVerification = lazy(() => import('@/components/OTPVerification/OTPVerification'));
+const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPassword'));
 
 const routers = [
     {

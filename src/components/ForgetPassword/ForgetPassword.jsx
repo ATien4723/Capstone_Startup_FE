@@ -56,7 +56,7 @@ const ForgetPassword = () => {
 
     const handleSendOTP = async (values, { setSubmitting }) => {
         try {
-            // await sendOTP(values.email);
+            await sendOTP(values.email);
             setEmail(values.email);
             setStep(2);
             setCountdown(60);

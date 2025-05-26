@@ -1,9 +1,9 @@
 import axiosClient from './axiosClient';
 
 // Get posts by account ID
-export const getPostsByAccountId = async (accountId) => {
+export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostsByAccountId?accountId=${accountId}`);
+        const response = await axiosClient.get(`GetPostsByAccountId?accountId=${accountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         throw error;
@@ -97,9 +97,7 @@ export const getPostCommentCount = async (postId) => {
 // Check if post is liked
 export const isPostLiked = async (likeData) => {
     try {
-        const response = await axiosClient.get(`${likeData.postId}/liked`, {
-            data: likeData
-        });
+        const response = await axiosClient.get(`${likeData.postId}/liked?postId=${likeData.postId}&accountId=${likeData.accountId}`);
         return response;
     } catch (error) {
         throw error;
