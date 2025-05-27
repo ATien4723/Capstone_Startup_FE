@@ -59,6 +59,26 @@ export const verifyOtp = async (email, otp) => {
 // };
 
 // Forget Password APIs
+// export const sendOTP = async (email) => {
+//     const urlApi = `api/Auth/SendOTP`;
+//     try {
+//         const response = await axiosClient.post(urlApi, { email });
+//         return response;
+//     } catch (error) {
+//         throw error;
+//     }
+// };
+
+// export const verifyOtpForgetPassword = async (email, otp) => {
+//     const urlApi = `api/Auth/VerifyOtp-Forgetpassword`;
+//     try {
+//         const response = await axiosClient.post(urlApi, { email, otp });
+//         return response;
+//     } catch (error) {
+//         throw error;
+//     }
+// };
+
 export const sendOTP = async (email) => {
     const urlApi = `api/Auth/SendOTP`;
     try {
@@ -108,8 +128,8 @@ export default {
     loginWithGoogle,
     register,
     verifyOtp,
-    sendOTP,
-    verifyOtpForgetPassword,
+    // sendOTP,
+    // verifyOtpForgetPassword,
     resetPassword,
     logout
 };

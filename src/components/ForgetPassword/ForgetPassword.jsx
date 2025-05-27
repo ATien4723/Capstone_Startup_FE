@@ -43,6 +43,7 @@ const ForgetPassword = () => {
             .required('Confirm password is required'),
     });
 
+
     const handleResendOTP = async () => {
         try {
             await sendOTP(email);
@@ -54,25 +55,27 @@ const ForgetPassword = () => {
         }
     };
 
+
     const handleSendOTP = async (values, { setSubmitting }) => {
         try {
-            await sendOTP(values.email);
+            await sendOTP(values.email)
             setEmail(values.email);
             setStep(2);
             setCountdown(60);
             setCanResend(false);
-            toast.success('OTP has been sent to your email!');
+            toast.success('OTP has been sent to your email !');
         } catch (error) {
             toast.error('Email not found or error sending OTP');
         } finally {
             setSubmitting(false);
         }
+
     };
 
     const handleVerifyOTP = async (values, { setSubmitting }) => {
         try {
             const response = await verifyOtpForgetPassword(email, values.otp);
-            if (response.data.success) {
+            if (response.success) {
                 setStep(3);
                 toast.success('OTP verified successfully!');
             }

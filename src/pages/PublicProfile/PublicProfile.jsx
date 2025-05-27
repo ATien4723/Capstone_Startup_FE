@@ -5,9 +5,10 @@ import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, fa
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
-import { getAccountInfo, getFollowing, getFollowers, updateProfile, updateBio } from '@/apis/accountService';
+import { getAccountInfo, getFollowing, getFollowers, updateBio } from '@/apis/accountService';
 import { getPostsByAccountId, createPost, likePost, unlikePost, getPostLikeCount, getPostCommentCount, isPostLiked, createPostComment, getPostCommentsByPostId } from '@/apis/postService';
 import { toast } from 'react-toastify';
+import { getRelativeTime } from '@/utils/dateUtils';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -31,9 +32,7 @@ const PublicProfile = () => {
     const [following, setFollowing] = useState([]);
     const [followers, setFollowers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isEditingBio, setIsEditingBio] = useState(false);
     const [newBio, setNewBio] = useState('');
-    const [editProfile, setEditProfile] = useState(false);
     const [editBio, setEditBio] = useState(false);
     // Thêm state cho bài viết
     const [posts, setPosts] = useState([]);
@@ -74,6 +73,7 @@ const PublicProfile = () => {
     const [selectedPost, setSelectedPost] = useState(null);
     const [commentContent, setCommentContent] = useState('');
     const [openCommentPosts, setOpenCommentPosts] = useState([]);
+    const [commentContents, setCommentContents] = useState({});
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -93,8 +93,7 @@ const PublicProfile = () => {
                 setProfileData(accountInfo);
                 setFollowing(followingData || []);
                 setFollowers(followersData || []);
-                setPosts(postsData);
-                setNewBio(accountInfo.bio || '');
+                setPosts(postsData.items || []);
                 setFormData({
                     firstName: accountInfo?.firstName || '',
                     lastName: accountInfo?.lastName || '',
@@ -112,13 +111,22 @@ const PublicProfile = () => {
                     portfolioUrl: accountInfo?.portfolioUrl || '',
                     country: accountInfo?.country || '',
                 });
-                postsData.forEach(async (post) => {
-                    const likeCount = await getPostLikeCount(post.postId);
-                    setPostLikes(prev => ({
-                        ...prev,
-                        [post.postId]: likeCount
-                    }));
-                });
+                if (postsData.items && Array.isArray(postsData.items)) {
+                    postsData.items.forEach(async (post) => {
+                        const [likeCount, comments] = await Promise.all([
+                            getPostLikeCount(post.postId),
+                            getPostCommentsByPostId(post.postId)
+                        ]);
+                        setPostLikes(prev => ({
+                            ...prev,
+                            [post.postId]: likeCount
+                        }));
+                        setPostComments(prev => ({
+                            ...prev,
+                            [post.postId]: comments || []
+                        }));
+                    });
+                }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
             } finally {
@@ -131,26 +139,12 @@ const PublicProfile = () => {
         }
     }, [id]);
 
-    // Chỉ lấy các trường profile để gửi API
-    const getProfileFields = (data) => {
-        const { firstName, lastName, gender, dob, address, phoneNumber, avatarUrl } = data;
-        return { firstName, lastName, gender, dob, address, phoneNumber, avatarUrl };
-    };
     // Chỉ lấy các trường bio để gửi API
     const getBioFields = (data) => {
         const { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country } = data;
         return { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country };
     };
 
-    // const handleUpdateProfile = async () => {
-    //     try {
-    //         const updatedProfile = await updateProfile(id, getProfileFields(formData));
-    //         setProfileData(updatedProfile);
-    //         toast.success('Profile updated successfully');
-    //     } catch (error) {
-    //         toast.error('Failed to update profile');
-    //     }
-    // };
 
     const handleUpdateBio = async () => {
         try {
@@ -162,6 +156,67 @@ const PublicProfile = () => {
         }
     };
 
+    //     const handleCreatePost = async () => {
+    //         try {
+    //             const formData = new FormData();
+    //             formData.append('content', newPost.content);
+    //             newPost.files.forEach(file => {
+    //                 formData.append('files', file);
+    //             });
+    //             formData.append('accountId', id);
+
+    //             // Hiển thị thông báo đang xử lý
+    //             toast.info('Đang tạo bài viết...');
+
+    //             // Tạo post mới
+    //             const result = await createPost(formData);
+    //             console.log('New post created:', result);
+
+    //             // Reset form trước khi refresh
+    //             setNewPost({ content: '', files: [] });
+    //             setShowPostModal(false);
+
+    //             // Gọi API để lấy danh sách posts mới nhất
+    //             const postsData = await getPostsByAccountId(id, 1, pageSize);
+
+    //             if (postsData && Array.isArray(postsData.items)) {
+    //                 console.log('Refreshed posts:', postsData.items);
+
+    //                 // Cập nhật state với danh sách posts mới
+    //                 setPosts(postsData.items);
+
+    //                 // Lấy thông tin likes và comments cho mỗi post mới
+    //                 for (const post of postsData.items) {
+    //                     try {
+    //                         const [likeCount, comments] = await Promise.all([
+    //                             getPostLikeCount(post.postId),
+    //                             getPostCommentsByPostId(post.postId)
+    //                         ]);
+
+    //                         setPostLikes(prev => ({
+    //                             ...prev,
+    //                             [post.postId]: likeCount
+    //                         }));
+
+    //                         setPostComments(prev => ({
+    //                             ...prev,
+    //                             [post.postId]: comments || []
+    //                         }));
+    //                     } catch (error) {
+    //                         console.error('Error fetching post details:', error);
+    //                     }
+    //                 }
+    //             }
+
+    //             toast.success('Bài viết đã được tạo thành công');
+    //         } catch (error) {
+    //             toast.error('Không thể tạo bài viết');
+    //             console.error('Error creating post:', error);
+    //         }
+    //     };
+
+
+
     // Hàm xử lý tạo bài viết mới
     const handleCreatePost = async () => {
         try {
@@ -172,13 +227,51 @@ const PublicProfile = () => {
             });
             formData.append('accountId', id);
 
+            // Hiển thị thông báo đang xử lý
+            toast.info('Đang tạo bài viết...');
+
+            // Tạo post mới
             const result = await createPost(formData);
-            setPosts(prevPosts => [result, ...prevPosts]);
+
+            // Reset form trước khi refresh
             setNewPost({ content: '', files: [] });
             setShowPostModal(false);
-            toast.success('Post created successfully');
+
+            // Gọi API để lấy danh sách posts mới nhất
+            const postsData = await getPostsByAccountId(id, 1, pageSize);
+
+            if (postsData && Array.isArray(postsData.items)) {
+                console.log('Refreshed posts:', postsData.items);
+
+                // Cập nhật state với danh sách posts mới
+                setPosts(postsData.items);
+
+                // Lấy thông tin likes và comments cho mỗi post mới
+                for (const post of postsData.items) {
+                    try {
+                        const [likeCount, comments] = await Promise.all([
+                            getPostLikeCount(post.postId),
+                            getPostCommentsByPostId(post.postId)
+                        ]);
+
+                        setPostLikes(prev => ({
+                            ...prev,
+                            [post.postId]: likeCount
+                        }));
+
+                        setPostComments(prev => ({
+                            ...prev,
+                            [post.postId]: comments || []
+                        }));
+                    } catch (error) {
+                        console.error('Error fetching post details:', error);
+                    }
+                }
+            }
+
+            toast.success('Bài viết đã được tạo thành công');
         } catch (error) {
-            toast.error('Failed to create post');
+            toast.error('Không thể tạo bài viết');
             console.error('Error creating post:', error);
         }
     };
@@ -282,25 +375,69 @@ const PublicProfile = () => {
     };
 
     // Hàm xử lý tạo comment
-    const handleCreateComment = async () => {
-        if (!commentContent.trim()) return;
+    const handleCreateComment = async (postId, content) => {
+        if (!content.trim()) {
+            toast.error('Vui lòng nhập nội dung bình luận');
+            return;
+        }
 
         try {
+            // Lấy accountId từ profileData
+            const accountId = profileData.accountId;
+
+            // Log để debug
+            // console.log('Creating comment for post ID:', postId);
+
             const commentData = {
-                postId: selectedPost.postId,
-                accountId: id,
-                content: commentContent
+                postId: postId,
+                accountId: accountId,
+                content: content
             };
 
+            // console.log('Sending comment data:', commentData);
+
+            // Gửi request tạo comment
             await createPostComment(commentData);
-            await fetchPostComments(selectedPost.postId);
+
+            // Lấy lại danh sách comments mới
+            const updatedComments = await getPostCommentsByPostId(postId);
+            // console.log('Updated comments for post ID:', postId, updatedComments);
+
+            // Cập nhật state với danh sách comments mới
+            setPostComments(prev => ({
+                ...prev,
+                [postId]: updatedComments || []
+            }));
+
+            // Reset input
             setCommentContent('');
-            setShowCommentModal(false);
-            toast.success('Comment added successfully');
+
+            toast.success('Bình luận đã được thêm thành công');
         } catch (error) {
-            toast.error('Failed to add comment');
+            toast.error('Không thể thêm bình luận');
             console.error('Error creating comment:', error);
         }
+    };
+
+    // Hàm này để toggle comment section
+    const toggleCommentSection = (postId) => {
+        setOpenCommentPosts(prev => {
+            if (prev.includes(postId)) {
+                return prev.filter(id => id !== postId);
+            } else {
+                // Nếu chưa có trong danh sách, thêm vào và fetch comments
+                fetchPostComments(postId);
+                return [...prev, postId];
+            }
+        });
+    };
+
+    // Hàm này để cập nhật nội dung comment cho từng bài viết
+    const updateCommentContent = (postId, content) => {
+        setCommentContents(prev => ({
+            ...prev,
+            [postId]: content
+        }));
     };
 
     // Sau khi fetch posts (trong useEffect hoặc fetchPosts)
@@ -342,7 +479,7 @@ const PublicProfile = () => {
             {/* Cover Image Section */}
             <div className="container mb-2 mx-auto rounded-bl-lg rounded-br-lg relative h-60 bg-gray-400 rounded-b-lg mt-4">
                 <img
-                    src={profileData.coverImage || ""}
+                    src={profileData.coverImage || "aaaa"}
                     alt="Cover"
                     className="w-full h-full object-cover"
                 />
@@ -539,78 +676,70 @@ const PublicProfile = () => {
                         </div>
 
                         {showPostModal && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                                <div className="bg-white rounded-lg w-full max-w-xl shadow-lg relative">
-                                    <button
-                                        className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
-                                        onClick={() => setShowPostModal(false)}
-                                    >
-                                        &times;
-                                    </button>
-                                    <div className="flex items-center gap-3 p-6 border-b">
-                                        <img
-                                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                            alt="Avatar"
-                                            className="w-12 h-12 rounded-full"
-                                        />
-                                        <div>
-                                            <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
-                                            <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6">
-                                        <textarea
-                                            className="w-full border-none outline-none resize-none text-lg"
-                                            rows={4}
-                                            placeholder="Bạn muốn nói về chủ đề gì?"
-                                            value={newPost.content}
-                                            onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
-                                        />
-                                        {newPost.files.length > 0 && (
-                                            <div className="mt-4 flex flex-wrap gap-2">
-                                                {newPost.files.map((file, index) => (
-                                                    <div key={index} className="relative">
-                                                        <img
-                                                            src={URL.createObjectURL(file)}
-                                                            alt={`Upload ${index + 1}`}
-                                                            className="w-20 h-20 object-cover rounded"
-                                                        />
-                                                        <button
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                                                            onClick={() => setNewPost(prev => ({
-                                                                ...prev,
-                                                                files: prev.files.filter((_, i) => i !== index)
-                                                            }))}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-3 mt-4">
-                                            <label className="cursor-pointer">
-                                                <input
-                                                    type="file"
-                                                    multiple
-                                                    className="hidden"
-                                                    onChange={handleFileUpload}
-                                                />
-                                                <FontAwesomeIcon icon={faImage} className="text-blue-500" />
-                                            </label>
-                                            <FontAwesomeIcon icon={faSmile} className="text-yellow-500" />
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end p-4 border-t">
-                                        <button
-                                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold"
-                                            onClick={handleCreatePost}
-                                        >
-                                            Post
-                                        </button>
+                            <Modal onClose={() => setShowPostModal(false)}>
+                                <div className="flex items-center gap-3 p-6 border-b">
+                                    <img
+                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                        alt="Avatar"
+                                        className="w-12 h-12 rounded-full"
+                                    />
+                                    <div>
+                                        <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
+                                        <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
                                     </div>
                                 </div>
-                            </div>
+                                <div className="p-6">
+                                    <textarea
+                                        className="w-full border-none outline-none resize-none text-lg"
+                                        rows={4}
+                                        placeholder="Bạn muốn nói về chủ đề gì?"
+                                        value={newPost.content}
+                                        onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                                    />
+                                    {newPost.files.length > 0 && (
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            {newPost.files.map((file, index) => (
+                                                <div key={index} className="relative">
+                                                    <img
+                                                        src={URL.createObjectURL(file)}
+                                                        alt={`Upload ${index + 1}`}
+                                                        className="w-20 h-20 object-cover rounded"
+                                                    />
+                                                    <button
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                                                        onClick={() => setNewPost(prev => ({
+                                                            ...prev,
+                                                            files: prev.files.filter((_, i) => i !== index)
+                                                        }))}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-3 mt-4">
+                                        <label className="cursor-pointer">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                            />
+                                            <FontAwesomeIcon icon={faImage} className="text-blue-500" />
+                                        </label>
+                                        <FontAwesomeIcon icon={faSmile} className="text-yellow-500" />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end p-4 border-t">
+                                    <button
+                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold"
+                                        onClick={handleCreatePost}
+                                    >
+                                        Post
+                                    </button>
+                                </div>
+                            </Modal>
                         )}
 
                         {/* Posts List */}
@@ -646,19 +775,32 @@ const PublicProfile = () => {
                                             <div>
                                                 <p className="text-gray-800">{post.content}</p>
                                                 {post.postMedia && post.postMedia.length > 0 && (
-                                                    <div className="mt-3 grid grid-cols-2 gap-2">
+                                                    <div className={`mt-3 grid ${post.postMedia.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
                                                         {post.postMedia
                                                             .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
                                                             .map((media) => (
-                                                                <img
+                                                                <div
                                                                     key={`media-${post.postId}-${media.postMediaId}`}
-                                                                    src={media.mediaUrl}
-                                                                    alt={`Post media ${media.displayOrder || 0}`}
-                                                                    className="w-full rounded-lg object-cover"
-                                                                    onError={(e) => {
-                                                                        e.target.onerror = null;
-                                                                    }}
-                                                                />
+                                                                    className="w-full h-96"
+                                                                >
+                                                                    {media.mediaUrl ? (
+                                                                        <img
+                                                                            src={media.mediaUrl}
+                                                                            alt={`Post media ${media.displayOrder || 0}`}
+                                                                            className="w-full h-full object-cover rounded-lg"
+                                                                            onError={(e) => {
+                                                                                e.target.onerror = null;
+                                                                                e.target.src = "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg";
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <img
+                                                                            src="https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg"
+                                                                            alt="Post image"
+                                                                            className="w-full h-full object-cover rounded-lg"
+                                                                        />
+                                                                    )}
+                                                                </div>
                                                             ))}
                                                     </div>
                                                 )}
@@ -677,15 +819,7 @@ const PublicProfile = () => {
                                                     </button>
                                                     <button
                                                         className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => {
-                                                            if (!openCommentPosts.includes(post.postId)) {
-                                                                setOpenCommentPosts([...openCommentPosts, post.postId]);
-                                                                fetchPostComments(post.postId);
-                                                            } else {
-                                                                setOpenCommentPosts(openCommentPosts.filter(id => id !== post.postId));
-                                                            }
-                                                            setSelectedPost(post);
-                                                        }}
+                                                        onClick={() => toggleCommentSection(post.postId)}
                                                     >
                                                         <FontAwesomeIcon icon={farComment} className="mr-1" />
                                                         {postComments[post.postId]?.length || 0} Comment
@@ -697,9 +831,11 @@ const PublicProfile = () => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Comment Section */}
                                         {openCommentPosts.includes(post.postId) && (
                                             <div className="px-6 pb-4">
-                                                {/* Input comment ở trên cùng */}
+                                                {/* Comment Input */}
                                                 <div className="flex items-start gap-3 mb-4">
                                                     <img
                                                         src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
@@ -709,56 +845,60 @@ const PublicProfile = () => {
                                                     <div className="flex-1 relative">
                                                         <input
                                                             type="text"
-                                                            value={selectedPost?.postId === post.postId ? commentContent : ''}
-                                                            onChange={(e) => {
-                                                                setSelectedPost(post);
-                                                                setCommentContent(e.target.value);
-                                                            }}
+                                                            value={commentContents[post.postId] || ''}
+                                                            onChange={(e) => updateCommentContent(post.postId, e.target.value)}
                                                             placeholder="Thêm bình luận..."
                                                             className="w-full p-2 pl-4 pr-20 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
                                                         />
                                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2 items-center">
-                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500"><FontAwesomeIcon icon={faSmile} /></button>
-                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500"><FontAwesomeIcon icon={faImage} /></button>
+                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500">
+                                                                <FontAwesomeIcon icon={faSmile} />
+                                                            </button>
+                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500">
+                                                                <FontAwesomeIcon icon={faImage} />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                     <button
-                                                        onClick={async () => {
-                                                            setSelectedPost(post);
-                                                            await handleCreateComment();
-                                                            fetchPostComments(post.postId);
-                                                        }}
+                                                        onClick={() => handleCreateComment(post.postId, commentContents[post.postId])}
                                                         className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700"
                                                     >
                                                         Gửi
                                                     </button>
                                                 </div>
-                                                {/* Most relevant line */}
-                                                <div className="text-sm text-gray-500 font-semibold mb-2">Có liên quan nhất <span className="ml-1">▼</span></div>
-                                                {/* Comment list */}
+
+                                                {/* Comments List */}
                                                 <div className="max-h-96 overflow-y-auto mb-2">
-                                                    {postComments[post.postId]?.map((comment) => (
-                                                        <div key={comment.commentId} className="flex gap-3 mb-5 group">
+                                                    {postComments[post.postId]?.filter(comment => comment !== null).map((comment, index) => (
+                                                        <div key={`${post.postId}-${comment.commentId || index}`} className="flex gap-3 mb-5 group">
                                                             <img
-                                                                src={comment.account?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                src={comment?.account?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                                 alt="Avatar"
                                                                 className="w-10 h-10 rounded-full mt-1"
                                                             />
                                                             <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-3">
                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="font-semibold text-gray-900">{comment.account?.firstName} {comment.account?.lastName}</span>
-                                                                    <span className="text-xs text-gray-500">• Cấp 3+</span>
-                                                                    <span className="text-xs text-gray-500 ml-2">{Math.floor((Date.now() - new Date(comment.createAt)) / (1000 * 60 * 60 * 24 * 30)) || 1}tháng</span>
+                                                                    <span className="font-semibold text-gray-900">{comment?.account?.firstName} {comment?.account?.lastName}</span>
                                                                 </div>
                                                                 <div className="text-gray-800 mb-2">{comment.content}</div>
                                                                 <div className="flex gap-4 text-xs text-gray-500">
+                                                                    <span>{getRelativeTime(comment.commentAt)}</span>
                                                                     <button className="hover:underline">Thích</button>
                                                                     <button className="hover:underline">Trả lời</button>
                                                                 </div>
                                                             </div>
-                                                            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 p-2"><FontAwesomeIcon icon={faEllipsisH} /></button>
+                                                            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 p-2">
+                                                                <FontAwesomeIcon icon={faEllipsisH} />
+                                                            </button>
                                                         </div>
                                                     ))}
+
+                                                    {/* Empty state for comments */}
+                                                    {(!postComments[post.postId] || postComments[post.postId].length === 0) && (
+                                                        <div className="text-center py-4 text-gray-500">
+                                                            Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -769,6 +909,8 @@ const PublicProfile = () => {
                                     <p className="text-gray-500 text-lg">Chưa có bài viết nào</p>
                                 </div>
                             )}
+
+                            {/* Loading indicator */}
                             {isLoadingMore && (
                                 <div className="flex justify-center py-4">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -783,3 +925,25 @@ const PublicProfile = () => {
 };
 
 export default PublicProfile;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,7 +33,10 @@ export const getPostLikesByPostId = async (postId) => {
 // Create post comment
 export const createPostComment = async (commentData) => {
     try {
-        const response = await axiosClient.post('CreatePostComment', commentData);
+        // Sử dụng query parameters thay vì body
+        const response = await axiosClient.post(
+            `CreatePostComment?AccountId=${commentData.accountId}&PostId=${commentData.postId}&Content=${encodeURIComponent(commentData.content)}`
+        );
         return response;
     } catch (error) {
         throw error;
