@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from 'react-router-dom';
 
 import { changePassword, getAccountInfo, updateProfile } from "@/apis/accountService";
+import { getUserId } from "@/apis/authService";
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -20,12 +21,19 @@ const tabs = [
 const profileSchema = Yup.object().shape({
     FirstName: Yup.string().required('First name is required'),
     LastName: Yup.string().required('Last name is required'),
-    Gender: Yup.string().oneOf(['Male', 'Female', 'Other'], 'Invalid gender').required('Gender is required'),
-    Dob: Yup.date().required('Date of birth is required'),
+    Gender: Yup.string()
+        .oneOf(['Male', 'Female', 'Other'], 'Invalid gender')
+        .required('Gender is required'),
+    Dob: Yup.date()
+        .required('Date of birth is required')
+        .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), 'You must be at least 18 years old'),
     Address: Yup.string().required('Address is required'),
-    PhoneNumber: Yup.string().required('Phone number is required').matches(/^\d{10,11}$/, 'Invalid phone number'),
+    PhoneNumber: Yup.string()
+        .required('Phone number is required')
+        .matches(/^\d{10,11}$/, 'Invalid phone number'),
     AvatarUrl: Yup.string().url('Invalid URL').nullable(),
 });
+
 
 const Setting = () => {
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -43,7 +51,7 @@ const Setting = () => {
     const fileInputRef = useRef();
     const [showCCCDVerify, setShowCCCDVerify] = useState(false);
     // Tự động lấy accountId từ localStorage
-    const { accountId } = useParams();
+    const accountId = getUserId();
 
     // Lấy thông tin profile khi vào tab Profile
     useEffect(() => {

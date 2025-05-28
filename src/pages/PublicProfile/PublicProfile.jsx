@@ -9,6 +9,7 @@ import { getAccountInfo, getFollowing, getFollowers, updateBio } from '@/apis/ac
 import { getPostsByAccountId, createPost, likePost, unlikePost, getPostLikeCount, getPostCommentCount, isPostLiked, createPostComment, getPostCommentsByPostId } from '@/apis/postService';
 import { toast } from 'react-toastify';
 import { getRelativeTime } from '@/utils/dateUtils';
+import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -659,7 +660,9 @@ const PublicProfile = () => {
                                         </button>
                                         <div className="flex justify-between items-center mt-2">
                                             <div className="space-x-2">
-                                                <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                    onClick={() => setShowPostModal(true)}
+                                                >
                                                     <FontAwesomeIcon icon={faImage} className="mr-1" /> Photo/Video
                                                 </button>
                                                 <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
@@ -775,34 +778,7 @@ const PublicProfile = () => {
                                             <div>
                                                 <p className="text-gray-800">{post.content}</p>
                                                 {post.postMedia && post.postMedia.length > 0 && (
-                                                    <div className={`mt-3 grid ${post.postMedia.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
-                                                        {post.postMedia
-                                                            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-                                                            .map((media) => (
-                                                                <div
-                                                                    key={`media-${post.postId}-${media.postMediaId}`}
-                                                                    className="w-full h-96"
-                                                                >
-                                                                    {media.mediaUrl ? (
-                                                                        <img
-                                                                            src={media.mediaUrl}
-                                                                            alt={`Post media ${media.displayOrder || 0}`}
-                                                                            className="w-full h-full object-cover rounded-lg"
-                                                                            onError={(e) => {
-                                                                                e.target.onerror = null;
-                                                                                e.target.src = "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg";
-                                                                            }}
-                                                                        />
-                                                                    ) : (
-                                                                        <img
-                                                                            src="https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg"
-                                                                            alt="Post image"
-                                                                            className="w-full h-full object-cover rounded-lg"
-                                                                        />
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                    </div>
+                                                    <PostMediaGrid media={post.postMedia} />
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center mt-3">
@@ -925,6 +901,11 @@ const PublicProfile = () => {
 };
 
 export default PublicProfile;
+
+
+
+
+
 
 
 

@@ -5,23 +5,9 @@ import {
     faBell, faCaretDown, faBars, faTimes, faUser,
     faCog, faEnvelope, faQuestionCircle, faHeadset, faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
-import { logout } from "@/apis/authService";
+import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
 import Cookies from "js-cookie";
 
-const navItems = [
-    { label: 'Home', to: '/home' },
-    { label: 'Startups', to: '/startups' },
-    { label: 'InvestmentEvents', to: '/investment-events' },
-    { label: 'Policy', to: '/policy' },
-];
-
-const dropdownItems = [
-    { label: 'Profile', to: '/profile', icon: faUser },
-    { label: 'Settings', to: '/settings', icon: faCog },
-    { label: 'Messages', to: '/messages', icon: faEnvelope },
-    { label: 'Help Center', to: '/help', icon: faQuestionCircle },
-    { label: 'Contact Support', to: '/support', icon: faHeadset },
-];
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -29,7 +15,8 @@ export default function Navbar() {
     const dropdownRef = useRef(null);
     const timeoutRef = useRef(null);
     const isAuthenticated = !!Cookies.get("accessToken");
-    const currentUserId = localStorage.getItem("userId");
+    const currentUserId = getUserId();
+    const userInfo = getUserInfoFromToken();
 
     // Đóng dropdown khi click ra ngoài
     useEffect(() => {
@@ -56,6 +43,23 @@ export default function Navbar() {
             setDropdownOpen(false);
         }, 300); // Delay 300ms trước khi đóng
     };
+
+
+    const navItems = [
+        { label: 'Home', to: '/home' },
+        { label: 'Startups', to: '/startups' },
+        { label: 'InvestmentEvents', to: '/investment-events' },
+        { label: 'Policy', to: '/policy' },
+    ];
+
+    const dropdownItems = [
+        { label: 'Profile', to: `/profile/${currentUserId}`, icon: faUser },
+        { label: 'Settings', to: `/settings/${currentUserId}`, icon: faCog },
+        { label: 'Messages', to: '/messages', icon: faEnvelope },
+        { label: 'Help Center', to: '/help', icon: faQuestionCircle },
+        { label: 'Contact Support', to: '/support', icon: faHeadset },
+    ];
+
 
 
     return (

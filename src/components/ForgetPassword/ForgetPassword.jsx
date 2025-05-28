@@ -36,8 +36,12 @@ const ForgetPassword = () => {
 
     const passwordSchema = Yup.object({
         newPassword: Yup.string()
-            .min(8, 'Password must be at least 8 characters')
-            .required('New password is required'),
+            .min(8, 'Must be at least 8 characters')
+            .matches(/[A-Z]/, 'Must contain uppercase letter')
+            .matches(/[a-z]/, 'Must contain lowercase letter')
+            .matches(/[0-9]/, 'Must contain number')
+            .matches(/[!@#$%^&*(),.?":{}|<>]/, 'Must contain special character')
+            .required('Required'),
         confirmPassword: Yup.string()
             .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
             .required('Confirm password is required'),

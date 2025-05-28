@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import routers from '@/routers/routers'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import authService from '@/apis/authService';
 
 function App() {
+  useEffect(() => {
+    authService.cleanupStorage();
+  }, []);
+
   return (
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
@@ -36,3 +40,4 @@ function App() {
 }
 
 export default App
+
