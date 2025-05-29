@@ -47,7 +47,9 @@ const Register = () => {
             confirmPassword: Yup.string()
                 .oneOf([Yup.ref('password'), null], 'Passwords must match')
                 .required('Required'),
-            DOB: Yup.date().required('Required'),
+            DOB: Yup.date()
+                .required('Required')
+                .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), 'You must be at least 18 years old'),
             Address: Yup.string().required('Required'),
         }),
         onSubmit: async (values) => {

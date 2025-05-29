@@ -910,4 +910,61 @@
 
 
 
+//     const handleCreatePost = async () => {
+//         try {
+//             const formData = new FormData();
+//             formData.append('content', newPost.content);
+//             newPost.files.forEach(file => {
+//                 formData.append('files', file);
+//             });
+//             formData.append('accountId', id);
 
+//             // Hiển thị thông báo đang xử lý
+//             toast.info('Đang tạo bài viết...');
+
+//             // Tạo post mới
+//             const result = await createPost(formData);
+//             console.log('New post created:', result);
+
+//             // Reset form trước khi refresh
+//             setNewPost({ content: '', files: [] });
+//             setShowPostModal(false);
+
+//             // Gọi API để lấy danh sách posts mới nhất
+//             const postsData = await getPostsByAccountId(id, 1, pageSize);
+
+//             if (postsData && Array.isArray(postsData.items)) {
+//                 console.log('Refreshed posts:', postsData.items);
+
+//                 // Cập nhật state với danh sách posts mới
+//                 setPosts(postsData.items);
+
+//                 // Lấy thông tin likes và comments cho mỗi post mới
+//                 for (const post of postsData.items) {
+//                     try {
+//                         const [likeCount, comments] = await Promise.all([
+//                             getPostLikeCount(post.postId),
+//                             getPostCommentsByPostId(post.postId)
+//                         ]);
+
+//                         setPostLikes(prev => ({
+//                             ...prev,
+//                             [post.postId]: likeCount
+//                         }));
+
+//                         setPostComments(prev => ({
+//                             ...prev,
+//                             [post.postId]: comments || []
+//                         }));
+//                     } catch (error) {
+//                         console.error('Error fetching post details:', error);
+//                     }
+//                 }
+//             }
+
+//             toast.success('Bài viết đã được tạo thành công');
+//         } catch (error) {
+//             toast.error('Không thể tạo bài viết');
+//             console.error('Error creating post:', error);
+//         }
+//     };
