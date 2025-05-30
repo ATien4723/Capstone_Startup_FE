@@ -145,6 +145,7 @@ export const cleanupStorage = () => {
     });
 };
 
+
 // Hàm kiểm tra người dùng đã đăng nhập chưa
 export const isAuthenticated = () => {
     try {
@@ -160,6 +161,8 @@ export const isAuthenticated = () => {
         return false;
     }
 };
+
+
 
 export default {
     login,

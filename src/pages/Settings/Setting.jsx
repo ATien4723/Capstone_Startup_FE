@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from 'react-router-dom';
-
-import { changePassword, getAccountInfo, updateProfile } from "@/apis/accountService";
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import { changePassword, getAccountInfo, updateProfile, verifyCCCD } from "@/apis/accountService";
 import { getUserId } from "@/apis/authService";
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { toast } from 'react-toastify';
 
 const tabs = [
     {
@@ -34,6 +34,22 @@ const profileSchema = Yup.object().shape({
     AvatarUrl: Yup.string().url('Invalid URL').nullable(),
 });
 
+// Thêm schema xác thực cho form CCCD
+const cccdSchema = Yup.object({
+    fullName: Yup.string().required('Họ tên là bắt buộc'),
+    cccdNumber: Yup.string()
+        .required('Số CCCD là bắt buộc')
+        .matches(/^\d{12}$/, 'Số CCCD phải có 12 chữ số'),
+    dateOfBirth: Yup.string()
+        .required('Ngày sinh là bắt buộc')
+        .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)'),
+    gender: Yup.string().required('Giới tính là bắt buộc'),
+    address: Yup.string().required('Địa chỉ là bắt buộc'),
+    issueDate: Yup.string()
+        .required('Ngày cấp là bắt buộc')
+        .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày cấp không hợp lệ (YYYY-MM-DD)'),
+    issuePlace: Yup.string().required('Nơi cấp là bắt buộc'),
+});
 
 const Setting = () => {
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -52,6 +68,153 @@ const Setting = () => {
     const [showCCCDVerify, setShowCCCDVerify] = useState(false);
     // Tự động lấy accountId từ localStorage
     const accountId = getUserId();
+
+    // Thêm state cho xác thực CCCD
+    const [cccdFrontFile, setCccdFrontFile] = useState(null);
+    const [cccdBackFile, setCccdBackFile] = useState(null);
+    const [selfieFile, setSelfieFile] = useState(null);
+    const [cccdFrontPreview, setCccdFrontPreview] = useState(null);
+    const [cccdBackPreview, setCccdBackPreview] = useState(null);
+    const [selfiePreview, setSelfiePreview] = useState(null);
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyResult, setVerifyResult] = useState(null);
+    const [extractedInfo, setExtractedInfo] = useState(null);
+    const cccdFrontRef = useRef(null);
+    const cccdBackRef = useRef(null);
+    const selfieRef = useRef(null);
+
+    // Thêm state cho webcam
+    const [showWebcam, setShowWebcam] = useState(false);
+    const [cameraStream, setCameraStream] = useState(null);
+    const webcamRef = useRef(null);
+    const canvasRef = useRef(null);
+
+    // Hàm mở webcam
+    const openCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: "user"
+                }
+            });
+
+            if (webcamRef.current) {
+                webcamRef.current.srcObject = stream;
+            }
+
+            setCameraStream(stream);
+            setShowWebcam(true);
+        } catch (error) {
+            console.error("Error accessing webcam:", error);
+            toast.error("Không thể truy cập webcam. Vui lòng kiểm tra quyền truy cập camera.");
+        }
+    };
+
+    // Hàm đóng webcam
+    const closeCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+        setShowWebcam(false);
+    };
+
+    // Hàm chụp ảnh từ webcam
+    const capturePhoto = () => {
+        if (webcamRef.current && canvasRef.current) {
+            const videoElement = webcamRef.current;
+            const canvas = canvasRef.current;
+
+            // Đặt kích thước canvas bằng với video
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+
+            // Vẽ frame hiện tại của video lên canvas
+            const context = canvas.getContext('2d');
+            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            // Chuyển đổi canvas thành blob
+            canvas.toBlob((blob) => {
+                // Tạo file từ blob
+                const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+
+                // Cập nhật state
+                setSelfieFile(file);
+                setSelfiePreview(canvas.toDataURL('image/jpeg'));
+
+                // Đóng webcam
+                closeCamera();
+            }, 'image/jpeg', 0.95);
+        }
+    };
+
+    // Cleanup khi component unmount
+    useEffect(() => {
+        return () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [cameraStream]);
+
+    // Hàm xử lý khi chọn file
+    const handleFileChange = (e, setFile, setPreview) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Hàm xử lý khi click vào vùng upload
+    const handleUploadClick = (ref) => {
+        if (ref.current) {
+            ref.current.click();
+        }
+    };
+
+    // Hàm xử lý xác thực CCCD
+    const handleVerifyCCCD = async () => {
+        if (!cccdFrontFile || !cccdBackFile || !selfieFile) {
+            toast.error('Vui lòng tải lên đầy đủ ảnh CCCD mặt trước, mặt sau và ảnh selfie');
+            return;
+        }
+
+        setVerifyLoading(true);
+        setVerifyResult(null);
+        setExtractedInfo(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('CccdFront', cccdFrontFile);
+            formData.append('CccdBack', cccdBackFile);
+            formData.append('Selfie', selfieFile);
+
+            const response = await verifyCCCD(formData);
+            setVerifyResult(response);
+
+            if (response.extracted) {
+                setExtractedInfo(response.extracted);
+            }
+
+            if (response.isFaceMatched) {
+                toast.success('Xác thực CCCD thành công!');
+            } else {
+                toast.warning('Xác thực CCCD không thành công. Vui lòng kiểm tra lại ảnh.');
+            }
+        } catch (error) {
+            console.error('Lỗi xác thực CCCD:', error);
+            toast.error(error.response?.data?.error || 'Lỗi xác thực CCCD. Vui lòng thử lại sau.');
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
 
     // Lấy thông tin profile khi vào tab Profile
     useEffect(() => {
@@ -305,35 +468,259 @@ const Setting = () => {
                             <div className="flex flex-col items-center justify-center gap-8 py-8">
                                 <button
                                     type="button"
-                                    className="flex items-center text-gray-600 hover:text-green-600 mb-6"
+                                    className="flex items-center text-gray-600 hover:text-green-600 mb-6 self-start"
                                     onClick={() => setShowCCCDVerify(false)}
                                 >
                                     <FontAwesomeIcon icon={faArrowLeft} className="mr-1" />
                                     <span className="text-base font-medium">Back</span>
                                 </button>
-                                <div className="flex flex-col md:flex-row gap-8 w-full justify-center">
-                                    {/* Upload front side */}
-                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-8 w-80 cursor-pointer hover:border-blue-400 transition">
-                                        <svg width="64" height="64" fill="none" className="mb-4 text-blue-400" viewBox="0 0 24 24">
-                                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-                                            <circle cx="8" cy="12" r="2" stroke="currentColor" strokeWidth="2" />
-                                            <path d="M15 11h2M15 15h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                        </svg>
-                                        <span className="font-semibold text-center mb-1">Upload front side of ID card</span>
-                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, less than 10MB)</span>
-                                        <input type="file" accept="image/png, image/jpeg" className="hidden" />
+
+                                <h2 className="text-xl font-semibold mb-4">Identity Verification</h2>
+                                <p className="text-gray-600 mb-6 text-center max-w-2xl">
+                                    Để xác thực danh tính, vui lòng tải lên ảnh CCCD/CMND mặt trước, mặt sau và chụp ảnh selfie của bạn.
+                                    Hệ thống sẽ tự động trích xuất thông tin từ ảnh CCCD và xác thực danh tính của bạn.
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-8">
+                                    {/* Upload CCCD mặt trước */}
+                                    <div
+                                        className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
+                                        onClick={() => handleUploadClick(cccdFrontRef)}
+                                    >
+                                        {cccdFrontPreview ? (
+                                            <div className="relative w-full h-48 mb-2">
+                                                <img
+                                                    src={cccdFrontPreview}
+                                                    alt="CCCD mặt trước"
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                />
+                                                <button
+                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setCccdFrontFile(null);
+                                                        setCccdFrontPreview(null);
+                                                    }}
+                                                >
+                                                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
+                                                <span className="font-semibold text-center mb-1">CCCD mặt trước</span>
+                                            </>
+                                        )}
+                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                        <input
+                                            type="file"
+                                            ref={cccdFrontRef}
+                                            accept="image/png, image/jpeg"
+                                            className="hidden"
+                                            onChange={(e) => handleFileChange(e, setCccdFrontFile, setCccdFrontPreview)}
+                                        />
                                     </div>
-                                    {/* Upload back side */}
-                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-8 w-80 cursor-pointer hover:border-blue-400 transition">
-                                        <svg width="64" height="64" fill="none" className="mb-4 text-blue-400" viewBox="0 0 24 24">
-                                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-                                            <path d="M8 15h8M8 11h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                        </svg>
-                                        <span className="font-semibold text-center mb-1">Upload back side of ID card</span>
-                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, less than 10MB)</span>
-                                        <input type="file" accept="image/png, image/jpeg" className="hidden" />
+
+                                    {/* Upload CCCD mặt sau */}
+                                    <div
+                                        className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
+                                        onClick={() => handleUploadClick(cccdBackRef)}
+                                    >
+                                        {cccdBackPreview ? (
+                                            <div className="relative w-full h-48 mb-2">
+                                                <img
+                                                    src={cccdBackPreview}
+                                                    alt="CCCD mặt sau"
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                />
+                                                <button
+                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setCccdBackFile(null);
+                                                        setCccdBackPreview(null);
+                                                    }}
+                                                >
+                                                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
+                                                <span className="font-semibold text-center mb-1">CCCD mặt sau</span>
+                                            </>
+                                        )}
+                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                        <input
+                                            type="file"
+                                            ref={cccdBackRef}
+                                            accept="image/png, image/jpeg"
+                                            className="hidden"
+                                            onChange={(e) => handleFileChange(e, setCccdBackFile, setCccdBackPreview)}
+                                        />
+                                    </div>
+
+                                    {/* Upload ảnh selfie hoặc chụp trực tiếp */}
+                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 hover:border-blue-400 transition">
+                                        {showWebcam ? (
+                                            <div className="relative w-full h-48">
+                                                <video
+                                                    ref={webcamRef}
+                                                    autoPlay
+                                                    playsInline
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                />
+                                                <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-4">
+                                                    <button
+                                                        type="button"
+                                                        className="bg-red-500/80 hover:bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                                                        onClick={closeCamera}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="bg-blue-500/80 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                                                        onClick={capturePhoto}
+                                                    >
+                                                        <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <canvas ref={canvasRef} className="hidden" />
+                                            </div>
+                                        ) : selfiePreview ? (
+                                            <div className="relative w-full h-48 mb-2">
+                                                <img
+                                                    src={selfiePreview}
+                                                    alt="Ảnh selfie"
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                />
+                                                <div className="absolute top-2 right-2 flex space-x-2">
+                                                    <button
+                                                        className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelfieFile(null);
+                                                            setSelfiePreview(null);
+                                                        }}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        className="bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 transition-colors"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openCamera();
+                                                        }}
+                                                    >
+                                                        <FontAwesomeIcon icon={faRedo} className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center w-full">
+                                                <FontAwesomeIcon icon={faUser} className="text-4xl text-blue-400 mb-4" />
+                                                <span className="font-semibold text-center mb-1">Ảnh selfie</span>
+                                                <span className="text-xs text-gray-500 text-center mb-4">(Chụp ảnh hoặc tải lên)</span>
+
+                                                <div className="flex space-x-4 mt-2">
+                                                    <button
+                                                        type="button"
+                                                        className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center"
+                                                        onClick={openCamera}
+                                                    >
+                                                        <FontAwesomeIcon icon={faCamera} className="mr-1" /> Chụp ảnh
+                                                    </button>
+
+                                                    <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
+                                                        <FontAwesomeIcon icon={faUser} className="mr-1" /> Tải lên
+                                                        <input
+                                                            type="file"
+                                                            ref={selfieRef}
+                                                            accept="image/png, image/jpeg"
+                                                            className="hidden"
+                                                            onChange={(e) => handleFileChange(e, setSelfieFile, setSelfiePreview)}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* Nút xác thực */}
+                                <div className="w-full max-w-4xl">
+                                    <button
+                                        onClick={handleVerifyCCCD}
+                                        disabled={!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading}
+                                        className={`w-full py-3 rounded-lg font-medium transition-colors ${!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                            }`}
+                                    >
+                                        {verifyLoading ? 'Đang xác thực...' : 'Xác thực danh tính'}
+                                    </button>
+                                </div>
+
+                                {/* Hiển thị kết quả xác thực */}
+                                {verifyResult && (
+                                    <div className="w-full max-w-4xl mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                                        <h3 className="text-lg font-semibold mb-4">Kết quả xác thực</h3>
+
+                                        <div className="space-y-4">
+                                            <div className="flex items-center">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${verifyResult.isFaceMatched ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                    <FontAwesomeIcon icon={verifyResult.isFaceMatched ? faCheck : faTimes} />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">Xác thực khuôn mặt</p>
+                                                    <p className="text-sm text-gray-600">
+                                                        {verifyResult.isFaceMatched
+                                                            ? 'Khuôn mặt trong ảnh selfie khớp với ảnh trên CCCD'
+                                                            : 'Khuôn mặt trong ảnh selfie không khớp với ảnh trên CCCD'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Hiển thị thông tin trích xuất từ CCCD */}
+                                        {extractedInfo && (
+                                            <div className="mt-6">
+                                                <h4 className="font-medium mb-3">Thông tin trích xuất từ CCCD:</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Họ và tên:</p>
+                                                        <p className="font-medium">{extractedInfo.fullName}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Số CCCD:</p>
+                                                        <p className="font-medium">{extractedInfo.cccdNumber}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Ngày sinh:</p>
+                                                        <p className="font-medium">{extractedInfo.dateOfBirth}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Giới tính:</p>
+                                                        <p className="font-medium">{extractedInfo.gender}</p>
+                                                    </div>
+                                                    <div className="md:col-span-2">
+                                                        <p className="text-sm text-gray-500">Địa chỉ:</p>
+                                                        <p className="font-medium">{extractedInfo.address}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Ngày cấp:</p>
+                                                        <p className="font-medium">{extractedInfo.issueDate}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Nơi cấp:</p>
+                                                        <p className="font-medium">{extractedInfo.issuePlace}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {/* Đổi mật khẩu */}

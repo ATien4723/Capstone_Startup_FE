@@ -65,25 +65,7 @@ export const createPost = async (postData) => {
     }
 };
 
-// Like post
-export const likePost = async (likeData) => {
-    try {
-        const response = await axiosClient.post('like', likeData);
-        return response;
-    } catch (error) {
-        throw error;
-    }
-};
 
-// Unlike post
-export const unlikePost = async (likeData) => {
-    try {
-        const response = await axiosClient.post('unlike', likeData);
-        return response;
-    } catch (error) {
-        throw error;
-    }
-};
 
 // Get post like count
 export const getPostLikeCount = async (postId) => {
@@ -170,14 +152,14 @@ export const unlikeComment = async (commentId, accountId) => {
 };
 
 // Kiểm tra xem người dùng đã thích bình luận chưa
-export const isCommentLiked = async (commentId, accountId) => {
-    try {
-        const response = await axiosClient.get(`IsCommentLiked?commentId=${commentId}&accountId=${accountId}`);
-        return response;
-    } catch (error) {
-        throw error;
-    }
-};
+// export const isCommentLiked = async (commentId, accountId) => {
+//     try {
+//         const response = await axiosClient.get(`IsCommentLiked?commentId=${commentId}&accountId=${accountId}`);
+//         return response;
+//     } catch (error) {
+//         throw error;
+//     }
+// };
 
 // Lấy số lượng like của bình luận
 export const getCommentLikeCount = async (commentId) => {
@@ -187,4 +169,47 @@ export const getCommentLikeCount = async (commentId) => {
     } catch (error) {
         throw error;
     }
-}; 
+};
+
+
+// Like post
+export const likePost = async (likeData) => {
+    try {
+        const response = await axiosClient.post('like', likeData);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Unlike post
+export const unlikePost = async (likeData) => {
+    try {
+        const response = await axiosClient.post('unlike', likeData);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Cập nhật bài viết
+export const updatePost = async (postId, updatePostDTO) => {
+    try {
+        const response = await axiosClient.put(`update-post/${postId}`, updatePostDTO);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating post:', error);
+        throw error;
+    }
+};
+
+// Xóa bài viết
+export const deletePost = async (postId) => {
+    try {
+        const response = await axiosClient.delete(`delete-post${postId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        throw error;
+    }
+};

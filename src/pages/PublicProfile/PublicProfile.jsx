@@ -5,6 +5,7 @@ import { faEdit, faCamera, faChevronDown, faChevronUp, faMapMarkerAlt, faImage, 
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
+import { getUserId } from "@/apis/authService";
 import { getAccountInfo, getFollowing, getFollowers, updateBio } from '@/apis/accountService';
 import {
     getPostsByAccountId,
@@ -21,8 +22,9 @@ import {
     deletePostComment,
     likeComment,
     unlikeComment,
-    isCommentLiked,
-    getCommentLikeCount
+    getCommentLikeCount,
+    updatePost,
+    deletePost
 } from '@/apis/postService';
 import { toast } from 'react-toastify';
 import { getRelativeTime } from '@/utils/dateUtils';
@@ -45,6 +47,7 @@ const Modal = ({ children, onClose }) => (
 
 const PublicProfile = () => {
     const { id } = useParams();
+    const currentUserId = getUserId();
     const [showPostModal, setShowPostModal] = useState(false);
     const [profileData, setProfileData] = useState(null);
     const [following, setFollowing] = useState([]);
@@ -120,6 +123,12 @@ const PublicProfile = () => {
 
     // Thêm state để lưu trữ số lượng phản hồi cho bình luận con
     const [childReplyCounts, setChildReplyCounts] = useState({});
+
+    const [openDropdownPostId, setOpenDropdownPostId] = useState({});
+
+    const [editingPost, setEditingPost] = useState(null);
+    const [editedPostContent, setEditedPostContent] = useState('');
+
 
     // Hàm để lấy số lượng phản hồi cho một bình luận
     const fetchCommentReplyCount = async (commentId) => {
@@ -369,6 +378,52 @@ const PublicProfile = () => {
         }
     };
 
+    //xóa bài post
+    const handleDeletePost = async (postId) => {
+        try {
+            if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+                return;
+            }
+
+            const result = await deletePost(postId);
+            // Cập nhật state để xóa bài viết khỏi UI
+            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
+            toast.success('Bài viết đã được xóa thành công');
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+        }
+    };
+
+    // Hàm xử lý cập nhật bài viết
+    const handleUpdatePost = async (postId, content) => {
+        try {
+            if (!content.trim()) {
+                toast.error('Nội dung bài viết không được để trống');
+                return;
+            }
+
+            const updatePostDTO = {
+                content: content
+            };
+
+            const result = await updatePost(postId, updatePostDTO);
+
+            // Cập nhật bài viết trong state
+            setPosts(prevPosts =>
+                prevPosts.map(post =>
+                    post.postId === postId ? { ...post, content: content } : post
+                )
+            );
+
+            toast.success('Bài viết đã được cập nhật thành công');
+        } catch (error) {
+            console.error('Error updating post:', error);
+            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
+        }
+    };
+
+
     // Hàm xử lý thích/bỏ thích bài viết
     const handleLikePost = async (postId) => {
         try {
@@ -377,12 +432,17 @@ const PublicProfile = () => {
                 accountId: id
             };
 
+            // Kiểm tra trạng thái like hiện tại
             const isLiked = await isPostLiked(likeData);
+
             if (isLiked) {
+                // Nếu đã like, thực hiện unlike
                 await unlikePost(likeData);
             } else {
+                // Nếu chưa like, thực hiện like
                 await likePost(likeData);
             }
+
             // Sau khi like/unlike, cập nhật lại số lượng like từ backend
             const likeCount = await getPostLikeCount(postId);
             setPostLikes(prev => ({
@@ -390,8 +450,14 @@ const PublicProfile = () => {
                 [postId]: likeCount
             }));
         } catch (error) {
-            toast.error('Failed to update like');
             console.error('Error updating like:', error);
+
+            // Hiển thị thông báo lỗi cụ thể nếu có
+            if (error.response && error.response.data) {
+                toast.error(`Không thể thích bài viết: ${error.response.data}`);
+            } else {
+                toast.error('Không thể cập nhật trạng thái thích');
+            }
         }
     };
 
@@ -670,11 +736,17 @@ const PublicProfile = () => {
     // Hàm xử lý thích/bỏ thích bình luận
     const handleLikeComment = async (postcommentId) => {
         try {
+            // Kiểm tra trạng thái like hiện tại
             const isLiked = await isCommentLiked(postcommentId, id);
+
             if (isLiked) {
+                // Nếu đã like, thực hiện unlike
                 await unlikeComment(postcommentId, id);
+                toast.success('Đã bỏ thích bình luận');
             } else {
+                // Nếu chưa like, thực hiện like
                 await likeComment(postcommentId, id);
+                toast.success('Đã thích bình luận');
             }
 
             // Cập nhật số lượng like
@@ -684,8 +756,14 @@ const PublicProfile = () => {
                 [postcommentId]: likeCount
             }));
         } catch (error) {
-            toast.error('Không thể cập nhật trạng thái thích bình luận');
             console.error('Error liking/unliking comment:', error);
+
+            // Hiển thị thông báo lỗi cụ thể nếu có
+            if (error.response && error.response.data) {
+                toast.error(`Không thể thích bình luận: ${error.response.data}`);
+            } else {
+                toast.error('Không thể cập nhật trạng thái thích bình luận');
+            }
         }
     };
 
@@ -1089,6 +1167,8 @@ const PublicProfile = () => {
             fetchCount();
         }, [childCommentId]);
 
+        // Chỉ hiển thị nút khi có phản hồi
+        if (count === null || count === 0) return null;
         return (
             <button
                 className="hover:underline flex items-center gap-1"
@@ -1457,10 +1537,44 @@ const PublicProfile = () => {
                                                         </small>
                                                     </div>
                                                 </div>
-                                                <div className="relative">
-                                                    <button className="text-gray-600 hover:text-blue-600 transition-all">
+                                                <div className="relative group">
+                                                    <button
+                                                        onClick={() =>
+                                                            setOpenDropdownPostId(openDropdownPostId === post.postId ? null : post.postId)
+                                                        }
+                                                        className="text-gray-600 hover:text-gray-900" >
                                                         <FontAwesomeIcon icon={faEllipsisH} />
                                                     </button>
+
+                                                    {/* Menu xổ xuống khi click vào nút ellipsis */}
+                                                    {openDropdownPostId === post.postId && (
+                                                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
+                                                            {post.accountId == currentUserId && (
+                                                                <div className="py-1">
+                                                                    <button
+                                                                        onClick={() => setEditingPost(post)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
+                                                                        Chỉnh sửa
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeletePost(post.postId)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} className="text-red-500" />
+                                                                        Xóa
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <div className="py-1">
+                                                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                                    <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
+                                                                    Chia sẻ
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div>
@@ -1606,25 +1720,27 @@ const PublicProfile = () => {
                                                                                     >
                                                                                         Trả lời
                                                                                     </button>
-                                                                                    <button
-                                                                                        className="hover:underline flex items-center gap-1"
-                                                                                        onClick={() => toggleChildComments(comment.postcommentId)}
-                                                                                    >
-                                                                                        {showChildComments[comment.postcommentId] ? (
-                                                                                            <>
-                                                                                                <FontAwesomeIcon icon={faChevronUp} className="text-xs" />
-                                                                                                Ẩn phản hồi
-                                                                                            </>
-                                                                                        ) : (
-                                                                                            <>
-                                                                                                <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
-                                                                                                Xem phản hồi
-                                                                                            </>
-                                                                                        )}
-                                                                                        <span className="ml-1 text-gray-500 font-normal">
-                                                                                            ({commentReplyCounts[comment.postcommentId] !== undefined ? commentReplyCounts[comment.postcommentId] : '...'})
-                                                                                        </span>
-                                                                                    </button>
+                                                                                    {commentReplyCounts[comment.postcommentId] > 0 && (
+                                                                                        <button
+                                                                                            className="hover:underline flex items-center gap-1"
+                                                                                            onClick={() => toggleChildComments(comment.postcommentId)}
+                                                                                        >
+                                                                                            {showChildComments[comment.postcommentId] ? (
+                                                                                                <>
+                                                                                                    <FontAwesomeIcon icon={faChevronUp} className="text-xs" />
+                                                                                                    Ẩn phản hồi
+                                                                                                </>
+                                                                                            ) : (
+                                                                                                <>
+                                                                                                    <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
+                                                                                                    Xem phản hồi
+                                                                                                </>
+                                                                                            )}
+                                                                                            <span className="ml-1 text-gray-500 font-normal">
+                                                                                                ({commentReplyCounts[comment.postcommentId] !== undefined ? commentReplyCounts[comment.postcommentId] : '...'})
+                                                                                            </span>
+                                                                                        </button>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         )}
@@ -1949,12 +2065,78 @@ const PublicProfile = () => {
                 <div>Open Comment Posts: {JSON.stringify(openCommentPosts)}</div>
                 <div>Post Comments: {JSON.stringify(postComments)}</div>
             </div> */}
+
+            {editingPost && (
+                <Modal onClose={() => {
+                    setEditingPost(null);
+                    setEditedPostContent('');
+                }}>
+                    <div className="flex items-center gap-3 p-6 border-b">
+                        <img
+                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                            alt="Avatar"
+                            className="w-12 h-12 rounded-full"
+                        />
+                        <div>
+                            <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
+                            <div className="text-xs text-gray-500">Chỉnh sửa bài viết</div>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        <textarea
+                            className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
+                            rows={4}
+                            placeholder="Nội dung bài viết..."
+                            value={editedPostContent || editingPost.content}
+                            onChange={(e) => setEditedPostContent(e.target.value)}
+                        />
+                        {editingPost.postMedia && editingPost.postMedia.length > 0 && (
+                            <div className="mt-4">
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">Ảnh/Video đã đính kèm:</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {editingPost.postMedia.map((media, index) => (
+                                        <div key={index} className="relative">
+                                            <img
+                                                src={media.url}
+                                                alt={`Media ${index + 1}`}
+                                                className="w-20 h-20 object-cover rounded"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-end p-4 border-t">
+                        <button
+                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold mr-2"
+                            onClick={() => {
+                                setEditingPost(null);
+                                setEditedPostContent('');
+                            }}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
+                            onClick={() => {
+                                handleUpdatePost(editingPost.postId, editedPostContent || editingPost.content);
+                                setEditingPost(null);
+                                setEditedPostContent('');
+                            }}
+                        >
+                            Cập nhật
+                        </button>
+                    </div>
+                </Modal>
+            )}
         </div >
     );
 };
 
-export default PublicProfile;
 
+export default PublicProfile;
 
 
 
