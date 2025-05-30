@@ -968,3 +968,61 @@
 //             console.error('Error creating post:', error);
 //         }
 //     };
+
+
+
+
+
+
+
+
+   
+//  // Hàm để lấy số lượng phản hồi cho một bình luận
+//  const fetchCommentReplyCount = async (commentId) => {
+//     try {
+//         // Có thể sử dụng API riêng để lấy số lượng nếu có
+//         // Hoặc lấy danh sách phản hồi và đếm số lượng
+//         const replies = await getPostChildComments(commentId);
+
+//         let replyCount = 0;
+//         if (Array.isArray(replies)) {
+//             replyCount = replies.length;
+//         } else if (replies && Array.isArray(replies.items)) {
+//             replyCount = replies.items.length;
+//         }
+
+//         setCommentReplyCounts(prev => ({
+//             ...prev,
+//             [commentId]: replyCount
+//         }));
+
+//         return replyCount;
+//     } catch (error) {
+//         console.error('Error fetching reply count:', error);
+//         return 0;
+//     }
+// };
+
+// // Hàm để lấy số lượng phản hồi cho bình luận con
+// const fetchChildReplyCount = async (childCommentId) => {
+//     try {
+//         const replies = await getPostChildComments(childCommentId);
+
+//         let replyCount = 0;
+//         if (Array.isArray(replies)) {
+//             replyCount = replies.length;
+//         } else if (replies && Array.isArray(replies.items)) {
+//             replyCount = replies.items.length;
+//         }
+
+//         setChildReplyCounts(prev => ({
+//             ...prev,
+//             [childCommentId]: replyCount
+//         }));
+
+//         return replyCount;
+//     } catch (error) {
+//         console.error('Error fetching child reply count:', error);
+//         return 0;
+//     }
+// };

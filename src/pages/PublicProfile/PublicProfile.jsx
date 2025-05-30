@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faCamera, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile, faTrash, faReply } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faCamera, faChevronDown, faChevronUp, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile, faTrash, faReply } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -114,6 +114,62 @@ const PublicProfile = () => {
     // Thêm state để theo dõi việc hiển thị phản hồi của bình luận con
     const [showChildReplies, setShowChildReplies] = useState({});
     const [childReplies, setChildReplies] = useState({});
+
+    // Thêm state mới để lưu trữ số lượng phản hồi
+    const [commentReplyCounts, setCommentReplyCounts] = useState({});
+
+    // Thêm state để lưu trữ số lượng phản hồi cho bình luận con
+    const [childReplyCounts, setChildReplyCounts] = useState({});
+
+    // Hàm để lấy số lượng phản hồi cho một bình luận
+    const fetchCommentReplyCount = async (commentId) => {
+        try {
+            // Có thể sử dụng API riêng để lấy số lượng nếu có
+            // Hoặc lấy danh sách phản hồi và đếm số lượng
+            const replies = await getPostChildComments(commentId);
+
+            let replyCount = 0;
+            if (Array.isArray(replies)) {
+                replyCount = replies.length;
+            } else if (replies && Array.isArray(replies.items)) {
+                replyCount = replies.items.length;
+            }
+
+            setCommentReplyCounts(prev => ({
+                ...prev,
+                [commentId]: replyCount
+            }));
+
+            return replyCount;
+        } catch (error) {
+            console.error('Error fetching reply count:', error);
+            return 0;
+        }
+    };
+
+    // Hàm để lấy số lượng phản hồi cho bình luận con
+    const fetchChildReplyCount = async (childCommentId) => {
+        try {
+            const replies = await getPostChildComments(childCommentId);
+
+            let replyCount = 0;
+            if (Array.isArray(replies)) {
+                replyCount = replies.length;
+            } else if (replies && Array.isArray(replies.items)) {
+                replyCount = replies.items.length;
+            }
+
+            setChildReplyCounts(prev => ({
+                ...prev,
+                [childCommentId]: replyCount
+            }));
+
+            return replyCount;
+        } catch (error) {
+            console.error('Error fetching child reply count:', error);
+            return 0;
+        }
+    };
 
     // State cho xử lý lỗi trong modal
     const [postError, setPostError] = useState('');
@@ -407,8 +463,8 @@ const PublicProfile = () => {
             const response = await getPostCommentsByPostId(postId, 1, 20);
             console.log('Response từ API bình luận:', response);
 
-            // Kiểm tra cấu trúc dữ liệu trả về
-            let comments;
+            // Xử lý dữ liệu bình luận
+            let comments = [];
             if (Array.isArray(response)) {
                 // Nếu response là mảng trực tiếp
                 comments = response;
@@ -419,31 +475,49 @@ const PublicProfile = () => {
                 // Nếu response là một đối tượng khác
                 console.log('Cấu trúc response không phải mảng:', response);
                 comments = [];
-            } else {
-                comments = [];
             }
 
-            console.log('Dữ liệu bình luận sau khi xử lý:', comments);
+            // Cập nhật state trước để hiển thị bình luận
+            setPostComments(prev => ({
+                ...prev,
+                [postId]: comments
+            }));
 
+            // Lấy thông tin người dùng và số lượng phản hồi cho mỗi bình luận
             if (comments && comments.length > 0) {
-                for (const comment of comments) {
-                    if (comment && comment.accountId) {
+                await Promise.all(comments.map(async (comment) => {
+                    if (comment && comment.accountId && comment.postcommentId) {
+                        // Lấy thông tin người dùng
                         const userInfo = await fetchCommentUserInfo(comment.accountId);
-                        // Thêm thông tin người dùng vào bình luận
                         comment.userInfo = userInfo;
+
+                        // Lấy số lượng phản hồi
+                        await fetchCommentReplyCount(comment.postcommentId);
+
+                        // Tải trước bình luận con và số lượng phản hồi của chúng
+                        const childComments = await getPostChildComments(comment.postcommentId);
+                        let childCommentsArray = [];
+                        if (Array.isArray(childComments)) {
+                            childCommentsArray = childComments;
+                        } else if (childComments && Array.isArray(childComments.items)) {
+                            childCommentsArray = childComments.items;
+                        }
+
+                        // Lưu bình luận con vào state
+                        setChildComments(prev => ({
+                            ...prev,
+                            [comment.postcommentId]: childCommentsArray
+                        }));
+
+                        // Lấy số lượng phản hồi cho mỗi bình luận con
+                        await Promise.all(childCommentsArray.map(async (childComment) => {
+                            if (childComment && childComment.postcommentId) {
+                                await fetchChildReplyCount(childComment.postcommentId);
+                            }
+                        }));
                     }
-                }
+                }));
             }
-
-
-            setPostComments(prev => {
-                const newState = {
-                    ...prev,
-                    [postId]: comments
-                };
-                console.log('State postComments sau khi cập nhật:', newState);
-                return newState;
-            });
         } catch (error) {
             console.error('Lỗi khi lấy bình luận:', error);
             toast.error('Không thể lấy bình luận');
@@ -549,42 +623,28 @@ const PublicProfile = () => {
 
             console.log('Dữ liệu bình luận con sau khi xử lý:', comments);
 
+            // Cập nhật state trước để hiển thị bình luận con
             setChildComments(prev => ({
                 ...prev,
                 [parentCommentId]: comments
             }));
 
+            // Lấy thông tin người dùng và số lượng phản hồi cho mỗi bình luận con
             if (comments && comments.length > 0) {
-                for (const comment of comments) {
-                    if (comment && comment.accountId) {
+                // Sử dụng Promise.all để tải song song thông tin người dùng và số lượng phản hồi
+                await Promise.all(comments.map(async (comment) => {
+                    if (comment && comment.accountId && comment.postcommentId) {
+                        // Lấy thông tin người dùng
                         const userInfo = await fetchCommentUserInfo(comment.accountId);
-                        // Thêm thông tin người dùng vào bình luận
                         comment.userInfo = userInfo;
+
+                        // Lấy số lượng phản hồi cho bình luận con
+                        await fetchChildReplyCount(comment.postcommentId);
                     }
-                }
+                }));
             }
-
-            setChildComments(prev => ({
-                ...prev,
-                [parentCommentId]: comments
-            }));
-
-
-            // Lấy số lượng like cho mỗi bình luận con
-            // if (comments.length > 0) {
-            //     comments.forEach(async (comment) => {
-            //         if (comment && comment.postcommentId) {
-            //             const likeCount = await getCommentLikeCount(comment.postcommentId);
-            //             setCommentLikes(prev => ({
-            //                 ...prev,
-            //                 [comment.postcommentId]: likeCount
-            //             }));
-            //         }
-            //     });
-            // }
         } catch (error) {
             console.error('Error fetching child comments:', error);
-            // Đảm bảo luôn có mảng rỗng khi có lỗi
             setChildComments(prev => ({
                 ...prev,
                 [parentCommentId]: []
@@ -630,17 +690,22 @@ const PublicProfile = () => {
     };
 
     // Hàm xử lý xóa bình luận
-    const handleDeleteComment = async (postcommentId, postId) => {
+    const handleDeleteComment = async (commentId, postId) => {
         try {
-            await deletePostComment(postcommentId);
+            await deletePostComment(commentId);
             toast.success('Đã xóa bình luận thành công');
 
             // Cập nhật lại danh sách bình luận
-            const updatedComments = await getPostCommentsByPostId(postId);
-            setPostComments(prev => ({
-                ...prev,
-                [postId]: updatedComments || []
-            }));
+            await fetchPostComments(postId);
+
+            // Nếu bình luận bị xóa là bình luận con, cập nhật lại số lượng phản hồi của bình luận cha
+            // Lưu ý: Cần biết parentCommentId của bình luận bị xóa
+            // Có thể lưu trữ thông tin này trong state hoặc lấy từ API
+
+            // Ví dụ: Nếu có thông tin parentCommentId
+            // if (parentCommentId) {
+            //     await fetchCommentReplyCount(parentCommentId);
+            // }
         } catch (error) {
             toast.error('Không thể xóa bình luận');
             console.error('Error deleting comment:', error);
@@ -681,8 +746,6 @@ const PublicProfile = () => {
         }
 
         try {
-            console.log(`Đang trả lời bình luận: postId=${postId}, postcommentId=${postcommentId}, content=${content}`);
-
             const commentData = {
                 postId: postId,
                 accountId: id,
@@ -698,12 +761,14 @@ const PublicProfile = () => {
             // Cập nhật lại danh sách bình luận con
             fetchChildComments(postcommentId);
 
+            // Cập nhật lại số lượng phản hồi
+            await fetchCommentReplyCount(postcommentId);
+
             // Cập nhật lại danh sách bình luận chính
             await fetchPostComments(postId);
 
             // Đóng form trả lời và xóa nội dung
             setReplyingToComment(null);
-            // Xóa nội dung bằng key kết hợp
             setChildCommentContents(prev => ({
                 ...prev,
                 [`${postId}-${postcommentId}`]: ''
@@ -741,12 +806,14 @@ const PublicProfile = () => {
                 fetchChildReplies(childCommentId);
             }
 
+            // Cập nhật lại số lượng phản hồi cho bình luận con
+            await fetchChildReplyCount(childCommentId);
+
             // Cập nhật lại danh sách bình luận con
             fetchChildComments(parentCommentId);
 
             // Đóng form trả lời và xóa nội dung
             setReplyingToChildComment(null);
-            // Xóa nội dung bằng key kết hợp
             setChildCommentContents(prev => ({
                 ...prev,
                 [`${postId}-${childCommentId}`]: ''
@@ -754,6 +821,66 @@ const PublicProfile = () => {
         } catch (error) {
             toast.error('Không thể trả lời bình luận');
             console.error('Error replying to child comment:', error);
+        }
+    };
+
+    // Thêm hàm mới để trả lời bình luận con nhưng gắn vào bình luận cha
+    const handleReplyToChildWithParent = async (postId, childComment, content) => {
+        // Kiểm tra kỹ hơn tham số đầu vào
+        // console.log("postId:", postId);
+        // console.log("childComment:", childComment);
+        // console.log("content:", content);
+
+        if (!content) {
+            toast.error('Nội dung bình luận không được để trống');
+            return;
+        }
+
+        if (!content.trim()) {
+            toast.error('Nội dung bình luận không được để trống');
+            return;
+        }
+
+        try {
+            // Lấy parentCommentId từ bình luận con
+            const parentCommentId = childComment.parentCommentId;
+
+            if (!parentCommentId) {
+                toast.error('Không tìm thấy bình luận cha');
+                return;
+            }
+
+            console.log(`Đang trả lời bình luận con: postId=${postId}, childCommentId=${childComment.postcommentId}`);
+            console.log(`Sẽ gắn vào bình luận cha: parentCommentId=${parentCommentId}`);
+
+            const commentData = {
+                postId: postId,
+                accountId: id,
+                content: content,
+                // Sử dụng parentCommentId của childComment làm parentCommentId
+                parentCommentId: parentCommentId
+            };
+
+            console.log('Dữ liệu gửi đi (gắn vào bình luận cha):', commentData);
+
+            await createPostComment(commentData);
+            toast.success('Đã trả lời bình luận thành công');
+
+            // Cập nhật lại danh sách bình luận con của bình luận cha
+            fetchChildComments(parentCommentId);
+
+            // Cập nhật lại số lượng phản hồi cho bình luận cha
+            await fetchCommentReplyCount(parentCommentId);
+
+            // Đóng form trả lời và xóa nội dung
+            setReplyingToChildComment(null);
+            setChildCommentContents(prev => ({
+                ...prev,
+                [`${postId}-${childComment.postcommentId}`]: ''
+            }));
+        } catch (error) {
+            toast.error('Không thể trả lời bình luận');
+            console.error('Error replying to child comment with parent:', error);
         }
     };
 
@@ -821,6 +948,12 @@ const PublicProfile = () => {
 
             console.log('Phản hồi của bình luận con:', replies);
 
+            // Cập nhật số lượng phản hồi
+            setChildReplyCounts(prev => ({
+                ...prev,
+                [childCommentId]: replies.length
+            }));
+
             // Lấy thông tin người dùng cho mỗi phản hồi
             if (replies && replies.length > 0) {
                 for (const reply of replies) {
@@ -843,6 +976,132 @@ const PublicProfile = () => {
             }));
         }
     };
+
+    // Thêm một hàm mới để tải tất cả số lượng phản hồi
+    const preloadAllReplyCounts = async () => {
+        try {
+            console.log('Đang tải trước tất cả số lượng phản hồi...');
+
+            // Lặp qua tất cả bài viết
+            for (const post of posts) {
+                if (!post.postId) continue;
+
+                // Lấy tất cả bình luận của bài viết
+                const comments = await getPostCommentsByPostId(post.postId, 1, 100);
+                let commentList = [];
+
+                if (Array.isArray(comments)) {
+                    commentList = comments;
+                } else if (comments && Array.isArray(comments.items)) {
+                    commentList = comments.items;
+                }
+
+                // Lưu bình luận vào state
+                setPostComments(prev => ({
+                    ...prev,
+                    [post.postId]: commentList
+                }));
+
+                // Lấy số lượng phản hồi cho mỗi bình luận
+                for (const comment of commentList) {
+                    if (!comment.postcommentId) continue;
+
+                    // Lấy số lượng phản hồi cho bình luận chính
+                    const childComments = await getPostChildComments(comment.postcommentId);
+                    let childList = [];
+
+                    if (Array.isArray(childComments)) {
+                        childList = childComments;
+                    } else if (childComments && Array.isArray(childComments.items)) {
+                        childList = childComments.items;
+                    }
+
+                    // Lưu số lượng phản hồi vào state
+                    setCommentReplyCounts(prev => ({
+                        ...prev,
+                        [comment.postcommentId]: childList.length
+                    }));
+
+                    // Lưu bình luận con vào state
+                    setChildComments(prev => ({
+                        ...prev,
+                        [comment.postcommentId]: childList
+                    }));
+
+                    // Lấy số lượng phản hồi cho mỗi bình luận con
+                    for (const childComment of childList) {
+                        if (!childComment.postcommentId) continue;
+
+                        const childReplies = await getPostChildComments(childComment.postcommentId);
+                        let replyList = [];
+
+                        if (Array.isArray(childReplies)) {
+                            replyList = childReplies;
+                        } else if (childReplies && Array.isArray(childReplies.items)) {
+                            replyList = childReplies.items;
+                        }
+
+                        // Lưu số lượng phản hồi vào state
+                        setChildReplyCounts(prev => ({
+                            ...prev,
+                            [childComment.postcommentId]: replyList.length
+                        }));
+                    }
+                }
+            }
+
+            console.log('Đã tải xong tất cả số lượng phản hồi');
+        } catch (error) {
+            console.error('Lỗi khi tải trước số lượng phản hồi:', error);
+        }
+    };
+
+    // Gọi hàm preloadAllReplyCounts khi posts thay đổi
+    useEffect(() => {
+        if (posts && posts.length > 0) {
+            preloadAllReplyCounts();
+        }
+    }, [posts]);
+
+
+    const GetChildReplyCount = ({ childCommentId, showChildReplies, toggleChildReplies }) => {
+        const [count, setCount] = useState(null);
+
+        useEffect(() => {
+            const fetchCount = async () => {
+                try {
+                    const replies = await getPostChildComments(childCommentId);
+                    let replyCount = 0;
+
+                    if (Array.isArray(replies)) {
+                        replyCount = replies.length;
+                    } else if (replies && Array.isArray(replies.items)) {
+                        replyCount = replies.items.length;
+                    }
+
+                    setCount(replyCount);
+                } catch (error) {
+                    console.error('Error fetching reply count:', error);
+                    setCount(0);
+                }
+            };
+
+            fetchCount();
+        }, [childCommentId]);
+
+        return (
+            <button
+                className="hover:underline flex items-center gap-1"
+                onClick={() => toggleChildReplies(childCommentId)}
+            >
+                {showChildReplies[childCommentId] ? 'Ẩn phản hồi' : 'Xem phản hồi'}
+                <span className="ml-1 text-gray-500 font-normal">
+                    ({count !== null ? count : '...'})
+                </span>
+            </button>
+        );
+    };
+
 
     if (isLoading) {
         return (
@@ -1348,10 +1607,23 @@ const PublicProfile = () => {
                                                                                         Trả lời
                                                                                     </button>
                                                                                     <button
-                                                                                        className="hover:underline"
+                                                                                        className="hover:underline flex items-center gap-1"
                                                                                         onClick={() => toggleChildComments(comment.postcommentId)}
                                                                                     >
-                                                                                        {showChildComments[comment.postcommentId] ? 'Ẩn phản hồi' : 'Xem phản hồi'}
+                                                                                        {showChildComments[comment.postcommentId] ? (
+                                                                                            <>
+                                                                                                <FontAwesomeIcon icon={faChevronUp} className="text-xs" />
+                                                                                                Ẩn phản hồi
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
+                                                                                                Xem phản hồi
+                                                                                            </>
+                                                                                        )}
+                                                                                        <span className="ml-1 text-gray-500 font-normal">
+                                                                                            ({commentReplyCounts[comment.postcommentId] !== undefined ? commentReplyCounts[comment.postcommentId] : '...'})
+                                                                                        </span>
                                                                                     </button>
                                                                                 </div>
                                                                             </div>
@@ -1412,17 +1684,17 @@ const PublicProfile = () => {
                                                                                                             <span className="font-semibold text-gray-900 text-sm">{childComment?.userInfo?.firstName} {childComment?.userInfo?.lastName}</span>
                                                                                                         </div>
                                                                                                         <div className="text-gray-800 text-sm">{childComment?.content}</div>
-                                                                                                        <div className="flex gap-3 text-xs text-gray-500">
-                                                                                                            <span>{getRelativeTime(childComment?.commentAt)}</span>
+                                                                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                                                                            <span>{new Date(childComment.commentAt).toLocaleDateString()}</span>
                                                                                                             <button
-                                                                                                                className="hover:underline flex items-center gap-1"
-                                                                                                            // onClick={() => childComment?.postcommentId && handleLikeComment(childComment.postcommentId)}
+                                                                                                                className="hover:underline"
+                                                                                                                onClick={() => handleLikeComment(childComment.postcommentId)}
                                                                                                             >
                                                                                                                 <FontAwesomeIcon
-                                                                                                                    icon={childComment?.postcommentId && commentLikes[childComment.postcommentId] ? faHeart : farHeart}
-                                                                                                                    className={childComment?.postcommentId && commentLikes[childComment.postcommentId] ? 'text-red-500' : ''}
+                                                                                                                    icon={commentLikes[childComment.postcommentId] ? faHeart : farHeart}
+                                                                                                                    className={`mr-1 ${commentLikes[childComment.postcommentId] ? 'text-red-500' : ''}`}
                                                                                                                 />
-                                                                                                                {childComment?.postcommentId ? (commentLikes[childComment.postcommentId] || 0) : 0}
+                                                                                                                {commentLikes[childComment.postcommentId] || 0}
                                                                                                             </button>
                                                                                                             <button
                                                                                                                 className="hover:underline"
@@ -1440,12 +1712,11 @@ const PublicProfile = () => {
                                                                                                             >
                                                                                                                 Trả lời
                                                                                                             </button>
-                                                                                                            <button
-                                                                                                                className="hover:underline"
-                                                                                                                onClick={() => toggleChildReplies(childComment.postcommentId)}
-                                                                                                            >
-                                                                                                                {showChildReplies[childComment.postcommentId] ? 'Ẩn phản hồi' : 'Xem phản hồi'}
-                                                                                                            </button>
+                                                                                                            <GetChildReplyCount
+                                                                                                                childCommentId={childComment.postcommentId}
+                                                                                                                showChildReplies={showChildReplies}
+                                                                                                                toggleChildReplies={toggleChildReplies}
+                                                                                                            />
                                                                                                         </div>
                                                                                                     </div>
                                                                                                 </div>
@@ -1486,8 +1757,7 @@ const PublicProfile = () => {
                                                                                                         <button
                                                                                                             onClick={() => handleReplyToChildComment(
                                                                                                                 post.postId,
-                                                                                                                comment.postcommentId,
-                                                                                                                childComment.postcommentId,
+                                                                                                                childComment,
                                                                                                                 childCommentContents[`${post.postId}-${childComment.postcommentId}`]
                                                                                                             )}
                                                                                                             className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
@@ -1579,11 +1849,10 @@ const PublicProfile = () => {
                                                                                                                                 />
                                                                                                                             </div>
                                                                                                                             <button
-                                                                                                                                onClick={() => handleReplyToChildComment(
+                                                                                                                                onClick={() => handleReplyToChildWithParent(
                                                                                                                                     post.postId,
-                                                                                                                                    comment.postcommentId,
-                                                                                                                                    reply.postcommentId,
-                                                                                                                                    childCommentContents[`${post.postId}-${reply.postcommentId}`]
+                                                                                                                                    reply, // Đây là bình luận con
+                                                                                                                                    childCommentContents[`${post.postId}-${reply.postcommentId}`] // Đây là nội dung đã nhập cho bình luận con này
                                                                                                                                 )}
                                                                                                                                 className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
                                                                                                                             >
@@ -1685,35 +1954,6 @@ const PublicProfile = () => {
 };
 
 export default PublicProfile;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
