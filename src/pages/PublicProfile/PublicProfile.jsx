@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faCamera, faChevronDown, faChevronUp, faMapMarkerAlt, faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase, faHeart, faComment, faShareSquare, faSmile, faTrash, faReply } from '@fortawesome/free-solid-svg-icons';
+import {
+    faEdit, faCamera, faChevronDown, faChevronUp, faMapMarkerAlt,
+    faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase,
+    faHeart, faComment, faShareSquare, faSmile, faTrash, faReply,
+    faUserPlus, faUserCheck // Thêm icons cho follow
+} from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -129,6 +134,67 @@ const PublicProfile = () => {
     const [editingPost, setEditingPost] = useState(null);
     const [editedPostContent, setEditedPostContent] = useState('');
 
+    // Thêm state để theo dõi trạng thái follow
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
+
+    // Hàm xử lý follow/unfollow
+    const handleFollowToggle = async () => {
+        if (followLoading) return;
+
+        try {
+            setFollowLoading(true);
+
+            // Lấy ID của người dùng hiện tại
+            const currentUserId = await getUserId();
+
+            if (currentUserId === id) {
+                toast.warning("Bạn không thể theo dõi chính mình");
+                return;
+            }
+
+            // Gọi API follow/unfollow
+            if (isFollowing) {
+                // Gọi API unfollow
+                await unfollowUser(id);
+                setIsFollowing(false);
+                toast.success(`Đã hủy theo dõi ${profileData.firstName} ${profileData.lastName}`);
+            } else {
+                // Gọi API follow
+                await followUser(id);
+                setIsFollowing(true);
+                toast.success(`Đã theo dõi ${profileData.firstName} ${profileData.lastName}`);
+            }
+        } catch (error) {
+            console.error('Error toggling follow:', error);
+            toast.error('Không thể thực hiện thao tác. Vui lòng thử lại sau.');
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
+    // Kiểm tra trạng thái follow khi component mount
+    useEffect(() => {
+        const checkFollowStatus = async () => {
+            try {
+                // Lấy ID của người dùng hiện tại
+                const currentUserId = await getUserId();
+
+                // Nếu đang xem profile của chính mình, không cần kiểm tra
+                if (currentUserId === id) return;
+
+                // Gọi API kiểm tra trạng thái follow
+                const status = await checkIsFollowing(id);
+                setIsFollowing(status);
+            } catch (error) {
+                console.error('Error checking follow status:', error);
+            }
+        };
+
+        if (id) {
+            checkFollowStatus();
+        }
+    }, [id]);
 
     // Hàm để lấy số lượng phản hồi cho một bình luận
     const fetchCommentReplyCount = async (commentId) => {
@@ -1215,10 +1281,31 @@ const PublicProfile = () => {
                 />
                 {/* Gradient shadow bottom */}
                 {/* <div className="absolute left-0 right-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div> */}
-                {/* Edit Cover Button */}
-                <button className="absolute bottom-4 right-8 bg-white px-4 py-2 rounded-lg text-gray-800 font-medium shadow flex items-center gap-2 hover:bg-gray-100 z-10">
-                    <FontAwesomeIcon icon={faCamera} /> Edit cover
-                </button>
+
+                {/* Buttons container */}
+                <div className="absolute bottom-4 right-8 flex gap-3 z-10">
+                    {/* Follow Button - Hiển thị khi xem profile người khác */}
+                    {currentUserId == id && (
+                        <button
+                            className={`px-4 py-2 rounded-lg font-medium shadow flex items-center gap-2 transition-colors ${isFollowing
+                                ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                            onClick={handleFollowToggle}
+                            disabled={followLoading}
+                        >
+                            <FontAwesomeIcon icon={isFollowing ? faUserCheck : faUserPlus} />
+                            {followLoading ? 'Processing...' : isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                    )}
+
+                    {/* Edit Cover Button - Chỉ hiển thị khi xem profile của chính mình */}
+                    {currentUserId === id && (
+                        <button className="bg-white px-4 py-2 rounded-lg text-gray-800 font-medium shadow flex items-center gap-2 hover:bg-gray-100">
+                            <FontAwesomeIcon icon={faCamera} /> Edit cover
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Profile Info under cover */}
@@ -2137,6 +2224,10 @@ const PublicProfile = () => {
 
 
 export default PublicProfile;
+
+
+
+
 
 
 
