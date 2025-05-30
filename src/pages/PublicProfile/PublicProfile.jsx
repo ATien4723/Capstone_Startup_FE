@@ -184,7 +184,7 @@ const PublicProfile = () => {
                 if (currentUserId === id) return;
 
                 // Gọi API kiểm tra trạng thái follow
-                const status = await checkIsFollowing(id);
+                // const status = await checkIsFollowing(id);
                 setIsFollowing(status);
             } catch (error) {
                 console.error('Error checking follow status:', error);
@@ -253,21 +253,22 @@ const PublicProfile = () => {
         const fetchProfileData = async () => {
             try {
                 setIsLoading(true);
-                const [accountInfo, followingData, followersData, postsData] = await Promise.all([
+                // Tách biệt việc lấy thông tin profile và bài viết
+                const [accountInfo, followingData, followersData] = await Promise.all([
                     getAccountInfo(id),
                     getFollowing(id),
-                    getFollowers(id),
-                    getPostsByAccountId(id)
+                    getFollowers(id)
                 ]);
-                if (!accountInfo || !postsData) {
+
+                if (!accountInfo) {
                     toast.error('Failed to load profile data');
                     setIsLoading(false);
                     return;
                 }
+
                 setProfileData(accountInfo);
                 setFollowing(followingData || []);
                 setFollowers(followersData || []);
-                setPosts(postsData.items || []);
                 setFormData({
                     firstName: accountInfo?.firstName || '',
                     lastName: accountInfo?.lastName || '',
@@ -285,30 +286,51 @@ const PublicProfile = () => {
                     portfolioUrl: accountInfo?.portfolioUrl || '',
                     country: accountInfo?.country || '',
                 });
-                if (postsData.items && Array.isArray(postsData.items)) {
-                    postsData.items.forEach(async (post) => {
-                        const [likeCount, comments] = await Promise.all([
-                            getPostLikeCount(post.postId),
-                            getPostCommentsByPostId(post.postId)
-                        ]);
-                        setPostLikes(prev => ({
-                            ...prev,
-                            [post.postId]: likeCount
-                        }));
-                        setPostComments(prev => ({
-                            ...prev,
-                            [post.postId]: comments || []
-                        }));
-                        const commentCount = await getPostCommentCount(post.postId);
-                        setPostCommentCounts(prev => ({
-                            ...prev,
-                            [post.postId]: commentCount
-                        }));
 
-                    });
+                // Tách riêng phần lấy bài viết
+                try {
+                    const postsData = await getPostsByAccountId(id);
+                    // Kiểm tra nếu có dữ liệu trả về
+                    if (postsData && postsData.items) {
+                        setPosts(postsData.items || []);
+
+                        if (Array.isArray(postsData.items)) {
+                            postsData.items.forEach(async (post) => {
+                                const [likeCount, comments] = await Promise.all([
+                                    getPostLikeCount(post.postId),
+                                    getPostCommentsByPostId(post.postId)
+                                ]);
+                                setPostLikes(prev => ({
+                                    ...prev,
+                                    [post.postId]: likeCount
+                                }));
+                                setPostComments(prev => ({
+                                    ...prev,
+                                    [post.postId]: comments || []
+                                }));
+                                const commentCount = await getPostCommentCount(post.postId);
+                                setPostCommentCounts(prev => ({
+                                    ...prev,
+                                    [post.postId]: commentCount
+                                }));
+                            });
+                        }
+                    } else {
+                        // Không có bài viết, set mảng rỗng
+                        setPosts([]);
+                    }
+                } catch (error) {
+                    console.error('Error fetching posts:', error);
+                    // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
+                    if (error.response && error.response.status !== 404) {
+                        toast.error('Failed to load posts');
+                    }
+                    // Vẫn tiếp tục hiển thị profile ngay cả khi không lấy được bài viết
+                    setPosts([]);
                 }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
+                toast.error('Failed to load profile data');
             } finally {
                 setIsLoading(false);
             }
@@ -387,35 +409,41 @@ const PublicProfile = () => {
             setPostError('');
 
             // Gọi API để lấy danh sách posts mới nhất
-            const postsData = await getPostsByAccountId(id, 1, pageSize);
+            try {
+                const postsData = await getPostsByAccountId(id, 1, pageSize);
 
-            if (postsData && Array.isArray(postsData.items)) {
-                console.log('Refreshed posts:', postsData.items);
+                if (postsData && postsData.items) {
+                    console.log('Refreshed posts:', postsData.items);
 
-                // Cập nhật state với danh sách posts mới
-                setPosts(postsData.items);
+                    // Cập nhật state với danh sách posts mới
+                    setPosts(postsData.items);
 
-                // Lấy thông tin likes và comments cho mỗi post mới
-                for (const post of postsData.items) {
-                    try {
-                        const [likeCount, comments] = await Promise.all([
-                            getPostLikeCount(post.postId),
-                            getPostCommentsByPostId(post.postId)
-                        ]);
+                    // Lấy thông tin likes và comments cho mỗi post mới
+                    for (const post of postsData.items) {
+                        try {
+                            const [likeCount, comments] = await Promise.all([
+                                getPostLikeCount(post.postId),
+                                getPostCommentsByPostId(post.postId)
+                            ]);
 
-                        setPostLikes(prev => ({
-                            ...prev,
-                            [post.postId]: likeCount
-                        }));
+                            setPostLikes(prev => ({
+                                ...prev,
+                                [post.postId]: likeCount
+                            }));
 
-                        setPostComments(prev => ({
-                            ...prev,
-                            [post.postId]: comments || []
-                        }));
-                    } catch (error) {
-                        console.error('Error fetching post details:', error);
+                            setPostComments(prev => ({
+                                ...prev,
+                                [post.postId]: comments || []
+                            }));
+                        } catch (error) {
+                            console.error('Error fetching post details:', error);
+                        }
                     }
                 }
+            } catch (error) {
+                console.error('Error refreshing posts after creation:', error);
+                // Nếu không lấy được bài viết mới, gọi tải lại
+                fetchPosts(1);
             }
 
             toast.success('Bài viết đã được tạo thành công');
@@ -495,7 +523,7 @@ const PublicProfile = () => {
         try {
             const likeData = {
                 postId,
-                accountId: id
+                accountId: currentUserId
             };
 
             // Kiểm tra trạng thái like hiện tại
@@ -540,6 +568,7 @@ const PublicProfile = () => {
     const fetchPosts = async (page) => {
         try {
             const response = await getPostsByAccountId(id, page, pageSize);
+            // Kiểm tra response an toàn hơn
             if (response && response.items) {
                 if (page === 1) {
                     setPosts(response.items);
@@ -548,11 +577,25 @@ const PublicProfile = () => {
                 }
                 setHasMore(response.items.length === pageSize);
             } else {
+                // Nếu không có items hoặc response không hợp lệ
+                if (page === 1) {
+                    setPosts([]);
+                }
                 setHasMore(false);
             }
         } catch (error) {
             console.error('Error fetching posts:', error);
+            // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
+            if (error.response && error.response.status === 404) {
+                console.log('No posts found for this user');
+            }
             setHasMore(false);
+            // Nếu là trang đầu tiên và xảy ra lỗi, set posts là mảng rỗng
+            if (page === 1) {
+                setPosts([]);
+            }
+        } finally {
+            setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
         }
     };
 
@@ -2129,9 +2172,37 @@ const PublicProfile = () => {
                                         )}
                                     </div>
                                 ))
+                            ) : isLoading ? (
+                                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
+                                </div>
                             ) : (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                                    <p className="text-gray-500 text-lg">Chưa có bài viết nào</p>
+                                    <img
+                                        src="/images/no-posts.svg"
+                                        alt="Không có bài viết"
+                                        className="w-32 h-32 mx-auto mb-4 opacity-60"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
+                                    <p className="text-gray-600 text-lg font-medium mb-2">Chưa có bài viết nào</p>
+                                    <p className="text-gray-500 mb-4">
+                                        {id === currentUserId ?
+                                            "Hãy chia sẻ trải nghiệm của bạn ngay bây giờ" :
+                                            `${profileData?.firstName || 'Người dùng này'} chưa đăng bài viết nào`}
+                                    </p>
+                                    {id === currentUserId && (
+                                        <button
+                                            onClick={() => setShowPostModal(true)}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+                                        >
+                                            <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                                            Tạo bài viết mới
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
