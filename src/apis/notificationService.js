@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from '@/config/axiosClient';
 
 // Lấy danh sách thông báo theo trang
 export const getNotifications = async (accountId, pageNumber = 1, pageSize = 10) => {
@@ -25,7 +25,7 @@ export const getUnreadNotificationCount = async (accountId) => {
 // Đánh dấu thông báo đã đọc
 export const markNotificationAsRead = async (notificationId, accountId) => {
     try {
-        const response = await axiosClient.put(`api/Notification/mark-as-read${notificationId}?accountId=${accountId}`);
+        const response = await axiosClient.put(`api/Notification/mark-as-read/${notificationId}?accountId=${accountId}`);
         return response;
     } catch (error) {
         console.error('Error marking notification as read:', error);
@@ -34,12 +34,9 @@ export const markNotificationAsRead = async (notificationId, accountId) => {
 };
 
 // Tạo thông báo mới (thường chỉ được gọi từ server, nhưng có thể cần cho testing)
-export const createNotification = async (userId, message) => {
+export const createNotification = async (notificationData) => {
     try {
-        const response = await axiosClient.post(`api/Notification/CreateNotification`, {
-            userId,
-            message
-        });
+        const response = await axiosClient.post(`api/Notification/CreateNotification`, notificationData);
         return response;
     } catch (error) {
         console.error('Error creating notification:', error);

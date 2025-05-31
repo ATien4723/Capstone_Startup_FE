@@ -1,4 +1,4 @@
-import axiosClient from "./axiosClient";
+import axiosClient from "@/config/axiosClient";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 

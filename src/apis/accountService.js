@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from '@/config/axiosClient';
 
 export const getAccountInfo = async (accountId) => {
     try {

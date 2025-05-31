@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from '@/config/axiosClient';
 
 // Get posts by account ID
 export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 10) => {

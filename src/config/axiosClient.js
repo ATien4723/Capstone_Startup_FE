@@ -1,9 +1,10 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+export const URL_API = "http://localhost:5070/";
 
 const axiosClient = axios.create({
-    baseURL: "https://localhost:7192/"
+    baseURL: URL_API
 });
 
 // Request interceptor
@@ -62,4 +63,4 @@ axiosClient.interceptors.response.use(
     }
 );
 
-export default axiosClient;
+export default axiosClient; 

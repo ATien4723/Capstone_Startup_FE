@@ -11,8 +11,10 @@ import { getNotifications, getUnreadNotificationCount, markNotificationAsRead } 
 import { getAccountInfo } from "@/apis/accountService";
 import Cookies from "js-cookie";
 import { toast } from 'react-toastify';
-import * as signalR from '@microsoft/signalr';
-import axiosClient from '@/apis/axiosClient';
+import { HubConnectionBuilder } from '@microsoft/signalr';
+import * as signalR from "@microsoft/signalr";
+
+import axiosClient, { URL_API } from '@/config/axiosClient';
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -36,37 +38,42 @@ export default function Navbar() {
     const [hasMore, setHasMore] = useState(true);
     const [userInfoCache, setUserInfoCache] = useState({});
 
+    // Thêm state để theo dõi trạng thái hiển thị (tất cả hoặc chỉ đã đọc)
+    const [showingUnreadOnly, setShowingUnreadOnly] = useState(false);
+
     // Kết nối SignalR khi component mount
     useEffect(() => {
-        // Bỏ qua nếu không có xác thực hoặc ID người dùng
+        // Bỏ qua nếu không có xác thực
         if (!isAuthenticated || !currentUserId) return;
 
-        // Lấy baseURL từ axiosClient
-        const baseURL = axiosClient.defaults.baseURL || 'https://localhost:7192';
-
-        // Tạo kết nối SignalR đơn giản
+        // Tạo kết nối SignalR
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${baseURL}hubs/notification`, {
-                skipNegotiation: true,
-                transport: signalR.HttpTransportType.WebSockets
-            })
+            .withUrl(`${URL_API}hubs/notification`)
             .withAutomaticReconnect()
             .build();
 
-        // Đăng ký các event handler
+        // Đăng ký event handler nhận thông báo mới
         connection.on('ReceiveNotification', notification => {
-            console.log('Received notification:', notification);
+            console.log('Nhận thông báo mới:', notification);
+
+            // Thêm thông báo mới vào đầu danh sách
             setNotifications(prev => [notification, ...prev]);
+
+            // Tăng số lượng thông báo chưa đọc
             setUnreadCount(prev => prev + 1);
-            toast.info(notification.message || notification.content);
+
+            // Hiển thị toast thông báo
+            toast.info(notification.content || 'Bạn có thông báo mới');
         });
 
+        // Đăng ký event handler cập nhật số lượng thông báo chưa đọc
         connection.on('ReceiveUnreadNotificationCount', data => {
             if (data && data.accountId && data.accountId.toString() === currentUserId.toString()) {
                 setUnreadCount(data.unreadCount);
             }
         });
 
+        // Đăng ký event handler khi thông báo được đánh dấu đã đọc
         connection.on('NotificationRead', data => {
             if (data && data.isRead) {
                 setNotifications(prev => prev.map(n =>
@@ -76,26 +83,30 @@ export default function Navbar() {
             }
         });
 
-        // Bắt đầu kết nối
-        connection.start()
+        // Kết nối đến hub
+        connection
+            .start()
             .then(() => {
-                console.log('SignalR Connected!');
-                return connection.invoke('JoinGroup', currentUserId.toString());
+                console.log("SignalR Connected!");
+                // Tham gia nhóm thông báo của người dùng
+                return connection.invoke("JoinGroup", currentUserId);
             })
             .then(() => {
-                console.log(`Joined group: ${currentUserId}`);
+                console.log(`Đã tham gia nhóm thông báo của user ID: ${currentUserId}`);
                 setHubConnection(connection);
             })
-            .catch(err => console.error('SignalR Connection Error:', err));
+            .catch((err) => {
+                console.error("SignalR Connection Error:", err);
+            });
 
-        // Cleanup khi component unmount
+        // Dọn dẹp khi component unmount
         return () => {
             if (connection) {
                 connection.stop()
-                    .catch(err => console.error('Error stopping connection:', err));
+                    .catch(err => console.error("Lỗi khi dừng kết nối SignalR:", err));
             }
         };
-    }, [isAuthenticated, currentUserId]);
+    }, [isAuthenticated, currentUserId]); // Phụ thuộc vào auth và userID
 
     // Lấy thông báo khi component mount
     useEffect(() => {
@@ -114,19 +125,41 @@ export default function Navbar() {
             const response = await getNotifications(currentUserId, pageNumber, pageSize);
 
             if (response && response.items) {
+                // Đảm bảo mỗi thông báo đều có ID duy nhất
+                console.log('Dữ liệu thông báo từ API:', response.items);
+
+                const processedItems = response.items.map((item, idx) => {
+                    // Kiểm tra xem item có trường nào khác có thể là ID không
+                    const possibleId = item.notificationId;
+
+                    // Nếu không có ID, thêm một ID tạm thời
+                    if (!possibleId) {
+                        console.log('Thông báo không có ID:', item);
+                        return { ...item, id: `temp-id-${Date.now()}-${idx}` };
+                    }
+
+                    // Sử dụng ID từ trường thích hợp
+                    if (!item.id && possibleId) {
+                        console.log(`Sử dụng ID từ trường khác: ${possibleId}`);
+                        return { ...item, id: possibleId };
+                    }
+
+                    return item;
+                });
+
                 // Nếu là trang đầu tiên, thay thế danh sách cũ
                 if (pageNumber === 1) {
-                    setNotifications(response.items);
+                    setNotifications(processedItems);
                 } else {
                     // Nếu không phải trang đầu, thêm vào danh sách hiện tại
-                    setNotifications(prev => [...prev, ...response.items]);
+                    setNotifications(prev => [...prev, ...processedItems]);
                 }
 
                 // Kiểm tra xem còn trang nào nữa không
                 setHasMore(response.items.length === pageSize);
 
                 // Lấy thông tin người dùng cho mỗi thông báo nếu cần
-                enrichNotificationsWithUserInfo(response.items);
+                enrichNotificationsWithUserInfo(processedItems);
             }
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -173,7 +206,7 @@ export default function Navbar() {
             await markNotificationAsRead(notificationId, currentUserId);
             // Cập nhật UI ngay lập tức (SignalR sẽ cập nhật lại sau)
             setNotifications(prev => prev.map(n =>
-                n.id === notificationId ? { ...n, isRead: true } : n
+                n.id == notificationId ? { ...n, isRead: true } : n
             ));
             // Giảm số lượng thông báo chưa đọc
             setUnreadCount(prev => Math.max(0, prev - 1));
@@ -200,25 +233,37 @@ export default function Navbar() {
         }
     };
 
-    // Tải thêm thông báo khi cuộn xuống
+    // Tải thêm thông báo khi cuộn xuống hoặc nhấn nút "Tải thêm"
     const loadMoreNotifications = () => {
         if (hasMore && !loading) {
+            // Tăng số trang lên để tải trang tiếp theo
             setPageNumber(prev => prev + 1);
         }
     };
 
-    // Hiển thị chỉ thông báo chưa đọc
-    const showUnreadOnly = () => {
-        // Implement filter logic if needed
+    // Thêm useEffect để tải thông báo khi pageNumber thay đổi
+    useEffect(() => {
+        if (isAuthenticated && currentUserId && pageNumber > 0) {
+            fetchNotifications();
+        }
+    }, [pageNumber, isAuthenticated, currentUserId]);
+
+    // Cập nhật phương thức hiển thị chỉ thông báo đã đọc
+    const toggleUnreadOnly = () => {
+        setShowingUnreadOnly(!showingUnreadOnly);
     };
 
     // Đóng dropdown khi click ra ngoài
     useEffect(() => {
         const handleClickOutside = (event) => {
+            // Kiểm tra nếu click ra ngoài dropdown
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
             }
-            if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
+            // Kiểm tra nếu click ra ngoài notification dropdown và không phải là nút thông báo
+            if (notificationDropdownRef.current &&
+                !notificationDropdownRef.current.contains(event.target) &&
+                !event.target.closest('.notification-btn')) {
                 setNotificationDropdownOpen(false);
             }
         };
@@ -231,6 +276,7 @@ export default function Navbar() {
         };
     }, []);
 
+    // Giữ lại các hàm xử lý hover cho user dropdown
     const handleMouseEnter = () => {
         clearTimeout(timeoutRef.current);
         setDropdownOpen(true);
@@ -242,17 +288,7 @@ export default function Navbar() {
         }, 300); // Delay 300ms trước khi đóng
     };
 
-    const handleNotificationMouseEnter = () => {
-        clearTimeout(notificationTimeoutRef.current);
-        setNotificationDropdownOpen(true);
-    };
-
-    const handleNotificationMouseLeave = () => {
-        notificationTimeoutRef.current = setTimeout(() => {
-            setNotificationDropdownOpen(false);
-        }, 300); // Delay 300ms trước khi đóng
-    };
-
+    // Toggle notification dropdown khi click
     const toggleNotificationDropdown = () => {
         setNotificationDropdownOpen(!notificationDropdownOpen);
     };
@@ -348,11 +384,9 @@ export default function Navbar() {
                             <div
                                 className="relative"
                                 ref={notificationDropdownRef}
-                                onMouseEnter={handleNotificationMouseEnter}
-                                onMouseLeave={handleNotificationMouseLeave}
                             >
                                 <button
-                                    className="relative"
+                                    className="relative notification-btn"
                                     onClick={toggleNotificationDropdown}
                                 >
                                     <FontAwesomeIcon icon={faBell} className="text-lg hover:text-white/80" />
@@ -366,8 +400,6 @@ export default function Navbar() {
                                     <div
                                         className="absolute right-0 w-80 bg-white rounded-lg shadow-xl z-50"
                                         style={{ top: 'calc(100% + 8px)' }}
-                                        onMouseEnter={handleNotificationMouseEnter}
-                                        onMouseLeave={handleNotificationMouseLeave}
                                     >
                                         <div className="p-3 border-b border-gray-200">
                                             <div className="flex justify-between items-center">
@@ -383,13 +415,14 @@ export default function Navbar() {
                                             </div>
                                             <div className="flex mt-2 border-b border-gray-100 pb-1">
                                                 <button
-                                                    className="flex-1 py-1 font-medium text-blue-600 border-b-2 border-blue-600"
+                                                    className={`flex-1 py-1 font-medium ${!showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                                                    onClick={() => setShowingUnreadOnly(false)}
                                                 >
                                                     Tất cả
                                                 </button>
                                                 <button
-                                                    className="flex-1 py-1 text-gray-600 hover:bg-gray-50"
-                                                    onClick={showUnreadOnly}
+                                                    className={`flex-1 py-1 ${showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                                                    onClick={toggleUnreadOnly}
                                                 >
                                                     Chưa đọc
                                                 </button>
@@ -406,48 +439,60 @@ export default function Navbar() {
                                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                                 </div>
                                             ) : notifications.length > 0 ? (
-                                                notifications.map((notification) => {
-                                                    const senderInfo = notification.senderId ? userInfoCache[notification.senderId] : null;
-                                                    return (
-                                                        <div
-                                                            key={notification.id}
-                                                            className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
-                                                            onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
-                                                        >
-                                                            <div className="relative mr-3">
-                                                                <img
-                                                                    src={senderInfo?.avatarUrl || "/api/placeholder/40/40"}
-                                                                    alt={senderInfo?.firstName || "User"}
-                                                                    className="w-12 h-12 rounded-full"
-                                                                />
-                                                                <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
-                                                                    {getNotificationIcon(notification.type)}
+                                                notifications
+                                                    .filter(notification => !showingUnreadOnly || !notification.isRead) // Lọc theo chưa đọc
+                                                    .map((notification, index) => {
+                                                        const senderInfo = notification.senderId ? userInfoCache[notification.senderId] : null;
+                                                        // Sử dụng index kết hợp với ID để đảm bảo key luôn duy nhất
+                                                        const uniqueKey = notification.id ? `notification-${notification.id}` : `notification-index-${index}`;
+                                                        return (
+                                                            <div
+                                                                key={uniqueKey}
+                                                                className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                                                                onClick={() => {
+                                                                    console.log("Clicked notification:", notification);
+
+                                                                    if (!notification.isRead) {
+                                                                        // Ưu tiên sử dụng ID đúng nếu có
+                                                                        const idToUse = notification.notificationId || notification.id;
+                                                                        handleMarkAsRead(idToUse);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <div className="relative mr-3">
+                                                                    <img
+                                                                        src={senderInfo?.avatarUrl || "/api/placeholder/40/40"}
+                                                                        alt={senderInfo?.firstName || "User"}
+                                                                        className="w-12 h-12 rounded-full"
+                                                                    />
+                                                                    <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
+                                                                        {getNotificationIcon(notification.type)}
+                                                                    </div>
                                                                 </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-gray-800 text-sm">
+                                                                        <span className="font-semibold">
+                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : 'Hệ thống'}
+                                                                        </span>{' '}
+                                                                        {notification.content}
+                                                                    </p>
+                                                                    <div className="flex items-center mt-1">
+                                                                        <span className="text-xs text-gray-500">
+                                                                            {formatTime(notification.sendAt || notification.createdAt)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                {!notification.isRead && (
+                                                                    <div className="flex items-center">
+                                                                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            <div className="flex-1">
-                                                                <p className="text-gray-800 text-sm">
-                                                                    <span className="font-semibold">
-                                                                        {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : 'Hệ thống'}
-                                                                    </span>{' '}
-                                                                    {notification.content}
-                                                                </p>
-                                                                <div className="flex items-center mt-1">
-                                                                    <span className="text-xs text-gray-500">
-                                                                        {formatTime(notification.sendAt || notification.createdAt)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            {!notification.isRead && (
-                                                                <div className="flex items-center">
-                                                                    <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    })
                                             ) : (
                                                 <div className="text-center py-6 text-gray-500">
-                                                    Không có thông báo nào
+                                                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
                                                 </div>
                                             )}
 
