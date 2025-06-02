@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useParams } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -8,6 +8,7 @@ import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
+import Webcam from 'react-webcam';
 
 const tabs = [
     {
@@ -90,64 +91,36 @@ const Setting = () => {
     const canvasRef = useRef(null);
 
     // Hàm mở webcam
-    const openCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: "user"
-                }
-            });
-
-            if (webcamRef.current) {
-                webcamRef.current.srcObject = stream;
-            }
-
-            setCameraStream(stream);
-            setShowWebcam(true);
-        } catch (error) {
-            console.error("Error accessing webcam:", error);
-            toast.error("Không thể truy cập webcam. Vui lòng kiểm tra quyền truy cập camera.");
-        }
+    const openCamera = () => {
+        setShowWebcam(true);
     };
 
     // Hàm đóng webcam
     const closeCamera = () => {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-            setCameraStream(null);
-        }
         setShowWebcam(false);
     };
 
     // Hàm chụp ảnh từ webcam
-    const capturePhoto = () => {
-        if (webcamRef.current && canvasRef.current) {
-            const videoElement = webcamRef.current;
-            const canvas = canvasRef.current;
-
-            // Đặt kích thước canvas bằng với video
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-
-            // Vẽ frame hiện tại của video lên canvas
-            const context = canvas.getContext('2d');
-            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-            // Chuyển đổi canvas thành blob
-            canvas.toBlob((blob) => {
-                // Tạo file từ blob
-                const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
-
-                // Cập nhật state
-                setSelfieFile(file);
-                setSelfiePreview(canvas.toDataURL('image/jpeg'));
-
-                // Đóng webcam
-                closeCamera();
-            }, 'image/jpeg', 0.95);
+    const capturePhoto = useCallback(() => {
+        if (webcamRef.current) {
+            const imageSrc = webcamRef.current.getScreenshot();
+            setSelfieFile(dataURLtoFile(imageSrc, "selfie.jpg"));
+            setSelfiePreview(imageSrc);
+            setShowWebcam(false);
         }
+    }, [webcamRef]);
+
+    // Hàm chuyển đổi dataURL thành File
+    const dataURLtoFile = (dataurl, filename) => {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, { type: mime });
     };
 
     // Cleanup khi component unmount
@@ -564,10 +537,16 @@ const Setting = () => {
                                     <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 hover:border-blue-400 transition">
                                         {showWebcam ? (
                                             <div className="relative w-full h-48">
-                                                <video
+                                                <Webcam
                                                     ref={webcamRef}
-                                                    autoPlay
-                                                    playsInline
+                                                    audio={false}
+                                                    screenshotFormat="image/jpeg"
+                                                    videoConstraints={{
+                                                        width: 480,
+                                                        height: 480,
+                                                        facingMode: "user"
+                                                    }}
+                                                    mirrored={true}
                                                     className="w-full h-full object-cover rounded-lg"
                                                 />
                                                 <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-4">
@@ -586,7 +565,6 @@ const Setting = () => {
                                                         <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                                                     </button>
                                                 </div>
-                                                <canvas ref={canvasRef} className="hidden" />
                                             </div>
                                         ) : selfiePreview ? (
                                             <div className="relative w-full h-48 mb-2">
@@ -632,7 +610,7 @@ const Setting = () => {
                                                         <FontAwesomeIcon icon={faCamera} className="mr-1" /> Chụp ảnh
                                                     </button>
 
-                                                    <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
+                                                    {/* <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
                                                         <FontAwesomeIcon icon={faUser} className="mr-1" /> Tải lên
                                                         <input
                                                             type="file"
@@ -641,7 +619,7 @@ const Setting = () => {
                                                             className="hidden"
                                                             onChange={(e) => handleFileChange(e, setSelfieFile, setSelfiePreview)}
                                                         />
-                                                    </label>
+                                                    </label> */}
                                                 </div>
                                             </div>
                                         )}
@@ -654,8 +632,8 @@ const Setting = () => {
                                         onClick={handleVerifyCCCD}
                                         disabled={!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading}
                                         className={`w-full py-3 rounded-lg font-medium transition-colors ${!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading
-                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
                                             }`}
                                     >
                                         {verifyLoading ? 'Đang xác thực...' : 'Xác thực danh tính'}

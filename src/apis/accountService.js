@@ -57,7 +57,7 @@ export const changePassword = async (accountId, changePasswordDTO) => {
 // Thêm API xác thực CCCD
 export const verifyCCCD = async (formData) => {
     try {
-        const response = await axiosClient.post('api/Account/verify-cccd-full', formData, {
+        const response = await axiosClient.post('api/Account/verify-cccd', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
