@@ -9,12 +9,10 @@ import {
 import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { getNotifications, getUnreadNotificationCount, markNotificationAsRead } from "@/apis/notificationService";
 import { getAccountInfo } from "@/apis/accountService";
+import signalRService from "@/services/signalRService";
 import Cookies from "js-cookie";
 import { toast } from 'react-toastify';
-import { HubConnectionBuilder } from '@microsoft/signalr';
-import * as signalR from "@microsoft/signalr";
 
-import axiosClient, { URL_API } from '@/config/axiosClient';
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -27,7 +25,6 @@ export default function Navbar() {
     const isAuthenticated = !!Cookies.get("accessToken");
     const currentUserId = getUserId();
     const userInfo = getUserInfoFromToken();
-    const [hubConnection, setHubConnection] = useState(null);
 
     // State cho thông báo
     const [notifications, setNotifications] = useState([]);
@@ -36,7 +33,7 @@ export default function Navbar() {
     const [pageNumber, setPageNumber] = useState(1);
     const [pageSize] = useState(10);
     const [hasMore, setHasMore] = useState(true);
-    const [userInfoCache, setUserInfoCache] = useState({});
+    const [userInfoMap, setUserInfoMap] = useState({});
 
     // Thêm state để theo dõi trạng thái hiển thị (tất cả hoặc chỉ đã đọc)
     const [showingUnreadOnly, setShowingUnreadOnly] = useState(false);
@@ -46,65 +43,85 @@ export default function Navbar() {
         // Bỏ qua nếu không có xác thực
         if (!isAuthenticated || !currentUserId) return;
 
-        // Tạo kết nối SignalR
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${URL_API}hubs/notification`)
-            .withAutomaticReconnect()
-            .build();
+        // Khởi tạo kết nối SignalR và đăng ký các callback
+        const initializeSignalR = async () => {
+            // Đăng ký các callback để xử lý sự kiện từ SignalR
+            signalRService.registerCallbacks({
+                onReceiveNotification: async (notification) => {
+                    console.log('Nhận thông báo mới:', notification);
 
-        // Đăng ký event handler nhận thông báo mới
-        connection.on('ReceiveNotification', notification => {
-            console.log('Nhận thông báo mới:', notification);
+                    // Lấy thông tin người dùng ngay khi nhận thông báo
+                    const userId = notification.accountId || notification.senderId;
+                    if (userId) {
+                        try {
+                            const userInfo = await getAccountInfo(userId);
+                            if (userInfo) {
+                                // Cập nhật thông tin người dùng trước
+                                setUserInfoMap(prev => ({
+                                    ...prev,
+                                    [userId]: userInfo
+                                }));
 
-            // Thêm thông báo mới vào đầu danh sách
-            setNotifications(prev => [notification, ...prev]);
+                                // Sau đó thêm thông báo vào danh sách với thông tin người dùng đính kèm
+                                setNotifications(prev => [{
+                                    ...notification,
+                                    userInfo: userInfo
+                                }, ...prev]);
 
-            // Tăng số lượng thông báo chưa đọc
-            setUnreadCount(prev => prev + 1);
+                                // Tăng số lượng thông báo chưa đọc
+                                setUnreadCount(prev => prev + 1);
+                            }
+                        } catch (error) {
+                            console.error('Lỗi khi lấy thông tin người dùng:', error);
+                            // Nếu không lấy được thông tin người dùng, vẫn thêm thông báo
+                            setNotifications(prev => [notification, ...prev]);
+                            setUnreadCount(prev => prev + 1);
+                        }
+                    } else {
+                        // Nếu không có userId, thêm thông báo bình thường
+                        setNotifications(prev => [notification, ...prev]);
+                        setUnreadCount(prev => prev + 1);
+                    }
+                },
+                onReceiveUnreadCount: (count) => {
+                    setUnreadCount(count);
+                },
+                onNotificationRead: (notificationId, unreadCount) => {
+                    setNotifications(prev => prev.map(n =>
+                        n.id === notificationId ? { ...n, isRead: true } : n
+                    ));
+                    setUnreadCount(unreadCount);
+                },
+                onUserInfoReceived: (userId, userInfo) => {
+                    // Cập nhật thông tin người dùng
+                    setUserInfoMap(prev => ({
+                        ...prev,
+                        [userId]: userInfo
+                    }));
 
-            // Hiển thị toast thông báo
-            toast.info(notification.content || 'Bạn có thông báo mới');
-        });
-
-        // Đăng ký event handler cập nhật số lượng thông báo chưa đọc
-        connection.on('ReceiveUnreadNotificationCount', data => {
-            if (data && data.accountId && data.accountId.toString() === currentUserId.toString()) {
-                setUnreadCount(data.unreadCount);
-            }
-        });
-
-        // Đăng ký event handler khi thông báo được đánh dấu đã đọc
-        connection.on('NotificationRead', data => {
-            if (data && data.isRead) {
-                setNotifications(prev => prev.map(n =>
-                    n.id === data.notificationId ? { ...n, isRead: true } : n
-                ));
-                setUnreadCount(data.unreadCount);
-            }
-        });
-
-        // Kết nối đến hub
-        connection
-            .start()
-            .then(() => {
-                console.log("SignalR Connected!");
-                // Tham gia nhóm thông báo của người dùng
-                return connection.invoke("JoinGroup", currentUserId);
-            })
-            .then(() => {
-                console.log(`Đã tham gia nhóm thông báo của user ID: ${currentUserId}`);
-                setHubConnection(connection);
-            })
-            .catch((err) => {
-                console.error("SignalR Connection Error:", err);
+                    // Cập nhật thông tin người dùng trong các thông báo hiện có
+                    setNotifications(prev => prev.map(notification => {
+                        const notificationUserId = notification.accountId || notification.senderId;
+                        if (notificationUserId === userId) {
+                            return {
+                                ...notification,
+                                userInfo: userInfo
+                            };
+                        }
+                        return notification;
+                    }));
+                }
             });
+
+            // Khởi tạo kết nối
+            await signalRService.initConnection(currentUserId);
+        };
+
+        initializeSignalR();
 
         // Dọn dẹp khi component unmount
         return () => {
-            if (connection) {
-                connection.stop()
-                    .catch(err => console.error("Lỗi khi dừng kết nối SignalR:", err));
-            }
+            signalRService.disconnect();
         };
     }, [isAuthenticated, currentUserId]); // Phụ thuộc vào auth và userID
 
@@ -128,24 +145,46 @@ export default function Navbar() {
                 // Đảm bảo mỗi thông báo đều có ID duy nhất
                 console.log('Dữ liệu thông báo từ API:', response.items);
 
-                const processedItems = response.items.map((item, idx) => {
+                // Xử lý từng thông báo và lấy thông tin người dùng ngay lập tức
+                const processedItemsPromises = response.items.map(async (item, idx) => {
                     // Kiểm tra xem item có trường nào khác có thể là ID không
                     const possibleId = item.notificationId;
+                    let processedItem = item;
 
                     // Nếu không có ID, thêm một ID tạm thời
                     if (!possibleId) {
                         console.log('Thông báo không có ID:', item);
-                        return { ...item, id: `temp-id-${Date.now()}-${idx}` };
+                        processedItem = { ...item, id: `temp-id-${Date.now()}-${idx}` };
                     }
-
                     // Sử dụng ID từ trường thích hợp
-                    if (!item.id && possibleId) {
+                    else if (!item.id && possibleId) {
                         console.log(`Sử dụng ID từ trường khác: ${possibleId}`);
-                        return { ...item, id: possibleId };
+                        processedItem = { ...item, id: possibleId };
                     }
 
-                    return item;
+                    // Lấy thông tin người dùng cho thông báo này
+                    const userId = processedItem.accountId || processedItem.senderId;
+                    if (userId) {
+                        try {
+                            const userInfo = await getAccountInfo(userId);
+                            if (userInfo) {
+                                // Cập nhật map thông tin người dùng
+                                setUserInfoMap(prev => ({
+                                    ...prev,
+                                    [userId]: userInfo
+                                }));
+                                // Đính kèm thông tin người dùng vào thông báo
+                                processedItem.userInfo = userInfo;
+                            }
+                        } catch (error) {
+                            console.error(`Lỗi khi lấy thông tin người dùng cho ID ${userId}:`, error);
+                        }
+                    }
+                    return processedItem;
                 });
+
+                // Đợi tất cả các thông báo được xử lý xong
+                const processedItems = await Promise.all(processedItemsPromises);
 
                 // Nếu là trang đầu tiên, thay thế danh sách cũ
                 if (pageNumber === 1) {
@@ -157,9 +196,6 @@ export default function Navbar() {
 
                 // Kiểm tra xem còn trang nào nữa không
                 setHasMore(response.items.length === pageSize);
-
-                // Lấy thông tin người dùng cho mỗi thông báo nếu cần
-                enrichNotificationsWithUserInfo(processedItems);
             }
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -178,23 +214,6 @@ export default function Navbar() {
             setUnreadCount(count);
         } catch (error) {
             console.error('Error fetching unread count:', error);
-        }
-    };
-
-    // Thêm thông tin người dùng vào thông báo
-    const enrichNotificationsWithUserInfo = async (notificationList) => {
-        for (const notification of notificationList) {
-            if (notification.senderId && !userInfoCache[notification.senderId]) {
-                try {
-                    const userInfo = await getAccountInfo(notification.senderId);
-                    setUserInfoCache(prev => ({
-                        ...prev,
-                        [notification.senderId]: userInfo
-                    }));
-                } catch (error) {
-                    console.error(`Error fetching user info for ID ${notification.senderId}:`, error);
-                }
-            }
         }
     };
 
@@ -442,7 +461,9 @@ export default function Navbar() {
                                                 notifications
                                                     .filter(notification => !showingUnreadOnly || !notification.isRead) // Lọc theo chưa đọc
                                                     .map((notification, index) => {
-                                                        const senderInfo = notification.senderId ? userInfoCache[notification.senderId] : null;
+                                                        const userId = notification.accountId || notification.senderId;
+                                                        // Ưu tiên sử dụng thông tin người dùng đính kèm trong thông báo
+                                                        const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
                                                         // Sử dụng index kết hợp với ID để đảm bảo key luôn duy nhất
                                                         const uniqueKey = notification.id ? `notification-${notification.id}` : `notification-index-${index}`;
                                                         return (
@@ -472,9 +493,9 @@ export default function Navbar() {
                                                                 <div className="flex-1">
                                                                     <p className="text-gray-800 text-sm">
                                                                         <span className="font-semibold">
-                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : 'Hệ thống'}
+                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Người dùng')}
                                                                         </span>{' '}
-                                                                        {notification.content}
+                                                                        {notification.content || notification.message}
                                                                     </p>
                                                                     <div className="flex items-center mt-1">
                                                                         <span className="text-xs text-gray-500">

@@ -34,7 +34,6 @@ export const login = async (formData) => {
         const response = await axiosClient.post(urlApi, formData);
         if (response.accessToken) {
             Cookies.set("accessToken", response.accessToken, { secure: true });
-            // Không lưu userId vào localStorage
         }
         return response;
     } catch (error) {

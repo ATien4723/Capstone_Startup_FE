@@ -11,7 +11,7 @@ import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-i
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getUserId } from "@/apis/authService";
-import { getAccountInfo, getFollowing, getFollowers, updateBio } from '@/apis/accountService';
+import { getAccountInfo, getFollowing, getFollowers, updateBio, followUser, unfollowUser, checkIsFollowing } from '@/apis/accountService';
 import {
     getPostsByAccountId,
     createPost,
@@ -156,14 +156,24 @@ const PublicProfile = () => {
             // Gọi API follow/unfollow
             if (isFollowing) {
                 // Gọi API unfollow
-                await unfollowUser(id);
+                await unfollowUser(currentUserId, id);
                 setIsFollowing(false);
                 toast.success(`Đã hủy theo dõi ${profileData.firstName} ${profileData.lastName}`);
+
+                // Cập nhật lại danh sách followers
+                const updatedFollowers = followers.filter(f => f.accountId !== currentUserId);
+                setFollowers(updatedFollowers);
             } else {
                 // Gọi API follow
-                await followUser(id);
+                await followUser(currentUserId, id);
                 setIsFollowing(true);
                 toast.success(`Đã theo dõi ${profileData.firstName} ${profileData.lastName}`);
+
+                // Cập nhật lại danh sách followers
+                const currentUserInfo = await getAccountInfo(currentUserId);
+                if (currentUserInfo) {
+                    setFollowers(prev => [...prev, currentUserInfo]);
+                }
             }
         } catch (error) {
             console.error('Error toggling follow:', error);
@@ -184,7 +194,7 @@ const PublicProfile = () => {
                 if (currentUserId === id) return;
 
                 // Gọi API kiểm tra trạng thái follow
-                // const status = await checkIsFollowing(id);
+                const status = await checkIsFollowing(currentUserId, id);
                 setIsFollowing(status);
             } catch (error) {
                 console.error('Error checking follow status:', error);
@@ -1328,7 +1338,7 @@ const PublicProfile = () => {
                 {/* Buttons container */}
                 <div className="absolute bottom-4 right-8 flex gap-3 z-10">
                     {/* Follow Button - Hiển thị khi xem profile người khác */}
-                    {currentUserId == id && (
+                    {currentUserId != id && (
                         <button
                             className={`px-4 py-2 rounded-lg font-medium shadow flex items-center gap-2 transition-colors ${isFollowing
                                 ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'

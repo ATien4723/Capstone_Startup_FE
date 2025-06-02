@@ -67,3 +67,41 @@ export const verifyCCCD = async (formData) => {
         throw error;
     }
 };
+
+// Thêm API follow
+export const followUser = async (followerAccountId, followingAccountId) => {
+    try {
+        const request = {
+            followerAccountId: followerAccountId,
+            followingAccountId: followingAccountId
+        };
+        const response = await axiosClient.post('api/Account/follow', request);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Thêm API unfollow
+export const unfollowUser = async (followerAccountId, followingAccountId) => {
+    try {
+        const request = {
+            followerAccountId: followerAccountId,
+            followingAccountId: followingAccountId
+        };
+        const response = await axiosClient.post('api/Account/unfollow', request);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Thêm API kiểm tra trạng thái follow
+export const checkIsFollowing = async (followerAccountId, followingAccountId) => {
+    try {
+        const response = await axiosClient.get(`api/Account/check-following/${followerAccountId}/${followingAccountId}`);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
