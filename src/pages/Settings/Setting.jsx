@@ -170,13 +170,23 @@ const Setting = () => {
             formData.append('Selfie', selfieFile);
 
             const response = await verifyCCCD(formData);
-            setVerifyResult(response);
+            console.log("API Response:", response); // Debug log
 
-            if (response.extracted) {
-                setExtractedInfo(response.extracted);
+            // Map the API response to match the component's expected structure
+            const mappedResponse = {
+                ...response,
+                isFaceMatched: response.isMatch // Map isMatch to isFaceMatched
+            };
+            setVerifyResult(mappedResponse);
+
+            if (response.extractedInfo) {
+                setExtractedInfo(response.extractedInfo);
+            } else if (typeof response.extractedInfo === 'string') {
+                // If extractedInfo is just a string message
+                setExtractedInfo({ message: response.extractedInfo });
             }
 
-            if (response.isFaceMatched) {
+            if (response.isMatch) {
                 toast.success('Xác thực CCCD thành công!');
             } else {
                 toast.warning('Xác thực CCCD không thành công. Vui lòng kiểm tra lại ảnh.');
@@ -662,41 +672,47 @@ const Setting = () => {
                                         </div>
 
                                         {/* Hiển thị thông tin trích xuất từ CCCD */}
-                                        {extractedInfo && (
+                                        {/* {extractedInfo && (
                                             <div className="mt-6">
                                                 <h4 className="font-medium mb-3">Thông tin trích xuất từ CCCD:</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Họ và tên:</p>
-                                                        <p className="font-medium">{extractedInfo.fullName}</p>
+                                                {typeof extractedInfo === 'string' ? (
+                                                    <p>{extractedInfo}</p>
+                                                ) : extractedInfo.message ? (
+                                                    <p>{extractedInfo.message}</p>
+                                                ) : (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Họ và tên:</p>
+                                                            <p className="font-medium">{extractedInfo.fullName}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Số CCCD:</p>
+                                                            <p className="font-medium">{extractedInfo.cccdNumber}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Ngày sinh:</p>
+                                                            <p className="font-medium">{extractedInfo.dateOfBirth}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Giới tính:</p>
+                                                            <p className="font-medium">{extractedInfo.gender}</p>
+                                                        </div>
+                                                        <div className="md:col-span-2">
+                                                            <p className="text-sm text-gray-500">Địa chỉ:</p>
+                                                            <p className="font-medium">{extractedInfo.address}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Ngày cấp:</p>
+                                                            <p className="font-medium">{extractedInfo.issueDate}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500">Nơi cấp:</p>
+                                                            <p className="font-medium">{extractedInfo.issuePlace}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Số CCCD:</p>
-                                                        <p className="font-medium">{extractedInfo.cccdNumber}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Ngày sinh:</p>
-                                                        <p className="font-medium">{extractedInfo.dateOfBirth}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Giới tính:</p>
-                                                        <p className="font-medium">{extractedInfo.gender}</p>
-                                                    </div>
-                                                    <div className="md:col-span-2">
-                                                        <p className="text-sm text-gray-500">Địa chỉ:</p>
-                                                        <p className="font-medium">{extractedInfo.address}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Ngày cấp:</p>
-                                                        <p className="font-medium">{extractedInfo.issueDate}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Nơi cấp:</p>
-                                                        <p className="font-medium">{extractedInfo.issuePlace}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                                )} */}
+                                        {/* </div>
+                                        )} */}
                                     </div>
                                 )}
                             </div>

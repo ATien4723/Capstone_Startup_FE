@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faEdit, faCamera, faChevronDown, faChevronUp, faMapMarkerAlt,
+    faEdit, faCamera, faMapMarkerAlt,
     faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase,
-    faHeart, faComment, faShareSquare, faSmile, faTrash, faReply,
-    faUserPlus, faUserCheck // Thêm icons cho follow
+    faHeart, faComment, faShareSquare, faSmile, faTrash,
+    faUserPlus, faUserCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
@@ -20,20 +20,12 @@ import {
     getPostLikeCount,
     getPostCommentCount,
     isPostLiked,
-    createPostComment,
-    getPostCommentsByPostId,
-    getPostChildComments,
-    updatePostComment,
-    deletePostComment,
-    likeComment,
-    unlikeComment,
-    getCommentLikeCount,
     updatePost,
     deletePost
 } from '@/apis/postService';
 import { toast } from 'react-toastify';
-import { getRelativeTime } from '@/utils/dateUtils';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
+import CommentSection from '@/components/CommentSection/CommentSection';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -58,8 +50,8 @@ const PublicProfile = () => {
     const [following, setFollowing] = useState([]);
     const [followers, setFollowers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [newBio, setNewBio] = useState('');
     const [editBio, setEditBio] = useState(false);
+
     // Thêm state cho bài viết
     const [posts, setPosts] = useState([]);
     const [newPost, setNewPost] = useState({
@@ -67,7 +59,10 @@ const PublicProfile = () => {
         files: []
     });
     const [postLikes, setPostLikes] = useState({});
-    const [postComments, setPostComments] = useState({});
+    const [postCommentCounts, setPostCommentCounts] = useState({});
+    const [openCommentPosts, setOpenCommentPosts] = useState([]);
+    const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
+
     // Gộp formData
     const [formData, setFormData] = useState({
         // Profile fields
@@ -88,55 +83,26 @@ const PublicProfile = () => {
         portfolioUrl: '',
         country: '',
     });
-    const [activeButton, setActiveButton] = useState('all'); // 'all', 'media', 'bio'
+
+    const [activeButton, setActiveButton] = useState('all');
     const [previousActiveButton, setPreviousActiveButton] = useState('all');
     const [pageNumber, setPageNumber] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const observer = useRef();
     const pageSize = 10;
-    const [showCommentModal, setShowCommentModal] = useState(false);
-    const [selectedPost, setSelectedPost] = useState(null);
-    const [commentContent, setCommentContent] = useState('');
-    const [openCommentPosts, setOpenCommentPosts] = useState([]);
-    const [commentContents, setCommentContents] = useState({});
-
-    // Thêm state mới cho các chức năng bình luận nâng cao
-    const [editingComment, setEditingComment] = useState(null);
-    const [replyingToComment, setReplyingToComment] = useState(null);
-    const [commentLikes, setCommentLikes] = useState({});
-    const [showChildComments, setShowChildComments] = useState({});
-    const [childComments, setChildComments] = useState({});
-    // Sử dụng cả postId và commentId làm key để đảm bảo mỗi form trả lời có state riêng biệt
-    // Format: { 'postId-commentId': content }
-    // Điều này giúp tránh xung đột khi nhiều bài viết có cùng commentId
-    const [childCommentContents, setChildCommentContents] = useState({});
-
-    // Thêm state để theo dõi bình luận con đang được trả lời
-    const [replyingToChildComment, setReplyingToChildComment] = useState(null); // { postId, parentCommentId, childCommentId }
-
-    const [commentUserInfos, setCommentUserInfos] = useState({});
-
-    const [postCommentCounts, setPostCommentCounts] = useState({});
-
-    // Thêm state để theo dõi việc hiển thị phản hồi của bình luận con
-    const [showChildReplies, setShowChildReplies] = useState({});
-    const [childReplies, setChildReplies] = useState({});
-
-    // Thêm state mới để lưu trữ số lượng phản hồi
-    const [commentReplyCounts, setCommentReplyCounts] = useState({});
-
-    // Thêm state để lưu trữ số lượng phản hồi cho bình luận con
-    const [childReplyCounts, setChildReplyCounts] = useState({});
 
     const [openDropdownPostId, setOpenDropdownPostId] = useState({});
-
     const [editingPost, setEditingPost] = useState(null);
     const [editedPostContent, setEditedPostContent] = useState('');
 
     // Thêm state để theo dõi trạng thái follow
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
+
+    // State cho xử lý lỗi trong modal
+    const [postError, setPostError] = useState('');
+    const [isCreatingPost, setIsCreatingPost] = useState(false);
 
     // Hàm xử lý follow/unfollow
     const handleFollowToggle = async () => {
@@ -206,59 +172,7 @@ const PublicProfile = () => {
         }
     }, [id]);
 
-    // Hàm để lấy số lượng phản hồi cho một bình luận
-    const fetchCommentReplyCount = async (commentId) => {
-        try {
-            // Có thể sử dụng API riêng để lấy số lượng nếu có
-            // Hoặc lấy danh sách phản hồi và đếm số lượng
-            const replies = await getPostChildComments(commentId);
-
-            let replyCount = 0;
-            if (Array.isArray(replies)) {
-                replyCount = replies.length;
-            } else if (replies && Array.isArray(replies.items)) {
-                replyCount = replies.items.length;
-            }
-
-            setCommentReplyCounts(prev => ({
-                ...prev,
-                [commentId]: replyCount
-            }));
-
-            return replyCount;
-        } catch (error) {
-            console.error('Error fetching reply count:', error);
-            return 0;
-        }
-    };
-
-    // Hàm để lấy số lượng phản hồi cho bình luận con
-    const fetchChildReplyCount = async (childCommentId) => {
-        try {
-            const replies = await getPostChildComments(childCommentId);
-
-            let replyCount = 0;
-            if (Array.isArray(replies)) {
-                replyCount = replies.length;
-            } else if (replies && Array.isArray(replies.items)) {
-                replyCount = replies.items.length;
-            }
-
-            setChildReplyCounts(prev => ({
-                ...prev,
-                [childCommentId]: replyCount
-            }));
-
-            return replyCount;
-        } catch (error) {
-            console.error('Error fetching child reply count:', error);
-            return 0;
-        }
-    };
-
-    // State cho xử lý lỗi trong modal
-    const [postError, setPostError] = useState('');
-    const [isCreatingPost, setIsCreatingPost] = useState(false);
+    // Lấy thông tin profile và bài viết
     useEffect(() => {
         const fetchProfileData = async () => {
             try {
@@ -304,26 +218,21 @@ const PublicProfile = () => {
                     if (postsData && postsData.items) {
                         setPosts(postsData.items || []);
 
+                        // Lấy thông tin like và comment count cho mỗi bài viết
                         if (Array.isArray(postsData.items)) {
-                            postsData.items.forEach(async (post) => {
-                                const [likeCount, comments] = await Promise.all([
-                                    getPostLikeCount(post.postId),
-                                    getPostCommentsByPostId(post.postId)
-                                ]);
+                            for (const post of postsData.items) {
+                                const likeCount = await getPostLikeCount(post.postId);
                                 setPostLikes(prev => ({
                                     ...prev,
                                     [post.postId]: likeCount
                                 }));
-                                setPostComments(prev => ({
-                                    ...prev,
-                                    [post.postId]: comments || []
-                                }));
+
                                 const commentCount = await getPostCommentCount(post.postId);
                                 setPostCommentCounts(prev => ({
                                     ...prev,
                                     [post.postId]: commentCount
                                 }));
-                            });
+                            }
                         }
                     } else {
                         // Không có bài viết, set mảng rỗng
@@ -357,32 +266,6 @@ const PublicProfile = () => {
         return { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country };
     };
 
-
-    // Hàm lấy thông tin người dùng từ accountId
-    const fetchCommentUserInfo = async (accountId) => {
-        try {
-            // Kiểm tra nếu đã có thông tin người dùng trong cache
-            if (commentUserInfos[accountId]) {
-                return commentUserInfos[accountId];
-            }
-
-            // Gọi API để lấy thông tin người dùng
-            const userInfo = await getAccountInfo(accountId);
-
-            // Lưu thông tin người dùng vào cache
-            setCommentUserInfos(prev => ({
-                ...prev,
-                [accountId]: userInfo
-            }));
-
-            return userInfo;
-        } catch (error) {
-            console.error('Error fetching user info:', error);
-            return null;
-        }
-    };
-
-
     const handleUpdateBio = async () => {
         try {
             const updatedProfile = await updateBio(id, getBioFields(formData));
@@ -392,7 +275,6 @@ const PublicProfile = () => {
             toast.error('Failed to update bio');
         }
     };
-
 
     // Hàm xử lý tạo bài viết mới
     const handleCreatePost = async () => {
@@ -431,24 +313,24 @@ const PublicProfile = () => {
                     // Lấy thông tin likes và comments cho mỗi post mới
                     for (const post of postsData.items) {
                         try {
-                            const [likeCount, comments] = await Promise.all([
-                                getPostLikeCount(post.postId),
-                                getPostCommentsByPostId(post.postId)
-                            ]);
-
+                            const likeCount = await getPostLikeCount(post.postId);
                             setPostLikes(prev => ({
                                 ...prev,
                                 [post.postId]: likeCount
                             }));
 
-                            setPostComments(prev => ({
+                            const commentCount = await getPostCommentCount(post.postId);
+                            setPostCommentCounts(prev => ({
                                 ...prev,
-                                [post.postId]: comments || []
+                                [post.postId]: commentCount
                             }));
                         } catch (error) {
                             console.error('Error fetching post details:', error);
                         }
                     }
+
+                    // Kích hoạt tải lại bình luận
+                    setRefreshCommentTrigger(prev => prev + 1);
                 }
             } catch (error) {
                 console.error('Error refreshing posts after creation:', error);
@@ -527,7 +409,6 @@ const PublicProfile = () => {
         }
     };
 
-
     // Hàm xử lý thích/bỏ thích bài viết
     const handleLikePost = async (postId) => {
         try {
@@ -553,6 +434,9 @@ const PublicProfile = () => {
                 ...prev,
                 [postId]: likeCount
             }));
+
+            // Kích hoạt tải lại bình luận (vì like có thể ảnh hưởng đến hiển thị bình luận)
+            setRefreshCommentTrigger(prev => prev + 1);
         } catch (error) {
             console.error('Error updating like:', error);
 
@@ -639,668 +523,52 @@ const PublicProfile = () => {
         }
     }, [pageNumber, id]);
 
-    // Thêm comment giải thích luồng dữ liệu bình luận
-    // Hàm lấy comments của một bài viết - Được gọi khi trang được tải hoặc khi người dùng nhấn vào nút bình luận
-    // Dữ liệu bình luận được lấy từ API endpoint: GetPostCommentsByPostId
-    const fetchPostComments = async (postId) => {
-        try {
-            console.log('Đang lấy bình luận cho bài viết ID:', postId);
-            const response = await getPostCommentsByPostId(postId, 1, 20);
-            console.log('Response từ API bình luận:', response);
-
-            // Xử lý dữ liệu bình luận
-            let comments = [];
-            if (Array.isArray(response)) {
-                // Nếu response là mảng trực tiếp
-                comments = response;
-            } else if (response && Array.isArray(response.items)) {
-                // Nếu response có cấu trúc phân trang với items là mảng
-                comments = response.items;
-            } else if (response && typeof response === 'object') {
-                // Nếu response là một đối tượng khác
-                console.log('Cấu trúc response không phải mảng:', response);
-                comments = [];
-            }
-
-            // Cập nhật state trước để hiển thị bình luận
-            setPostComments(prev => ({
-                ...prev,
-                [postId]: comments
-            }));
-
-            // Lấy thông tin người dùng và số lượng phản hồi cho mỗi bình luận
-            if (comments && comments.length > 0) {
-                await Promise.all(comments.map(async (comment) => {
-                    if (comment && comment.accountId && comment.postcommentId) {
-                        // Lấy thông tin người dùng
-                        const userInfo = await fetchCommentUserInfo(comment.accountId);
-                        comment.userInfo = userInfo;
-
-                        // Lấy số lượng phản hồi
-                        await fetchCommentReplyCount(comment.postcommentId);
-
-                        // Tải trước bình luận con và số lượng phản hồi của chúng
-                        const childComments = await getPostChildComments(comment.postcommentId);
-                        let childCommentsArray = [];
-                        if (Array.isArray(childComments)) {
-                            childCommentsArray = childComments;
-                        } else if (childComments && Array.isArray(childComments.items)) {
-                            childCommentsArray = childComments.items;
-                        }
-
-                        // Lưu bình luận con vào state
-                        setChildComments(prev => ({
-                            ...prev,
-                            [comment.postcommentId]: childCommentsArray
-                        }));
-
-                        // Lấy số lượng phản hồi cho mỗi bình luận con
-                        await Promise.all(childCommentsArray.map(async (childComment) => {
-                            if (childComment && childComment.postcommentId) {
-                                await fetchChildReplyCount(childComment.postcommentId);
-                            }
-                        }));
-                    }
-                }));
-            }
-        } catch (error) {
-            console.error('Lỗi khi lấy bình luận:', error);
-            toast.error('Không thể lấy bình luận');
-        }
-    };
-
-    // Hàm xử lý tạo comment
-    const handleCreateComment = async (postId, content) => {
-        if (!content.trim()) {
-            toast.error('Vui lòng nhập nội dung bình luận');
-            return;
-        }
-
-        try {
-            console.log('Bắt đầu tạo bình luận cho bài viết ID:', postId);
-
-            // Lấy accountId từ profileData
-            const accountId = profileData.accountId;
-
-            const commentData = {
-                postId: postId,
-                accountId: accountId,
-                content: content,
-                parentCommentId: null
-            };
-
-            console.log('Dữ liệu bình luận gửi đi:', commentData);
-
-            // Gửi request tạo comment
-            const createResponse = await createPostComment(commentData);
-            console.log('Kết quả tạo bình luận:', createResponse);
-
-            console.log('Đã gửi bình luận thành công, đang lấy danh sách bình luận mới');
-
-            // Đợi một chút để đảm bảo dữ liệu đã được lưu vào database
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Lấy lại danh sách comments mới
-            await fetchPostComments(postId);
-
-            // Reset input
-            setCommentContents(prev => ({
-                ...prev,
-                [postId]: ''
-            }));
-
-            // Đảm bảo bài viết đang mở phần bình luận
-            if (!openCommentPosts.includes(postId)) {
-                setOpenCommentPosts(prev => [...prev, postId]);
-            }
-
-            toast.success('Bình luận đã được thêm thành công');
-        } catch (error) {
-            toast.error('Không thể thêm bình luận');
-            console.error('Error creating comment:', error);
-        }
-    };
-
     // Hàm này để toggle comment section
     const toggleCommentSection = (postId) => {
-        console.log('Toggle comment section cho bài viết ID:', postId);
         setOpenCommentPosts(prev => {
             const isOpen = prev.includes(postId);
-            console.log('Trạng thái hiện tại của phần bình luận:', isOpen ? 'đang mở' : 'đang đóng');
 
             if (isOpen) {
                 // Nếu đang mở, đóng lại
                 return prev.filter(id => id !== postId);
             } else {
-                // Nếu đang đóng, mở ra và fetch comments
-                console.log('Mở phần bình luận và lấy dữ liệu');
-                fetchPostComments(postId);
+                // Nếu đang đóng, mở ra
                 return [...prev, postId];
             }
         });
     };
 
-    // Hàm này để cập nhật nội dung comment cho từng bài viết
-    const updateCommentContent = (postId, content) => {
-        setCommentContents(prev => ({
+    // Hàm xử lý khi số lượng comment thay đổi
+    const handleCommentCountChange = (postId, newCount) => {
+        setPostCommentCounts(prev => ({
             ...prev,
-            [postId]: content
+            [postId]: newCount
         }));
+
+        // Kích hoạt tải lại bình luận
+        setRefreshCommentTrigger(prev => prev + 1);
     };
 
-    // Hàm lấy bình luận con
-    const fetchChildComments = async (parentCommentId) => {
-        try {
-            console.log('Đang lấy bình luận con cho bình luận gốc ID:', parentCommentId);
-            const response = await getPostChildComments(parentCommentId);
-            console.log('Bình luận con nhận được:', response);
-
-            // Xác định dữ liệu bình luận con
-            let comments = [];
-            if (Array.isArray(response)) {
-                comments = response;
-            } else if (response && Array.isArray(response.items)) {
-                comments = response.items;
-            } else if (response && typeof response === 'object') {
-                console.log('Cấu trúc response không phải mảng:', response);
-                comments = [];
-            }
-
-            console.log('Dữ liệu bình luận con sau khi xử lý:', comments);
-
-            // Cập nhật state trước để hiển thị bình luận con
-            setChildComments(prev => ({
-                ...prev,
-                [parentCommentId]: comments
-            }));
-
-            // Lấy thông tin người dùng và số lượng phản hồi cho mỗi bình luận con
-            if (comments && comments.length > 0) {
-                // Sử dụng Promise.all để tải song song thông tin người dùng và số lượng phản hồi
-                await Promise.all(comments.map(async (comment) => {
-                    if (comment && comment.accountId && comment.postcommentId) {
-                        // Lấy thông tin người dùng
-                        const userInfo = await fetchCommentUserInfo(comment.accountId);
-                        comment.userInfo = userInfo;
-
-                        // Lấy số lượng phản hồi cho bình luận con
-                        await fetchChildReplyCount(comment.postcommentId);
-                    }
-                }));
-            }
-        } catch (error) {
-            console.error('Error fetching child comments:', error);
-            setChildComments(prev => ({
-                ...prev,
-                [parentCommentId]: []
-            }));
-        }
-    };
-
-    // Hàm toggle hiển thị bình luận con
-    const toggleChildComments = (commentId) => {
-        setShowChildComments(prev => {
-            const newState = { ...prev };
-            newState[commentId] = !newState[commentId];
-
-            // Nếu mở ra, fetch bình luận con
-            if (newState[commentId]) {
-                fetchChildComments(commentId);
-            }
-
-            return newState;
-        });
-    };
-
-    // Hàm xử lý thích/bỏ thích bình luận
-    const handleLikeComment = async (postcommentId) => {
-        try {
-            // Kiểm tra trạng thái like hiện tại
-            const isLiked = await isCommentLiked(postcommentId, id);
-
-            if (isLiked) {
-                // Nếu đã like, thực hiện unlike
-                await unlikeComment(postcommentId, id);
-                toast.success('Đã bỏ thích bình luận');
-            } else {
-                // Nếu chưa like, thực hiện like
-                await likeComment(postcommentId, id);
-                toast.success('Đã thích bình luận');
-            }
-
-            // Cập nhật số lượng like
-            const likeCount = await getCommentLikeCount(postcommentId);
-            setCommentLikes(prev => ({
-                ...prev,
-                [postcommentId]: likeCount
-            }));
-        } catch (error) {
-            console.error('Error liking/unliking comment:', error);
-
-            // Hiển thị thông báo lỗi cụ thể nếu có
-            if (error.response && error.response.data) {
-                toast.error(`Không thể thích bình luận: ${error.response.data}`);
-            } else {
-                toast.error('Không thể cập nhật trạng thái thích bình luận');
-            }
-        }
-    };
-
-    // Hàm xử lý xóa bình luận
-    const handleDeleteComment = async (commentId, postId) => {
-        try {
-            await deletePostComment(commentId);
-            toast.success('Đã xóa bình luận thành công');
-
-            // Cập nhật lại danh sách bình luận
-            await fetchPostComments(postId);
-
-            // Nếu bình luận bị xóa là bình luận con, cập nhật lại số lượng phản hồi của bình luận cha
-            // Lưu ý: Cần biết parentCommentId của bình luận bị xóa
-            // Có thể lưu trữ thông tin này trong state hoặc lấy từ API
-
-            // Ví dụ: Nếu có thông tin parentCommentId
-            // if (parentCommentId) {
-            //     await fetchCommentReplyCount(parentCommentId);
-            // }
-        } catch (error) {
-            toast.error('Không thể xóa bình luận');
-            console.error('Error deleting comment:', error);
-        }
-    };
-
-    // Hàm xử lý cập nhật bình luận
-    const handleUpdateComment = async (postcommentId, postId, content) => {
-        if (!content.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
-            return;
-        }
-
-        try {
-            await updatePostComment({ commentId: postcommentId, content });
-            toast.success('Đã cập nhật bình luận thành công');
-
-            // Cập nhật lại danh sách bình luận
-            const updatedComments = await getPostCommentsByPostId(postId);
-            setPostComments(prev => ({
-                ...prev,
-                [postId]: updatedComments || []
-            }));
-
-            // Đóng form chỉnh sửa
-            setEditingComment(null);
-        } catch (error) {
-            toast.error('Không thể cập nhật bình luận');
-            console.error('Error updating comment:', error);
-        }
-    };
-
-    // Hàm xử lý trả lời bình luận
-    const handleReplyComment = async (postId, postcommentId, content) => {
-        if (!content.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
-            return;
-        }
-
-        try {
-            const commentData = {
-                postId: postId,
-                accountId: id,
-                content: content,
-                parentCommentId: postcommentId // Sử dụng postcommentId làm parentCommentId để xác định bình luận gốc
-            };
-
-            console.log('Dữ liệu gửi đi:', commentData);
-
-            await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
-
-            // Cập nhật lại danh sách bình luận con
-            fetchChildComments(postcommentId);
-
-            // Cập nhật lại số lượng phản hồi
-            await fetchCommentReplyCount(postcommentId);
-
-            // Cập nhật lại danh sách bình luận chính
-            await fetchPostComments(postId);
-
-            // Đóng form trả lời và xóa nội dung
-            setReplyingToComment(null);
-            setChildCommentContents(prev => ({
-                ...prev,
-                [`${postId}-${postcommentId}`]: ''
-            }));
-        } catch (error) {
-            toast.error('Không thể trả lời bình luận');
-            console.error('Error replying to comment:', error);
-        }
-    };
-
-    // Hàm xử lý trả lời bình luận con
-    const handleReplyToChildComment = async (postId, parentCommentId, childCommentId, content) => {
-        if (!content.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
-            return;
-        }
-
-        try {
-            console.log(`Đang trả lời bình luận con: postId=${postId}, childCommentId=${childCommentId}`);
-
-            const commentData = {
-                postId: postId,
-                accountId: id,
-                content: content,
-                parentCommentId: childCommentId // Sử dụng childCommentId làm parentCommentId để trả lời trực tiếp bình luận con
-            };
-
-            console.log('Dữ liệu gửi đi:', commentData);
-
-            await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
-
-            // Cập nhật lại danh sách phản hồi của bình luận con
-            if (showChildReplies[childCommentId]) {
-                fetchChildReplies(childCommentId);
-            }
-
-            // Cập nhật lại số lượng phản hồi cho bình luận con
-            await fetchChildReplyCount(childCommentId);
-
-            // Cập nhật lại danh sách bình luận con
-            fetchChildComments(parentCommentId);
-
-            // Đóng form trả lời và xóa nội dung
-            setReplyingToChildComment(null);
-            setChildCommentContents(prev => ({
-                ...prev,
-                [`${postId}-${childCommentId}`]: ''
-            }));
-        } catch (error) {
-            toast.error('Không thể trả lời bình luận');
-            console.error('Error replying to child comment:', error);
-        }
-    };
-
-    // Thêm hàm mới để trả lời bình luận con nhưng gắn vào bình luận cha
-    const handleReplyToChildWithParent = async (postId, childComment, content) => {
-        // Kiểm tra kỹ hơn tham số đầu vào
-        // console.log("postId:", postId);
-        // console.log("childComment:", childComment);
-        // console.log("content:", content);
-
-        if (!content) {
-            toast.error('Nội dung bình luận không được để trống');
-            return;
-        }
-
-        if (!content.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
-            return;
-        }
-
-        try {
-            // Lấy parentCommentId từ bình luận con
-            const parentCommentId = childComment.parentCommentId;
-
-            if (!parentCommentId) {
-                toast.error('Không tìm thấy bình luận cha');
-                return;
-            }
-
-            console.log(`Đang trả lời bình luận con: postId=${postId}, childCommentId=${childComment.postcommentId}`);
-            console.log(`Sẽ gắn vào bình luận cha: parentCommentId=${parentCommentId}`);
-
-            const commentData = {
-                postId: postId,
-                accountId: id,
-                content: content,
-                // Sử dụng parentCommentId của childComment làm parentCommentId
-                parentCommentId: parentCommentId
-            };
-
-            console.log('Dữ liệu gửi đi (gắn vào bình luận cha):', commentData);
-
-            await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
-
-            // Cập nhật lại danh sách bình luận con của bình luận cha
-            fetchChildComments(parentCommentId);
-
-            // Cập nhật lại số lượng phản hồi cho bình luận cha
-            await fetchCommentReplyCount(parentCommentId);
-
-            // Đóng form trả lời và xóa nội dung
-            setReplyingToChildComment(null);
-            setChildCommentContents(prev => ({
-                ...prev,
-                [`${postId}-${childComment.postcommentId}`]: ''
-            }));
-        } catch (error) {
-            toast.error('Không thể trả lời bình luận');
-            console.error('Error replying to child comment with parent:', error);
-        }
-    };
-
-    // Cập nhật useEffect để tự động tải bình luận khi tải trang
+    // Cập nhật số lượng comment khi có thay đổi
     useEffect(() => {
         if (posts && posts.length > 0) {
-            posts.forEach(async (post) => {
-                try {
-                    // Lấy số lượng like
-                    const likeCount = await getPostLikeCount(post.postId);
-                    setPostLikes(prev => ({
-                        ...prev,
-                        [post.postId]: likeCount
-                    }));
-
-                    // Lấy bình luận cho mỗi bài viết nhưng không tự động mở
-                    await fetchPostComments(post.postId);
-
-                    // Lấy số lượng like cho mỗi bình luận
-                    if (postComments[post.postId] && Array.isArray(postComments[post.postId]) && postComments[post.postId].length > 0) {
-                        postComments[post.postId].forEach(async (comment) => {
-                            const likeCount = await getCommentLikeCount(comment.postcommentId);
-                            setCommentLikes(prev => ({
-                                ...prev,
-                                [comment.postcommentId]: likeCount
-                            }));
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error fetching post details:', error);
-                }
-            });
-        }
-    }, [posts]);
-
-    // Hàm toggle hiển thị phản hồi của bình luận con
-    const toggleChildReplies = async (childCommentId) => {
-        setShowChildReplies(prev => {
-            const newState = { ...prev };
-            newState[childCommentId] = !newState[childCommentId];
-
-            // Nếu mở ra, fetch phản hồi của bình luận con
-            if (newState[childCommentId]) {
-                fetchChildReplies(childCommentId);
-            }
-            // Không xóa dữ liệu khi ẩn phản hồi, chỉ ẩn hiển thị
-
-            return newState;
-        });
-    };
-
-    // Hàm lấy phản hồi của bình luận con
-    const fetchChildReplies = async (childCommentId) => {
-        try {
-            console.log('Đang lấy phản hồi cho bình luận con ID:', childCommentId);
-            const response = await getPostChildComments(childCommentId);
-
-            // Xác định dữ liệu phản hồi
-            let replies = [];
-            if (Array.isArray(response)) {
-                replies = response;
-            } else if (response && Array.isArray(response.items)) {
-                replies = response.items;
-            }
-
-            console.log('Phản hồi của bình luận con:', replies);
-
-            // Cập nhật số lượng phản hồi
-            setChildReplyCounts(prev => ({
-                ...prev,
-                [childCommentId]: replies.length
-            }));
-
-            // Lấy thông tin người dùng cho mỗi phản hồi
-            if (replies && replies.length > 0) {
-                for (const reply of replies) {
-                    if (reply && reply.accountId) {
-                        const userInfo = await fetchCommentUserInfo(reply.accountId);
-                        reply.userInfo = userInfo;
-                    }
-                }
-            }
-
-            setChildReplies(prev => ({
-                ...prev,
-                [childCommentId]: replies
-            }));
-        } catch (error) {
-            console.error('Error fetching child replies:', error);
-            setChildReplies(prev => ({
-                ...prev,
-                [childCommentId]: []
-            }));
-        }
-    };
-
-    // Thêm một hàm mới để tải tất cả số lượng phản hồi
-    const preloadAllReplyCounts = async () => {
-        try {
-            console.log('Đang tải trước tất cả số lượng phản hồi...');
-
-            // Lặp qua tất cả bài viết
-            for (const post of posts) {
-                if (!post.postId) continue;
-
-                // Lấy tất cả bình luận của bài viết
-                const comments = await getPostCommentsByPostId(post.postId, 1, 100);
-                let commentList = [];
-
-                if (Array.isArray(comments)) {
-                    commentList = comments;
-                } else if (comments && Array.isArray(comments.items)) {
-                    commentList = comments.items;
-                }
-
-                // Lưu bình luận vào state
-                setPostComments(prev => ({
-                    ...prev,
-                    [post.postId]: commentList
-                }));
-
-                // Lấy số lượng phản hồi cho mỗi bình luận
-                for (const comment of commentList) {
-                    if (!comment.postcommentId) continue;
-
-                    // Lấy số lượng phản hồi cho bình luận chính
-                    const childComments = await getPostChildComments(comment.postcommentId);
-                    let childList = [];
-
-                    if (Array.isArray(childComments)) {
-                        childList = childComments;
-                    } else if (childComments && Array.isArray(childComments.items)) {
-                        childList = childComments.items;
-                    }
-
-                    // Lưu số lượng phản hồi vào state
-                    setCommentReplyCounts(prev => ({
-                        ...prev,
-                        [comment.postcommentId]: childList.length
-                    }));
-
-                    // Lưu bình luận con vào state
-                    setChildComments(prev => ({
-                        ...prev,
-                        [comment.postcommentId]: childList
-                    }));
-
-                    // Lấy số lượng phản hồi cho mỗi bình luận con
-                    for (const childComment of childList) {
-                        if (!childComment.postcommentId) continue;
-
-                        const childReplies = await getPostChildComments(childComment.postcommentId);
-                        let replyList = [];
-
-                        if (Array.isArray(childReplies)) {
-                            replyList = childReplies;
-                        } else if (childReplies && Array.isArray(childReplies.items)) {
-                            replyList = childReplies.items;
-                        }
-
-                        // Lưu số lượng phản hồi vào state
-                        setChildReplyCounts(prev => ({
+            const updateCommentCounts = async () => {
+                for (const post of posts) {
+                    try {
+                        const commentCount = await getPostCommentCount(post.postId);
+                        setPostCommentCounts(prev => ({
                             ...prev,
-                            [childComment.postcommentId]: replyList.length
+                            [post.postId]: commentCount
                         }));
+                    } catch (error) {
+                        console.error('Error fetching comment count:', error);
                     }
-                }
-            }
-
-            console.log('Đã tải xong tất cả số lượng phản hồi');
-        } catch (error) {
-            console.error('Lỗi khi tải trước số lượng phản hồi:', error);
-        }
-    };
-
-    // Gọi hàm preloadAllReplyCounts khi posts thay đổi
-    useEffect(() => {
-        if (posts && posts.length > 0) {
-            preloadAllReplyCounts();
-        }
-    }, [posts]);
-
-
-    const GetChildReplyCount = ({ childCommentId, showChildReplies, toggleChildReplies }) => {
-        const [count, setCount] = useState(null);
-
-        useEffect(() => {
-            const fetchCount = async () => {
-                try {
-                    const replies = await getPostChildComments(childCommentId);
-                    let replyCount = 0;
-
-                    if (Array.isArray(replies)) {
-                        replyCount = replies.length;
-                    } else if (replies && Array.isArray(replies.items)) {
-                        replyCount = replies.items.length;
-                    }
-
-                    setCount(replyCount);
-                } catch (error) {
-                    console.error('Error fetching reply count:', error);
-                    setCount(0);
                 }
             };
 
-            fetchCount();
-        }, [childCommentId]);
-
-        // Chỉ hiển thị nút khi có phản hồi
-        if (count === null || count === 0) return null;
-        return (
-            <button
-                className="hover:underline flex items-center gap-1"
-                onClick={() => toggleChildReplies(childCommentId)}
-            >
-                {showChildReplies[childCommentId] ? 'Ẩn phản hồi' : 'Xem phản hồi'}
-                <span className="ml-1 text-gray-500 font-normal">
-                    ({count !== null ? count : '...'})
-                </span>
-            </button>
-        );
-    };
-
+            updateCommentCounts();
+        }
+    }, [posts]);
 
     if (isLoading) {
         return (
@@ -1750,436 +1018,18 @@ const PublicProfile = () => {
                                             </div>
                                         </div>
 
-                                        {/* Comment Section */}
-                                        {openCommentPosts.includes(post.postId) && (
-                                            <div className="px-6 pb-4">
-                                                {/* Debug info */}
-                                                <div className="text-xs text-gray-400 mb-2">
-                                                    Bài viết ID: {post.postId}
-                                                    {/* Có bình luận: {Array.isArray(postComments[post.postId]) ? postComments[post.postId].length : 'không có dữ liệu'} */}
-                                                </div>
-
-                                                {/* Comment Input */}
-                                                <div className="flex items-start gap-3 mb-4">
-                                                    <img
-                                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                        alt="Avatar"
-                                                        className="w-10 h-10 rounded-full"
-                                                    />
-                                                    <div className="flex-1 relative">
-                                                        <input
-                                                            type="text"
-                                                            value={commentContents[post.postId] || ''}
-                                                            onChange={(e) => updateCommentContent(post.postId, e.target.value)}
-                                                            placeholder="Thêm bình luận..."
-                                                            className="w-full p-2 pl-4 pr-20 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
-                                                        />
-                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2 items-center">
-                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500">
-                                                                <FontAwesomeIcon icon={faSmile} />
-                                                            </button>
-                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500">
-                                                                <FontAwesomeIcon icon={faImage} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleCreateComment(post.postId, commentContents[post.postId])}
-                                                        className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700"
-                                                    >
-                                                        Gửi
-                                                    </button>
-                                                </div>
-
-                                                {/* Comments List */}
-                                                <div className="max-h-96 overflow-y-auto mb-2">
-                                                    {Array.isArray(postComments[post.postId]) && postComments[post.postId].length > 0
-                                                        ? postComments[post.postId]
-                                                            .filter(comment => comment !== null && !comment.parentCommentId)
-                                                            .map((comment, index) => (
-                                                                <div key={`${post.postId}-${comment.postcommentId || index}`} className="flex gap-3 mb-5 group">
-                                                                    <img
-                                                                        src={comment?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                        alt="Avatar"
-                                                                        className="w-10 h-10 rounded-full mt-1"
-                                                                    />
-                                                                    <div className="flex-1">
-                                                                        {editingComment === comment.postcommentId ? (
-                                                                            <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    value={commentContent || comment.content}
-                                                                                    onChange={(e) => setCommentContent(e.target.value)}
-                                                                                    className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
-                                                                                />
-                                                                                <div className="flex gap-2 mt-2">
-                                                                                    <button
-                                                                                        onClick={() => handleUpdateComment(comment.postcommentId, post.postId, commentContent || comment.content)}
-                                                                                        className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm"
-                                                                                    >
-                                                                                        Cập nhật
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            setEditingComment(null);
-                                                                                            setCommentContent('');
-                                                                                        }}
-                                                                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm"
-                                                                                    >
-                                                                                        Hủy
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                                                                                <div className="flex items-center gap-2 mb-1">
-                                                                                    <span className="font-semibold text-gray-900">{comment?.userInfo?.firstName} {comment?.userInfo?.lastName}</span>
-                                                                                </div>
-                                                                                <div className="text-gray-800 mb-2">{comment.content}</div>
-                                                                                <div className="flex gap-4 text-xs text-gray-500">
-                                                                                    <span>{getRelativeTime(comment.commentAt)}</span>
-                                                                                    <button
-                                                                                        className="hover:underline flex items-center gap-1"
-                                                                                    // onClick={() => handleLikeComment(comment.postcommentId)}
-                                                                                    >
-                                                                                        <FontAwesomeIcon
-                                                                                            icon={commentLikes[comment.postcommentId] ? faHeart : farHeart}
-                                                                                            className={commentLikes[comment.postcommentId] ? 'text-red-500' : ''}
-                                                                                        />
-                                                                                        {commentLikes[comment.postcommentId] || 0}
-                                                                                    </button>
-                                                                                    <button
-                                                                                        className="hover:underline"
-                                                                                        onClick={() => {
-                                                                                            setReplyingToComment({ postId: post.postId, commentId: comment.postcommentId });
-                                                                                            setChildCommentContents(prev => ({
-                                                                                                ...prev,
-                                                                                                [`${post.postId}-${comment.postcommentId}`]: ''
-                                                                                            }));
-                                                                                        }}
-                                                                                    >
-                                                                                        Trả lời
-                                                                                    </button>
-                                                                                    {commentReplyCounts[comment.postcommentId] > 0 && (
-                                                                                        <button
-                                                                                            className="hover:underline flex items-center gap-1"
-                                                                                            onClick={() => toggleChildComments(comment.postcommentId)}
-                                                                                        >
-                                                                                            {showChildComments[comment.postcommentId] ? (
-                                                                                                <>
-                                                                                                    <FontAwesomeIcon icon={faChevronUp} className="text-xs" />
-                                                                                                    Ẩn phản hồi
-                                                                                                </>
-                                                                                            ) : (
-                                                                                                <>
-                                                                                                    <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
-                                                                                                    Xem phản hồi
-                                                                                                </>
-                                                                                            )}
-                                                                                            <span className="ml-1 text-gray-500 font-normal">
-                                                                                                ({commentReplyCounts[comment.postcommentId] !== undefined ? commentReplyCounts[comment.postcommentId] : '...'})
-                                                                                            </span>
-                                                                                        </button>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Reply form */}
-                                                                        {replyingToComment &&
-                                                                            replyingToComment.postId === post.postId &&
-                                                                            replyingToComment.commentId === comment.postcommentId && (
-                                                                                <div className="mt-2 ml-4 flex items-start gap-2">
-                                                                                    <img
-                                                                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                                        alt="Avatar"
-                                                                                        className="w-8 h-8 rounded-full"
-                                                                                    />
-                                                                                    <div className="flex-1 relative">
-                                                                                        <input
-                                                                                            type="text"
-                                                                                            value={childCommentContents[`${post.postId}-${comment.postcommentId}`] || ''}
-                                                                                            onChange={(e) => setChildCommentContents(prev => ({
-                                                                                                ...prev,
-                                                                                                [`${post.postId}-${comment.postcommentId}`]: e.target.value
-                                                                                            }))}
-                                                                                            placeholder="Viết phản hồi..."
-                                                                                            className="w-full p-2 pl-3 pr-16 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100 text-sm"
-                                                                                        />
-                                                                                    </div>
-                                                                                    <button
-                                                                                        onClick={() => handleReplyComment(post.postId, comment.postcommentId, childCommentContents[`${post.postId}-${comment.postcommentId}`])}
-                                                                                        className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
-                                                                                    >
-                                                                                        Gửi
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={() => setReplyingToComment(null)}
-                                                                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-sm"
-                                                                                    >
-                                                                                        Hủy
-                                                                                    </button>
-                                                                                </div>
-                                                                            )}
-
-                                                                        {/* Child comments */}
-                                                                        {showChildComments[comment.postcommentId] && childComments[comment.postcommentId] && (
-                                                                            <div className="ml-6 mt-2 space-y-3">
-                                                                                {Array.isArray(childComments[comment.postcommentId])
-                                                                                    ? childComments[comment.postcommentId].map((childComment, idx) => (
-                                                                                        <div key={`child-${childComment?.postcommentId || idx}`} className="flex flex-col w-full">
-                                                                                            <div className="flex gap-2 group w-full">
-                                                                                                <img
-                                                                                                    src={childComment?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                                                    alt="Avatar"
-                                                                                                    className="w-8 h-8 rounded-full mt-1"
-                                                                                                />
-                                                                                                <div className="flex-1">
-                                                                                                    <div className="bg-gray-100 rounded-2xl px-3 py-2">
-                                                                                                        <div className="flex items-center gap-2">
-                                                                                                            <span className="font-semibold text-gray-900 text-sm">{childComment?.userInfo?.firstName} {childComment?.userInfo?.lastName}</span>
-                                                                                                        </div>
-                                                                                                        <div className="text-gray-800 text-sm">{childComment?.content}</div>
-                                                                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                                                                            <span>{new Date(childComment.commentAt).toLocaleDateString()}</span>
-                                                                                                            <button
-                                                                                                                className="hover:underline"
-                                                                                                                onClick={() => handleLikeComment(childComment.postcommentId)}
-                                                                                                            >
-                                                                                                                <FontAwesomeIcon
-                                                                                                                    icon={commentLikes[childComment.postcommentId] ? faHeart : farHeart}
-                                                                                                                    className={`mr-1 ${commentLikes[childComment.postcommentId] ? 'text-red-500' : ''}`}
-                                                                                                                />
-                                                                                                                {commentLikes[childComment.postcommentId] || 0}
-                                                                                                            </button>
-                                                                                                            <button
-                                                                                                                className="hover:underline"
-                                                                                                                onClick={() => {
-                                                                                                                    setReplyingToChildComment({
-                                                                                                                        postId: post.postId,
-                                                                                                                        parentCommentId: comment.postcommentId,
-                                                                                                                        childCommentId: childComment.postcommentId
-                                                                                                                    });
-                                                                                                                    setChildCommentContents(prev => ({
-                                                                                                                        ...prev,
-                                                                                                                        [`${post.postId}-${childComment.postcommentId}`]: ''
-                                                                                                                    }));
-                                                                                                                }}
-                                                                                                            >
-                                                                                                                Trả lời
-                                                                                                            </button>
-                                                                                                            <GetChildReplyCount
-                                                                                                                childCommentId={childComment.postcommentId}
-                                                                                                                showChildReplies={showChildReplies}
-                                                                                                                toggleChildReplies={toggleChildReplies}
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                {childComment?.accountId === id && (
-                                                                                                    <button
-                                                                                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
-                                                                                                        onClick={() => childComment?.postcommentId && handleDeleteComment(childComment.postcommentId, post.postId)}
-                                                                                                    >
-                                                                                                        <FontAwesomeIcon icon={faTrash} />
-                                                                                                    </button>
-                                                                                                )}
-                                                                                            </div>
-
-                                                                                            {/* Form trả lời bình luận con Child comments  */}
-                                                                                            {replyingToChildComment &&
-                                                                                                replyingToChildComment.postId === post.postId &&
-                                                                                                replyingToChildComment.parentCommentId === comment.postcommentId &&
-                                                                                                replyingToChildComment.childCommentId === childComment.postcommentId && (
-                                                                                                    <div className="mt-2 ml-8 flex items-start gap-2 w-full">
-                                                                                                        <img
-                                                                                                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                                                            alt="Avatar"
-                                                                                                            className="w-8 h-8 rounded-full"
-                                                                                                        />
-                                                                                                        <div className="flex-1 relative">
-                                                                                                            <input
-                                                                                                                type="text"
-                                                                                                                value={childCommentContents[`${post.postId}-${childComment.postcommentId}`] || ''}
-                                                                                                                onChange={(e) => setChildCommentContents(prev => ({
-                                                                                                                    ...prev,
-                                                                                                                    [`${post.postId}-${childComment.postcommentId}`]: e.target.value
-                                                                                                                }))}
-                                                                                                                placeholder="Viết phản hồi..."
-                                                                                                                className="w-full p-2 pl-3 pr-16 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100 text-sm"
-                                                                                                                autoFocus
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                        <button
-                                                                                                            onClick={() => handleReplyToChildComment(
-                                                                                                                post.postId,
-                                                                                                                childComment,
-                                                                                                                childCommentContents[`${post.postId}-${childComment.postcommentId}`]
-                                                                                                            )}
-                                                                                                            className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
-                                                                                                        >
-                                                                                                            Gửi
-                                                                                                        </button>
-                                                                                                        <button
-                                                                                                            onClick={() => setReplyingToChildComment(null)}
-                                                                                                            className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-sm"
-                                                                                                        >
-                                                                                                            Hủy
-                                                                                                        </button>
-                                                                                                    </div>
-                                                                                                )}
-
-                                                                                            {/* Child replies */}
-                                                                                            {showChildReplies[childComment.postcommentId] && (
-                                                                                                <div className="ml-8 mt-2 space-y-3 w-full">
-                                                                                                    {Array.isArray(childReplies[childComment.postcommentId]) && childReplies[childComment.postcommentId].length > 0 ? (
-                                                                                                        childReplies[childComment.postcommentId].map((reply, replyIdx) => (
-                                                                                                            <div key={`reply-${reply?.postcommentId || replyIdx}`} className="flex flex-col gap-2">
-                                                                                                                <div className="flex gap-2 group">
-                                                                                                                    <img
-                                                                                                                        src={reply?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                                                                        alt="Avatar"
-                                                                                                                        className="w-8 h-8 rounded-full mt-1"
-                                                                                                                    />
-                                                                                                                    <div className="flex-1">
-                                                                                                                        <div className="bg-gray-100 rounded-2xl px-3 py-2">
-                                                                                                                            <div className="flex items-center gap-2">
-                                                                                                                                <span className="font-semibold text-gray-900 text-sm">{reply?.userInfo?.firstName} {reply?.userInfo?.lastName}</span>
-                                                                                                                            </div>
-                                                                                                                            <div className="text-gray-800 text-sm">{reply?.content}</div>
-                                                                                                                            <div className="flex gap-3 text-xs text-gray-500">
-                                                                                                                                <span>{getRelativeTime(reply?.commentAt)}</span>
-                                                                                                                                <button
-                                                                                                                                    className="hover:underline flex items-center gap-1"
-                                                                                                                                // onClick={() => reply?.postcommentId && handleLikeComment(reply.postcommentId)}
-                                                                                                                                >
-                                                                                                                                    <FontAwesomeIcon
-                                                                                                                                        icon={reply?.postcommentId && commentLikes[reply.postcommentId] ? faHeart : farHeart}
-                                                                                                                                        className={reply?.postcommentId && commentLikes[reply.postcommentId] ? 'text-red-500' : ''}
-                                                                                                                                    />
-                                                                                                                                    {reply?.postcommentId ? (commentLikes[reply.postcommentId] || 0) : 0}
-                                                                                                                                </button>
-                                                                                                                                <button
-                                                                                                                                    className="hover:underline"
-                                                                                                                                    onClick={() => {
-                                                                                                                                        setReplyingToChildComment({
-                                                                                                                                            postId: post.postId,
-                                                                                                                                            parentCommentId: comment.postcommentId,
-                                                                                                                                            childCommentId: reply.postcommentId
-                                                                                                                                        });
-                                                                                                                                        setChildCommentContents(prev => ({
-                                                                                                                                            ...prev,
-                                                                                                                                            [`${post.postId}-${reply.postcommentId}`]: ''
-                                                                                                                                        }));
-                                                                                                                                    }}
-                                                                                                                                >
-                                                                                                                                    Trả lời
-                                                                                                                                </button>
-                                                                                                                            </div>
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                                                                                </div>
-
-                                                                                                                {/* Form trả lời cho Child replies*/}
-                                                                                                                {replyingToChildComment &&
-                                                                                                                    replyingToChildComment.postId === post.postId &&
-                                                                                                                    replyingToChildComment.parentCommentId === comment.postcommentId &&
-                                                                                                                    replyingToChildComment.childCommentId === reply.postcommentId && (
-                                                                                                                        <div className="mt-2 ml-8 flex items-start gap-2 w-full">
-                                                                                                                            <img
-                                                                                                                                src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                                                                                                alt="Avatar"
-                                                                                                                                className="w-8 h-8 rounded-full"
-                                                                                                                            />
-                                                                                                                            <div className="flex-1 relative">
-                                                                                                                                <input
-                                                                                                                                    type="text"
-                                                                                                                                    value={childCommentContents[`${post.postId}-${reply.postcommentId}`] || ''}
-                                                                                                                                    onChange={(e) => setChildCommentContents(prev => ({
-                                                                                                                                        ...prev,
-                                                                                                                                        [`${post.postId}-${reply.postcommentId}`]: e.target.value
-                                                                                                                                    }))}
-                                                                                                                                    placeholder="Viết phản hồi..."
-                                                                                                                                    className="w-full p-2 pl-3 pr-16 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100 text-sm"
-                                                                                                                                    autoFocus
-                                                                                                                                />
-                                                                                                                            </div>
-                                                                                                                            <button
-                                                                                                                                onClick={() => handleReplyToChildWithParent(
-                                                                                                                                    post.postId,
-                                                                                                                                    reply, // Đây là bình luận con
-                                                                                                                                    childCommentContents[`${post.postId}-${reply.postcommentId}`] // Đây là nội dung đã nhập cho bình luận con này
-                                                                                                                                )}
-                                                                                                                                className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
-                                                                                                                            >
-                                                                                                                                Gửi
-                                                                                                                            </button>
-                                                                                                                            <button
-                                                                                                                                onClick={() => setReplyingToChildComment(null)}
-                                                                                                                                className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-sm"
-                                                                                                                            >
-                                                                                                                                Hủy
-                                                                                                                            </button>
-                                                                                                                        </div>
-                                                                                                                    )}
-                                                                                                            </div>
-                                                                                                        ))
-                                                                                                    ) : (
-                                                                                                        <div className="text-center py-2 text-gray-500 text-sm">
-                                                                                                            {Array.isArray(childReplies[childComment.postcommentId]) ? 'Chưa có phản hồi nào' : 'Đang tải phản hồi...'}
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    ))
-                                                                                    : (
-                                                                                        <div className="text-center py-2 text-gray-500 text-sm">
-                                                                                            Đang tải bình luận...
-                                                                                        </div>
-                                                                                    )
-                                                                                }
-                                                                                {Array.isArray(childComments[comment.postcommentId]) && childComments[comment.postcommentId].length === 0 && (
-                                                                                    <div className="text-center py-2 text-gray-500 text-sm">
-                                                                                        Chưa có phản hồi nào
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {/* Comment actions */}
-                                                                    {
-                                                                        comment.accountId === id && (
-                                                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
-                                                                                <button
-                                                                                    className="text-blue-500 hover:text-blue-700 p-1"
-                                                                                    onClick={() => {
-                                                                                        setEditingComment(comment.postcommentId);
-                                                                                        setCommentContent(comment.content);
-                                                                                    }}
-                                                                                >
-                                                                                    <FontAwesomeIcon icon={faEdit} />
-                                                                                </button>
-                                                                                <button
-                                                                                    className="text-red-500 hover:text-red-700 p-1"
-                                                                                    onClick={() => handleDeleteComment(comment.postcommentId, post.postId)}
-                                                                                >
-                                                                                    <FontAwesomeIcon icon={faTrash} />
-                                                                                </button>
-                                                                            </div>
-                                                                        )
-                                                                    }
-                                                                </div>
-                                                            ))
-                                                        : (
-                                                            <div className="text-center py-4 text-gray-500">
-                                                                Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
-                                                            </div>
-                                                        )}
-                                                </div>
-                                            </div>
-                                        )}
+                                        {/* Comment Section - Thay thế bằng component CommentSection */}
+                                        <div className="px-6 pb-4">
+                                            <CommentSection
+                                                postId={post.postId}
+                                                isOpen={openCommentPosts.includes(post.postId)}
+                                                onToggle={() => toggleCommentSection(post.postId)}
+                                                commentCount={postCommentCounts[post.postId] || 0}
+                                                currentUserAvatar={profileData?.avatarUrl}
+                                                refreshTrigger={refreshCommentTrigger}
+                                                onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
+                                            />
+                                        </div>
                                     </div>
                                 ))
                             ) : isLoading ? (
