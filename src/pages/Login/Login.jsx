@@ -3,7 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { login } from "@/apis/authService";
+import { login, isAuthenticated } from "@/apis/authService";
 import { toast } from 'react-toastify';
 import Cookies from 'js-cookie';
 
@@ -12,9 +12,8 @@ const Login = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Check if user is already logged in by checking the accessToken cookie
-        const accessToken = Cookies.get('accessToken');
-        if (accessToken) {
+        // Check if user is already logged in using isAuthenticated function
+        if (isAuthenticated()) {
             navigate('/home');
         }
     }, [navigate]);
@@ -29,12 +28,27 @@ const Login = () => {
     const handleLogin = async (values, { setSubmitting }) => {
         try {
             const response = await login(values);
-            if (response) {
+
+            // response chính là response.data vì interceptor đã return response.data
+            if (response && response.accessToken) {
+                Cookies.set("accessToken", response.accessToken);
+
+                // if (response.refreshToken) {
+                //     Cookies.set("refreshToken", response.refreshToken, {
+                //         secure: false, // hoặc true nếu bạn dùng HTTPS
+                //         sameSite: 'Strict'
+                //     });
+                // }
+
                 toast.success('Đăng nhập thành công!');
                 navigate('/home');
+            } else {
+                console.error('Không nhận được token:', response);
+                toast.error('Đăng nhập thất bại, vui lòng thử lại');
             }
         } catch (error) {
-            toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
+            console.error('Lỗi đăng nhập:', error);
+            toast.error(error?.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng');
         } finally {
             setSubmitting(false);
         }

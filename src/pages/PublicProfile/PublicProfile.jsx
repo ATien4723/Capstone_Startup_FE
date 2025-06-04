@@ -5,7 +5,7 @@ import {
     faEdit, faCamera, faMapMarkerAlt,
     faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase,
     faHeart, faComment, faShareSquare, faSmile, faTrash,
-    faUserPlus, faUserCheck
+    faUserPlus, faUserCheck, faEyeSlash
 } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
@@ -21,8 +21,10 @@ import {
     getPostCommentCount,
     isPostLiked,
     updatePost,
-    deletePost
-} from '@/apis/postService';
+    deletePost,
+    hidePost
+}
+    from '@/apis/postService';
 import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
@@ -570,6 +572,31 @@ const PublicProfile = () => {
         }
     }, [posts]);
 
+
+    // Hàm xử lý ẩn bài viết
+    const handleHidePost = async (postId) => {
+        try {
+            // Lấy ID của người dùng hiện tại
+            const currentUserId = await getUserId();
+
+            if (!currentUserId) {
+                toast.error('Please login to hide posts');
+                return;
+            }
+
+            // Gọi API ẩn bài viết
+            await hidePost(currentUserId, postId);
+
+            // Cập nhật UI để ẩn bài viết
+            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
+
+            toast.success('Post hidden successfully');
+        } catch (error) {
+            console.error('Error hiding post:', error);
+            toast.error('Failed to hide post. Please try again.');
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -972,6 +999,13 @@ const PublicProfile = () => {
                                                                     >
                                                                         <FontAwesomeIcon icon={faTrash} className="text-red-500" />
                                                                         Xóa
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleHidePost(post.postId)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
+                                                                        Ẩn bài viết
                                                                     </button>
                                                                 </div>
                                                             )}

@@ -213,3 +213,33 @@ export const deletePost = async (postId) => {
         throw error;
     }
 };
+
+// Ẩn bài viết
+// export const hidePost = async (accountId, postId) => {
+//     try {
+//         const hidePostDTO = {
+//             accountId: accountId,
+//             postId: postId
+//         };
+
+//         const response = await axiosClient.post('hide', hidePostDTO);
+//         return response;
+//     } catch (error) {
+//         console.error('Error hiding post:', error);
+//         throw error;
+//     }
+// };
+
+
+export const hidePost = async (accountId, postId) => {
+    try {
+        const response = await axiosClient.post('/hide', {
+            accountId: accountId,
+            postId: postId
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error hiding post:', error);
+        throw error;
+    }
+};

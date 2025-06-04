@@ -4,7 +4,8 @@ import Cookies from "js-cookie";
 export const URL_API = "http://localhost:5070/";
 
 const axiosClient = axios.create({
-    baseURL: URL_API
+    baseURL: URL_API,
+    withCredentials: true
 });
 
 // Request interceptor
@@ -33,7 +34,7 @@ axiosClient.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
 
-            // Kiểm tra refreshToken trước khi thực hiện refresh
+            //Kiểm tra refreshToken trước khi thực hiện refresh
             const hasRefreshToken = Cookies.get("refreshToken");
             if (!hasRefreshToken) {
                 // Nếu không có refresh token, xóa access token và chuyển về trang login
@@ -45,7 +46,7 @@ axiosClient.interceptors.response.use(
                 const response = await axiosClient.post("api/Auth/RefreshToken");
                 const newAccessToken = response.accessToken;
 
-                Cookies.set("accessToken", newAccessToken, { secure: true });
+                Cookies.set("accessToken", newAccessToken);
 
                 originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
                 return axiosClient(originalRequest);

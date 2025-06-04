@@ -1,13 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisH, faPlus, faImage, faPaperclip, faHeart, faComment, faEye, faEnvelope, faSmile, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as farHeart, faComment as farComment, faEnvelope as farEnvelope } from '@fortawesome/free-regular-svg-icons';
+import {
+    faEllipsisH, faImage, faPaperclip, faSmile, faPlus, faMapMarkerAlt, faEdit, faTrash, faShareSquare, faComment, faHeart, faEyeSlash
+} from '@fortawesome/free-solid-svg-icons';
+import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getUserId, getUserInfoFromToken } from '@/apis/authService';
-import { createPost, getPostsByAccountId, likePost, unlikePost, getPostLikeCount, isPostLiked, createPostComment, getPostCommentsByPostId } from '@/apis/postService';
+import {
+    createPost,
+    getPostsByAccountId,
+    likePost,
+    unlikePost,
+    getPostLikeCount,
+    isPostLiked,
+    createPostComment,
+    getPostCommentsByPostId,
+    getPostCommentCount,
+    updatePost,
+    deletePost,
+    hidePost
+} from '@/apis/postService';
 import { getAccountInfo, getFollowing, getFollowers } from '@/apis/accountService';
 import { toast } from 'react-toastify';
+import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
+import CommentSection from '@/components/CommentSection/CommentSection';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -43,66 +60,146 @@ const Home = () => {
     const observer = useRef();
     const currentUserId = getUserId();
     const userInfo = getUserInfoFromToken();
-
+    const [postCommentCounts, setPostCommentCounts] = useState({});
     // Thêm state cho thông tin profile
     const [profileData, setProfileData] = useState(null);
     const [following, setFollowing] = useState([]);
     const [followers, setFollowers] = useState([]);
 
-    // Fetch user profile data khi component mount
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (!currentUserId) return;
+    // Thêm các state mới
+    const [openPostMenus, setOpenPostMenus] = useState([]);
+    const [editingPost, setEditingPost] = useState(null);
+    const [editedPostContent, setEditedPostContent] = useState('');
+    const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
 
+    // Thêm state để hiển thị lỗi khi tạo bài viết
+    const [postError, setPostError] = useState('');
+    const [isCreatingPost, setIsCreatingPost] = useState(false);
+
+    // Thêm state để quản lý dropdown menu
+    const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
+
+    // Thêm hàm để đóng dropdown khi click ra ngoài
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openDropdownPostId && !event.target.closest('.post-menu-container')) {
+                setOpenDropdownPostId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [openDropdownPostId]);
+
+    // Thêm useEffect để fetch dữ liệu profile và bài viết
+    useEffect(() => {
+        const fetchProfileData = async () => {
             try {
+                setIsLoading(true);
+                // Tách biệt việc lấy thông tin profile và bài viết
                 const [accountInfo, followingData, followersData] = await Promise.all([
                     getAccountInfo(currentUserId),
                     getFollowing(currentUserId),
                     getFollowers(currentUserId)
                 ]);
 
+                if (!accountInfo) {
+                    toast.error('Failed to load profile data');
+                    setIsLoading(false);
+                    return;
+                }
+
                 setProfileData(accountInfo);
                 setFollowing(followingData || []);
                 setFollowers(followersData || []);
+
+                // Tách riêng phần lấy bài viết
+                try {
+                    const postsData = await getPostsByAccountId(currentUserId);
+                    // Kiểm tra nếu có dữ liệu trả về
+                    if (postsData && postsData.items) {
+                        setPosts(postsData.items || []);
+
+                        // Lấy thông tin like và comment count cho mỗi bài viết
+                        if (Array.isArray(postsData.items)) {
+                            for (const post of postsData.items) {
+                                const likeCount = await getPostLikeCount(post.postId);
+                                setPostLikes(prev => ({
+                                    ...prev,
+                                    [post.postId]: likeCount
+                                }));
+
+                                const commentCount = await getPostCommentCount(post.postId);
+                                setPostCommentCounts(prev => ({
+                                    ...prev,
+                                    [post.postId]: commentCount
+                                }));
+                            }
+                        }
+                    } else {
+                        // Không có bài viết, set mảng rỗng
+                        setPosts([]);
+                    }
+                } catch (error) {
+                    console.error('Error fetching posts:', error);
+                    // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
+                    if (error.response && error.response.status !== 404) {
+                        toast.error('Failed to load posts');
+                    }
+                    // Vẫn tiếp tục hiển thị profile ngay cả khi không lấy được bài viết
+                    setPosts([]);
+                }
             } catch (error) {
-                console.error('Error fetching user data:', error);
+                console.error('Error fetching profile data:', error);
+                toast.error('Failed to load profile data');
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        fetchUserData();
+        if (currentUserId) {
+            fetchProfileData();
+        }
     }, [currentUserId]);
 
     // Thêm các hàm và useEffect cần thiết cho infinite scrolling
 
-    // // Hàm fetch posts với phân trang
-    // const fetchPosts = async (page) => {
-    //     try {
-    //         const response = await getPostsByAccountId(currentUserId, page, pageSize);
-    //         if (response && response.items) {
-    //             if (page === 1) {
-    //                 setPosts(response.items);
-    //             } else {
-    //                 setPosts(prevPosts => [...prevPosts, ...response.items]);
-    //             }
-    //             setHasMore(response.items.length === pageSize);
-
-    //             // Lấy thông tin likes cho mỗi post mới
-    //             response.items.forEach(async (post) => {
-    //                 const likeCount = await getPostLikeCount(post.postId);
-    //                 setPostLikes(prev => ({
-    //                     ...prev,
-    //                     [post.postId]: likeCount
-    //                 }));
-    //             });
-    //         } else {
-    //             setHasMore(false);
-    //         }
-    //     } catch (error) {
-    //         console.error('Error fetching posts:', error);
-    //         toast.error('Failed to load posts');
-    //         setHasMore(false);
-    //     }
-    // };
+    // Hàm fetch posts với phân trang
+    const fetchPosts = async (page) => {
+        try {
+            const response = await getPostsByAccountId(currentUserId, page, pageSize);
+            // Kiểm tra response an toàn hơn
+            if (response && response.items) {
+                if (page === 1) {
+                    setPosts(response.items);
+                } else {
+                    setPosts(prevPosts => [...prevPosts, ...response.items]);
+                }
+                setHasMore(response.items.length === pageSize);
+            } else {
+                // Nếu không có items hoặc response không hợp lệ
+                if (page === 1) {
+                    setPosts([]);
+                }
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
+            if (error.response && error.response.status === 404) {
+                console.log('No posts found for this user');
+            }
+            setHasMore(false);
+            // Nếu là trang đầu tiên và xảy ra lỗi, set posts là mảng rỗng
+            if (page === 1) {
+                setPosts([]);
+            }
+        } finally {
+            setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
+        }
+    };
 
     // Hàm load more posts
     const loadMorePosts = useCallback(() => {
@@ -123,37 +220,35 @@ const Home = () => {
         if (node) observer.current.observe(node);
     }, [isLoadingMore, hasMore, loadMorePosts]);
 
-    // Fetch posts khi component mount hoặc pageNumber thay đổi
-    // useEffect(() => {
-    //     if (pageNumber === 1) {
-    //         setIsLoading(true);
-    //         fetchPosts(1).finally(() => {
-    //             setIsLoading(false);
-    //         });
-    //     } else {
-    //         fetchPosts(pageNumber).finally(() => {
-    //             setIsLoadingMore(false);
-    //         });
-    //     }
-    // }, [pageNumber, currentUserId]);
+    //Fetch posts khi component mount hoặc pageNumber thay đổi
+    useEffect(() => {
+        if (pageNumber === 1) {
+            setIsLoading(true);
+            fetchPosts(1).finally(() => {
+                setIsLoading(false);
+            });
+        } else {
+            fetchPosts(pageNumber).finally(() => {
+                setIsLoadingMore(false);
+            });
+        }
+    }, [pageNumber, currentUserId]);
 
     // Hàm xử lý tạo bài viết mới
     const handleCreatePost = async () => {
-        if (!newPost.content.trim()) {
-            toast.error('Please enter some content for your post');
-            return;
-        }
-
         try {
+            setIsCreatingPost(true);
+            setPostError(''); // Reset lỗi trước đó
+
             const formData = new FormData();
             formData.append('content', newPost.content);
             newPost.files.forEach(file => {
-                formData.append('files', file);
+                formData.append('MediaFiles', file);
             });
             formData.append('accountId', currentUserId);
 
             // Hiển thị thông báo đang xử lý
-            toast.info('Creating post...');
+            toast.info('Đang tạo bài viết...');
 
             // Tạo post mới
             const result = await createPost(formData);
@@ -161,32 +256,69 @@ const Home = () => {
             // Reset form trước khi refresh
             setNewPost({ content: '', files: [] });
             setShowPostModal(false);
+            setPostError('');
 
             // Gọi API để lấy danh sách posts mới nhất
-            const postsData = await getPostsByAccountId(currentUserId, 1, pageSize);
+            try {
+                const postsData = await getPostsByAccountId(currentUserId, 1, pageSize);
 
-            if (postsData && Array.isArray(postsData.items)) {
-                // Cập nhật state với danh sách posts mới
-                setPosts(postsData.items);
+                if (postsData && postsData.items) {
+                    console.log('Refreshed posts:', postsData.items);
 
-                // Lấy thông tin likes và comments cho mỗi post mới
-                for (const post of postsData.items) {
-                    try {
-                        const likeCount = await getPostLikeCount(post.postId);
-                        setPostLikes(prev => ({
-                            ...prev,
-                            [post.postId]: likeCount
-                        }));
-                    } catch (error) {
-                        console.error('Error fetching post details:', error);
+                    // Cập nhật state với danh sách posts mới
+                    setPosts(postsData.items);
+
+                    // Lấy thông tin likes và comments cho mỗi post mới
+                    for (const post of postsData.items) {
+                        try {
+                            const likeCount = await getPostLikeCount(post.postId);
+                            setPostLikes(prev => ({
+                                ...prev,
+                                [post.postId]: likeCount
+                            }));
+
+                            const commentCount = await getPostCommentCount(post.postId);
+                            setPostCommentCounts(prev => ({
+                                ...prev,
+                                [post.postId]: commentCount
+                            }));
+                        } catch (error) {
+                            console.error('Error fetching post details:', error);
+                        }
                     }
+
+                    // Kích hoạt tải lại bình luận
+                    setRefreshCommentTrigger(prev => prev + 1);
                 }
+            } catch (error) {
+                console.error('Error refreshing posts after creation:', error);
+                // Nếu không lấy được bài viết mới, gọi tải lại
+                fetchPosts(1);
             }
 
-            toast.success('Post created successfully');
+            toast.success('Bài viết đã được tạo thành công');
         } catch (error) {
-            toast.error('Failed to create post');
             console.error('Error creating post:', error);
+
+            // Xử lý lỗi từ API
+            if (error.response) {
+                const status = error.response.status;
+                const errorData = error.response.data;
+
+                if (status === 400 && errorData) {
+                    // Hiển thị lỗi trong modal thay vì toast
+                    setPostError(errorData.message || 'Bài viết vi phạm nguyên tắc cộng đồng');
+                } else {
+                    setPostError('Có lỗi xảy ra khi tạo bài viết. Vui lòng thử lại.');
+                }
+            } else {
+                setPostError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+            }
+
+            // Vẫn hiển thị toast để thông báo tổng quát
+            toast.error('Không thể tạo bài viết');
+        } finally {
+            setIsCreatingPost(false);
         }
     };
 
@@ -306,6 +438,94 @@ const Home = () => {
             ...prev,
             [postId]: content
         }));
+    };
+
+    // Hàm toggle menu của bài post
+    const togglePostMenu = (postId) => {
+        setOpenPostMenus(prev => {
+            if (prev.includes(postId)) {
+                return prev.filter(id => id !== postId);
+            } else {
+                return [...prev, postId];
+            }
+        });
+    };
+
+    // Hàm xử lý cập nhật bài viết
+    const handleUpdatePost = async (postId, content) => {
+        try {
+            if (!content.trim()) {
+                toast.error('Nội dung bài viết không được để trống');
+                return;
+            }
+
+            const updatePostDTO = {
+                content: content
+            };
+
+            const result = await updatePost(postId, updatePostDTO);
+
+            // Cập nhật bài viết trong state
+            setPosts(prevPosts =>
+                prevPosts.map(post =>
+                    post.postId === postId ? { ...post, content: content } : post
+                )
+            );
+
+            toast.success('Bài viết đã được cập nhật thành công');
+        } catch (error) {
+            console.error('Error updating post:', error);
+            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
+        }
+    };
+
+    // Hàm xử lý xóa bài viết
+    const handleDeletePost = async (postId) => {
+        try {
+            if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+                return;
+            }
+
+            const result = await deletePost(postId);
+            // Cập nhật state để xóa bài viết khỏi UI
+            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
+            toast.success('Bài viết đã được xóa thành công');
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+        }
+    };
+
+    // Hàm xử lý cập nhật số lượng comment
+    const handleCommentCountChange = (postId, newCount) => {
+        setPostCommentCounts(prev => ({
+            ...prev,
+            [postId]: newCount
+        }));
+    };
+
+    // Hàm xử lý ẩn bài viết
+    const handleHidePost = async (postId) => {
+        try {
+            // Lấy ID của người dùng hiện tại
+            const currentUserId = await getUserId();
+
+            if (!currentUserId) {
+                toast.error('Please login to hide posts');
+                return;
+            }
+
+            // Gọi API ẩn bài viết
+            await hidePost(currentUserId, postId);
+
+            // Cập nhật UI để ẩn bài viết
+            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
+
+            toast.success('Post hidden successfully');
+        } catch (error) {
+            console.error('Error hiding post:', error);
+            toast.error('Failed to hide post. Please try again.');
+        }
     };
 
     return (
@@ -447,7 +667,11 @@ const Home = () => {
 
                         {/* Post Modal */}
                         {showPostModal && (
-                            <Modal onClose={() => setShowPostModal(false)}>
+                            <Modal onClose={() => {
+                                setShowPostModal(false);
+                                setPostError(''); // Reset lỗi khi đóng modal
+                                setNewPost({ content: '', files: [] }); // Reset form
+                            }}>
                                 <div className="flex items-center gap-3 p-6 border-b">
                                     <img
                                         src={profileData?.avatarUrl || "/api/placeholder/40/40"}
@@ -461,20 +685,37 @@ const Home = () => {
                                 </div>
                                 <div className="p-6">
                                     <textarea
-                                        className="w-full border-none outline-none resize-none text-lg"
+                                        className={`w-full border-none outline-none resize-none text-lg ${postError ? 'border-red-500' : ''}`}
                                         rows={4}
                                         placeholder="What would you like to talk about?"
                                         value={newPost.content}
                                         onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
                                     />
+                                    {postError && (
+                                        <div className="mt-2 text-red-500 text-sm bg-red-50 p-2 rounded-md">
+                                            {postError}
+                                        </div>
+                                    )}
                                     {newPost.files.length > 0 && (
-                                        <div className="mt-4 border rounded-lg p-3">
-                                            <div className="font-semibold mb-2">Attached files:</div>
-                                            <ul className="list-disc pl-5">
-                                                {newPost.files.map((file, index) => (
-                                                    <li key={index} className="text-sm text-gray-600">{file.name}</li>
-                                                ))}
-                                            </ul>
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            {newPost.files.map((file, index) => (
+                                                <div key={index} className="relative">
+                                                    <img
+                                                        src={URL.createObjectURL(file)}
+                                                        alt={`Upload ${index + 1}`}
+                                                        className="w-20 h-20 object-cover rounded"
+                                                    />
+                                                    <button
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                                                        onClick={() => setNewPost(prev => ({
+                                                            ...prev,
+                                                            files: prev.files.filter((_, i) => i !== index)
+                                                        }))}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     <div className="flex items-center gap-3 mt-4">
@@ -492,25 +733,94 @@ const Home = () => {
                                 </div>
                                 <div className="flex justify-end p-4 border-t">
                                     <button
-                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold"
+                                        className={`bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold ${isCreatingPost ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         onClick={handleCreatePost}
+                                        disabled={isCreatingPost}
                                     >
-                                        Post
+                                        {isCreatingPost ? 'Đang đăng...' : 'Post'}
                                     </button>
                                 </div>
                             </Modal>
                         )}
 
-                        {/* PostList 
+                        {/* Modal chỉnh sửa bài viết */}
+                        {editingPost && (
+                            <Modal onClose={() => {
+                                setEditingPost(null);
+                                setEditedPostContent('');
+                            }}>
+                                <div className="flex items-center gap-3 p-6 border-b">
+                                    <img
+                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                        alt="Avatar"
+                                        className="w-12 h-12 rounded-full"
+                                    />
+                                    <div>
+                                        <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
+                                        <div className="text-xs text-gray-500">Chỉnh sửa bài viết</div>
+                                    </div>
+                                </div>
+
+                                <div className="p-6">
+                                    <textarea
+                                        className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
+                                        rows={4}
+                                        placeholder="Nội dung bài viết..."
+                                        value={editedPostContent || editingPost.content}
+                                        onChange={(e) => setEditedPostContent(e.target.value)}
+                                    />
+                                    {editingPost.postMedia && editingPost.postMedia.length > 0 && (
+                                        <div className="mt-4">
+                                            <h3 className="text-sm font-medium text-gray-600 mb-2">Ảnh/Video đã đính kèm:</h3>
+                                            <div className="flex flex-wrap gap-2">
+                                                {editingPost.postMedia.map((media, index) => (
+                                                    <div key={index} className="relative">
+                                                        <img
+                                                            src={media.url}
+                                                            alt={`Media ${index + 1}`}
+                                                            className="w-20 h-20 object-cover rounded"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end p-4 border-t">
+                                    <button
+                                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium mr-2"
+                                        onClick={() => {
+                                            setEditingPost(null);
+                                            setEditedPostContent('');
+                                        }}
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
+                                        onClick={() => {
+                                            handleUpdatePost(editingPost.postId, editedPostContent || editingPost.content);
+                                            setEditingPost(null);
+                                        }}
+                                    >
+                                        Lưu thay đổi
+                                    </button>
+                                </div>
+                            </Modal>
+                        )}
+
+                        {/* PostList */}
                         <div className="space-y-6">
                             {posts && posts.length > 0 ? (
                                 posts.map((post, index) => (
                                     <div
                                         key={`post-${post.postId}-${index}`}
                                         ref={index === posts.length - 1 ? lastPostElementRef : null}
-                                        className="bg-white rounded-lg shadow-md mb-6"
+                                        className="bg-white rounded-lg shadow-md"
                                     >
                                         <div className="p-4">
+                                            {/* Post header */}
                                             <div className="flex justify-between mb-3">
                                                 <div className="flex gap-3">
                                                     <img
@@ -527,38 +837,61 @@ const Home = () => {
                                                             {post.account?.firstName} {post.account?.lastName || "Unknown User"}
                                                         </h6>
                                                         <small className="text-gray-600">
-                                                            {post.createAt ? new Date(post.createAt).toLocaleDateString() : "Unknown date"}
+                                                            {post.createAt ? new Date(post.createAt).toLocaleDateString('vi-VN') : "Unknown date"}
                                                         </small>
                                                     </div>
                                                 </div>
-                                                <div className="relative">
-                                                    <button className="text-gray-600 hover:text-blue-600 transition-all">
+                                                <div className="relative post-menu-container">
+                                                    <button
+                                                        onClick={() => setOpenDropdownPostId(openDropdownPostId === post.postId ? null : post.postId)}
+                                                        className="text-gray-600 hover:text-gray-900"
+                                                    >
                                                         <FontAwesomeIcon icon={faEllipsisH} />
                                                     </button>
+
+                                                    {/* Menu xổ xuống khi click vào nút ellipsis */}
+                                                    {openDropdownPostId === post.postId && (
+                                                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
+                                                            {post.accountId == currentUserId && (
+                                                                <div className="py-1">
+                                                                    <button
+                                                                        onClick={() => setEditingPost(post)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
+                                                                        Chỉnh sửa
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeletePost(post.postId)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} className="text-red-500" />
+                                                                        Xóa
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleHidePost(post.postId)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
+                                                                        Ẩn bài viết
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <div className="py-1">
+                                                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                                    <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
+                                                                    Chia sẻ
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div>
                                                 {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
                                                 <p className="text-gray-800">{post.content}</p>
                                                 {post.postMedia && post.postMedia.length > 0 && (
-                                                    <div className={`mt-3 grid ${post.postMedia.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
-                                                        {post.postMedia.map((media) => (
-                                                            <div
-                                                                key={`media-${post.postId}-${media.postMediaId}`}
-                                                                className="w-full h-60"
-                                                            >
-                                                                <img
-                                                                    src={media.mediaUrl}
-                                                                    alt="Post media"
-                                                                    className="w-full h-full object-cover rounded-lg"
-                                                                    onError={(e) => {
-                                                                        e.target.onerror = null;
-                                                                        e.target.src = "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg";
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                    <PostMediaGrid media={post.postMedia} />
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center mt-3">
@@ -574,96 +907,74 @@ const Home = () => {
                                                         {postLikes[post.postId] || 0} Like
                                                     </button>
                                                     <button
-                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
                                                         onClick={() => toggleCommentSection(post.postId)}
                                                     >
-                                                        <FontAwesomeIcon icon={farComment} className="mr-1" />
-                                                        {postComments[post.postId]?.length || 0} Comment
+                                                        <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
+                                                        {postCommentCounts[post.postId] || 0} Comment
+                                                    </button>
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                        <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
+                                                        Share
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {openCommentPosts.includes(post.postId) && (
-                                            <div className="px-4 pb-4">
-                                                <div className="flex items-start gap-3 mb-4">
-                                                    <img
-                                                        src={profileData?.avatarUrl || "/api/placeholder/40/40"}
-                                                        alt="Avatar"
-                                                        className="w-8 h-8 rounded-full"
-                                                    />
-                                                    <div className="flex-1 relative">
-                                                        <input
-                                                            type="text"
-                                                            value={commentContents[post.postId] || ''}
-                                                            onChange={(e) => setCommentContents(prev => ({
-                                                                ...prev,
-                                                                [post.postId]: e.target.value
-                                                            }))}
-                                                            placeholder="Add a comment..."
-                                                            className="w-full p-2 pl-4 pr-20 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
-                                                        />
-                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2 items-center">
-                                                            <button type="button" className="text-xl text-gray-500 hover:text-blue-500">
-                                                                <FontAwesomeIcon icon={faSmile} />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm"
-                                                                onClick={() => handleCreateComment(post.postId, commentContents[post.postId] || '')}
-                                                            >
-                                                                Post
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4 ml-12">
-                                                    {postComments[post.postId] && postComments[post.postId].length > 0 ? (
-                                                        postComments[post.postId].map((comment) => (
-                                                            <div key={comment.commentId} className="group flex gap-3">
-                                                                <img
-                                                                    src={comment.avatarUrl || "/api/placeholder/32/32"}
-                                                                    alt="Avatar"
-                                                                    className="w-8 h-8 rounded-full"
-                                                                />
-                                                                <div className="flex-1">
-                                                                    <div className="bg-gray-100 p-3 rounded-lg">
-                                                                        <div className="font-semibold text-sm">{comment.firstName} {comment.lastName}</div>
-                                                                        <p className="text-sm text-gray-700">{comment.content}</p>
-                                                                    </div>
-                                                                    <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                                        <span>{new Date(comment.commentAt).toLocaleDateString()}</span>
-                                                                        <button className="hover:underline">Like</button>
-                                                                        <button className="hover:underline">Reply</button>
-                                                                    </div>
-                                                                </div>
-                                                                <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 p-2">
-                                                                    <FontAwesomeIcon icon={faEllipsisH} />
-                                                                </button>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="text-center py-4 text-gray-500">
-                                                            No comments yet. Be the first to comment!
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
+                                        {/* Comment Section */}
+                                        <div className="px-6 pb-4">
+                                            <CommentSection
+                                                postId={post.postId}
+                                                isOpen={openCommentPosts.includes(post.postId)}
+                                                onToggle={() => toggleCommentSection(post.postId)}
+                                                commentCount={postCommentCounts[post.postId] || 0}
+                                                currentUserAvatar={profileData?.avatarUrl}
+                                                refreshTrigger={refreshCommentTrigger}
+                                                onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
+                                            />
+                                        </div>
                                     </div>
                                 ))
+                            ) : isLoading ? (
+                                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
+                                </div>
                             ) : (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                                    <p className="text-gray-500 text-lg">No posts yet</p>
+                                    <img
+                                        src="/images/no-posts.svg"
+                                        alt="Không có bài viết"
+                                        className="w-32 h-32 mx-auto mb-4 opacity-60"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
+                                    <p className="text-gray-600 text-lg font-medium mb-2">Chưa có bài viết nào</p>
+                                    <p className="text-gray-500 mb-4">Hãy chia sẻ trải nghiệm của bạn ngay bây giờ</p>
+                                    <button
+                                        onClick={() => setShowPostModal(true)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+                                    >
+                                        <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                                        Tạo bài viết mới
+                                    </button>
                                 </div>
                             )}
-                        </div> */}
+
+                            {/* Loading indicator */}
+                            {isLoadingMore && (
+                                <div className="flex justify-center py-4">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Thay thế tạm thời */}
-                        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                        {/* <div className="bg-white rounded-lg shadow-md p-8 text-center">
                             <p className="text-gray-500 text-lg">Danh sách bài viết đang được cập nhật</p>
-                        </div>
+                        </div> */}
                         {/* Loading indicator */}
                         {isLoadingMore && (
                             <div className="flex justify-center py-4">

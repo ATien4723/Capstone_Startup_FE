@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useParams } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { changePassword, getAccountInfo, updateProfile, verifyCCCD } from "@/apis/accountService";
+import { changePassword, getAccountInfo, updateProfile, verifyCCCD, setStatusVerified } from "@/apis/accountService";
 import { getUserId } from "@/apis/authService";
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import Webcam from 'react-webcam';
 
@@ -36,21 +36,21 @@ const profileSchema = Yup.object().shape({
 });
 
 // Thêm schema xác thực cho form CCCD
-const cccdSchema = Yup.object({
-    fullName: Yup.string().required('Họ tên là bắt buộc'),
-    cccdNumber: Yup.string()
-        .required('Số CCCD là bắt buộc')
-        .matches(/^\d{12}$/, 'Số CCCD phải có 12 chữ số'),
-    dateOfBirth: Yup.string()
-        .required('Ngày sinh là bắt buộc')
-        .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)'),
-    gender: Yup.string().required('Giới tính là bắt buộc'),
-    address: Yup.string().required('Địa chỉ là bắt buộc'),
-    issueDate: Yup.string()
-        .required('Ngày cấp là bắt buộc')
-        .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày cấp không hợp lệ (YYYY-MM-DD)'),
-    issuePlace: Yup.string().required('Nơi cấp là bắt buộc'),
-});
+// const cccdSchema = Yup.object({
+//     fullName: Yup.string().required('Họ tên là bắt buộc'),
+//     cccdNumber: Yup.string()
+//         .required('Số CCCD là bắt buộc')
+//         .matches(/^\d{12}$/, 'Số CCCD phải có 12 chữ số'),
+//     dateOfBirth: Yup.string()
+//         .required('Ngày sinh là bắt buộc')
+//         .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)'),
+//     gender: Yup.string().required('Giới tính là bắt buộc'),
+//     address: Yup.string().required('Địa chỉ là bắt buộc'),
+//     issueDate: Yup.string()
+//         .required('Ngày cấp là bắt buộc')
+//         .matches(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng ngày cấp không hợp lệ (YYYY-MM-DD)'),
+//     issuePlace: Yup.string().required('Nơi cấp là bắt buộc'),
+// });
 
 const Setting = () => {
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -188,6 +188,19 @@ const Setting = () => {
 
             if (response.isMatch) {
                 toast.success('Xác thực CCCD thành công!');
+
+                // Nếu xác thực thành công, gọi API để cập nhật trạng thái tài khoản
+                try {
+                    await setStatusVerified(accountId);
+                    toast.success('Tài khoản đã được xác thực thành công!');
+
+                    // Cập nhật lại thông tin profile
+                    const updatedProfile = await getAccountInfo(accountId);
+                    setProfile(updatedProfile);
+                } catch (verifyError) {
+                    console.error('Lỗi cập nhật trạng thái tài khoản:', verifyError);
+                    toast.error('Không thể cập nhật trạng thái tài khoản. Vui lòng thử lại sau.');
+                }
             } else {
                 toast.warning('Xác thực CCCD không thành công. Vui lòng kiểm tra lại ảnh.');
             }
@@ -239,7 +252,7 @@ const Setting = () => {
                 <nav className="flex md:flex-col flex-row md:w-64 w-full bg-white rounded-xl shadow md:shadow-none md:rounded-none md:border-r p-2 md:p-6 gap-2 md:gap-4 mb-4 md:mb-0 items-start">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">S</div>
-                        <span className="text-2xl md:text-3xl font-bold">Cài đặt</span>
+                        <span className="text-2xl md:text-3xl font-bold">Settings</span>
                     </div>
                     {tabs.map((tab, idx) => (
                         <button
@@ -316,13 +329,42 @@ const Setting = () => {
                                     <button
                                         className="text-sm text-gray-600 underline mb-4"
                                         type="button"
-                                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                        onClick={() => {
+                                            fileInputRef.current && fileInputRef.current.click();
+                                            // Thêm sự kiện để lắng nghe khi file được chọn
+                                            fileInputRef.current.onchange = async (e) => {
+                                                const file = e.target.files[0];
+                                                if (file && !fileError) {
+                                                    try {
+                                                        const formData = new FormData();
+                                                        formData.append('AvatarUrl', file);
+
+                                                        // Gọi API với formData, không phải object chứa preview
+                                                        await updateProfile(accountId, formData);
+
+                                                        toast.success('Cập nhật ảnh đại diện thành công!');
+                                                    } catch (err) {
+                                                        toast.error('Cập nhật ảnh đại diện thất bại!');
+                                                    }
+                                                }
+                                            };
+
+                                        }}
                                     >
                                         Change your profile picture here
                                     </button>
                                     {fileError && <div className="text-red-500 text-sm mb-2">{fileError}</div>}
                                     <div className="text-lg font-bold mb-1" disabled>{profile?.firstName || ''}</div>
-                                    <div className="text-gray-600 text-sm">Status: <span className="font-medium text-black">{profile?.status || ''}</span></div>
+                                    <div className="text-gray-600 flex text-sm mb-2">
+                                        Status:
+                                        {profile?.status === 'verified' ? (
+                                            <span className="font-medium text-green-600 ml-1 flex items-center">
+                                                Verified <FontAwesomeIcon icon={faCheckCircle} className="ml-1" />
+                                            </span>
+                                        ) : (
+                                            <span className="font-medium text-yellow-600 ml-1">{profile?.status}</span>
+                                        )}
+                                    </div>
                                 </div>
                                 {/* Right: Formik Form */}
                                 <div className="flex-1">
@@ -398,15 +440,15 @@ const Setting = () => {
                                                             disabled
                                                         />
                                                     </div>
-                                                    <div className="flex flex-col md:col-span-2">
-                                                        <label className="font-medium mb-1">Avatar URL</label>
+                                                    {/* <div className="flex flex-col md:col-span-2">
+                                                        {/* <label className="font-medium mb-1">Avatar URL</label>
                                                         <Field name="AvatarUrl" className="bg-white border rounded px-3 py-2" />
                                                         <ErrorMessage name="AvatarUrl" component="div" className="text-red-500 text-sm" />
                                                         {/* Sync preview to formik field */}
-                                                        {avatarPreview && (
-                                                            <input type="hidden" name="AvatarUrl" value={avatarPreview} />
-                                                        )}
-                                                    </div>
+                                                    {avatarPreview && (
+                                                        <input type="hidden" name="AvatarUrl" value={avatarPreview} />
+                                                    )}
+                                                    {/* </div> */}
                                                     <div className="md:col-span-2 flex gap-2 mt-2">
                                                         <button type="submit" disabled={isSubmitting} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
                                                             {isSubmitting ? 'Saving...' : 'Save'}
@@ -429,19 +471,31 @@ const Setting = () => {
                                 <ul className="divide-y divide-gray-200">
                                     <li className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-2">
                                         <span>Email Address</span>
-                                        <span className="text-gray-500 break-all">tienlahe176488@fpt.edu.vn</span>
-                                    </li>
-                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50">
-                                        <span>Phone Number</span>
-                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                        <span className="text-gray-500 break-all">{profile?.email}</span>
                                     </li>
                                     <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => setShowChangePassword(true)}>
                                         <span>Password</span>
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </li>
-                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => setShowCCCDVerify(true)}>
+                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => {
+                                        if (profile?.status !== 'verified') {
+                                            setShowCCCDVerify(true);
+                                        } else {
+                                            toast.info('Tài khoản của bạn đã được xác thực');
+                                        }
+                                    }}>
                                         <span>Identity Verification</span>
-                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                        <div className="flex items-center">
+                                            {profile?.status === 'verified' ? (
+                                                <div className="flex items-center text-green-600 mr-2">
+                                                    <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                                                    <span>{profile?.status}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-yellow-600 mr-2">{profile?.status}</span>
+                                            )}
+                                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                        </div>
                                     </li>
                                 </ul>
                             </>
@@ -459,261 +513,280 @@ const Setting = () => {
                                 </button>
 
                                 <h2 className="text-xl font-semibold mb-4">Identity Verification</h2>
-                                <p className="text-gray-600 mb-6 text-center max-w-2xl">
-                                    Để xác thực danh tính, vui lòng tải lên ảnh CCCD/CMND mặt trước, mặt sau và chụp ảnh selfie của bạn.
-                                    Hệ thống sẽ tự động trích xuất thông tin từ ảnh CCCD và xác thực danh tính của bạn.
-                                </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-8">
-                                    {/* Upload CCCD mặt trước */}
-                                    <div
-                                        className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
-                                        onClick={() => handleUploadClick(cccdFrontRef)}
-                                    >
-                                        {cccdFrontPreview ? (
-                                            <div className="relative w-full h-48 mb-2">
-                                                <img
-                                                    src={cccdFrontPreview}
-                                                    alt="CCCD mặt trước"
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
-                                                <button
-                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCccdFrontFile(null);
-                                                        setCccdFrontPreview(null);
-                                                    }}
-                                                >
-                                                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
-                                                <span className="font-semibold text-center mb-1">CCCD mặt trước</span>
-                                            </>
-                                        )}
-                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
-                                        <input
-                                            type="file"
-                                            ref={cccdFrontRef}
-                                            accept="image/png, image/jpeg"
-                                            className="hidden"
-                                            onChange={(e) => handleFileChange(e, setCccdFrontFile, setCccdFrontPreview)}
-                                        />
+                                {profile?.status === 'VERIFIED' ? (
+                                    <div className="flex flex-col items-center justify-center p-8 bg-green-50 border border-green-200 rounded-lg w-full max-w-2xl">
+                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-3xl" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-green-700 mb-2">Tài khoản đã được xác thực</h3>
+                                        <p className="text-center text-gray-600">
+                                            {/* Tài khoản của bạn đã được xác thực danh tính thành công.
+                                            Bạn có thể sử dụng đầy đủ các tính năng của hệ thống. */}
+                                            xác thực thành công
+                                        </p>
                                     </div>
+                                ) : (
+                                    <>
+                                        <p className="text-gray-600 mb-6 text-center max-w-2xl">
+                                            {/* Để xác thực danh tính, vui lòng tải lên ảnh CCCD/CMND mặt trước, mặt sau và chụp ảnh selfie của bạn.
+                                            Hệ thống sẽ tự động trích xuất thông tin từ ảnh CCCD và xác thực danh tính của bạn. */}
+                                            kkkkk
+                                        </p>
 
-                                    {/* Upload CCCD mặt sau */}
-                                    <div
-                                        className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
-                                        onClick={() => handleUploadClick(cccdBackRef)}
-                                    >
-                                        {cccdBackPreview ? (
-                                            <div className="relative w-full h-48 mb-2">
-                                                <img
-                                                    src={cccdBackPreview}
-                                                    alt="CCCD mặt sau"
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
-                                                <button
-                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCccdBackFile(null);
-                                                        setCccdBackPreview(null);
-                                                    }}
-                                                >
-                                                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
-                                                <span className="font-semibold text-center mb-1">CCCD mặt sau</span>
-                                            </>
-                                        )}
-                                        <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
-                                        <input
-                                            type="file"
-                                            ref={cccdBackRef}
-                                            accept="image/png, image/jpeg"
-                                            className="hidden"
-                                            onChange={(e) => handleFileChange(e, setCccdBackFile, setCccdBackPreview)}
-                                        />
-                                    </div>
-
-                                    {/* Upload ảnh selfie hoặc chụp trực tiếp */}
-                                    <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 hover:border-blue-400 transition">
-                                        {showWebcam ? (
-                                            <div className="relative w-full h-48">
-                                                <Webcam
-                                                    ref={webcamRef}
-                                                    audio={false}
-                                                    screenshotFormat="image/jpeg"
-                                                    videoConstraints={{
-                                                        width: 480,
-                                                        height: 480,
-                                                        facingMode: "user"
-                                                    }}
-                                                    mirrored={true}
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
-                                                <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-4">
-                                                    <button
-                                                        type="button"
-                                                        className="bg-red-500/80 hover:bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-                                                        onClick={closeCamera}
-                                                    >
-                                                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="bg-blue-500/80 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-                                                        onClick={capturePhoto}
-                                                    >
-                                                        <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : selfiePreview ? (
-                                            <div className="relative w-full h-48 mb-2">
-                                                <img
-                                                    src={selfiePreview}
-                                                    alt="Ảnh selfie"
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
-                                                <div className="absolute top-2 right-2 flex space-x-2">
-                                                    <button
-                                                        className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelfieFile(null);
-                                                            setSelfiePreview(null);
-                                                        }}
-                                                    >
-                                                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        className="bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 transition-colors"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openCamera();
-                                                        }}
-                                                    >
-                                                        <FontAwesomeIcon icon={faRedo} className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center w-full">
-                                                <FontAwesomeIcon icon={faUser} className="text-4xl text-blue-400 mb-4" />
-                                                <span className="font-semibold text-center mb-1">Ảnh selfie</span>
-                                                <span className="text-xs text-gray-500 text-center mb-4">(Chụp ảnh hoặc tải lên)</span>
-
-                                                <div className="flex space-x-4 mt-2">
-                                                    <button
-                                                        type="button"
-                                                        className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center"
-                                                        onClick={openCamera}
-                                                    >
-                                                        <FontAwesomeIcon icon={faCamera} className="mr-1" /> Chụp ảnh
-                                                    </button>
-
-                                                    {/* <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
-                                                        <FontAwesomeIcon icon={faUser} className="mr-1" /> Tải lên
-                                                        <input
-                                                            type="file"
-                                                            ref={selfieRef}
-                                                            accept="image/png, image/jpeg"
-                                                            className="hidden"
-                                                            onChange={(e) => handleFileChange(e, setSelfieFile, setSelfiePreview)}
+                                        {/* Phần upload CCCD và xác thực */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-8">
+                                            {/* Upload CCCD mặt trước */}
+                                            <div
+                                                className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
+                                                onClick={() => handleUploadClick(cccdFrontRef)}
+                                            >
+                                                {cccdFrontPreview ? (
+                                                    <div className="relative w-full h-48 mb-2">
+                                                        <img
+                                                            src={cccdFrontPreview}
+                                                            alt="CCCD mặt trước"
+                                                            className="w-full h-full object-cover rounded-lg"
                                                         />
-                                                    </label> */}
-                                                </div>
+                                                        <button
+                                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCccdFrontFile(null);
+                                                                setCccdFrontPreview(null);
+                                                            }}
+                                                        >
+                                                            <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
+                                                        <span className="font-semibold text-center mb-1">CCCD mặt trước</span>
+                                                    </>
+                                                )}
+                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                                <input
+                                                    type="file"
+                                                    ref={cccdFrontRef}
+                                                    accept="image/png, image/jpeg"
+                                                    className="hidden"
+                                                    onChange={(e) => handleFileChange(e, setCccdFrontFile, setCccdFrontPreview)}
+                                                />
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {/* Nút xác thực */}
-                                <div className="w-full max-w-4xl">
-                                    <button
-                                        onClick={handleVerifyCCCD}
-                                        disabled={!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading}
-                                        className={`w-full py-3 rounded-lg font-medium transition-colors ${!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                            }`}
-                                    >
-                                        {verifyLoading ? 'Đang xác thực...' : 'Xác thực danh tính'}
-                                    </button>
-                                </div>
+                                            {/* Upload CCCD mặt sau */}
+                                            <div
+                                                className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 cursor-pointer hover:border-blue-400 transition"
+                                                onClick={() => handleUploadClick(cccdBackRef)}
+                                            >
+                                                {cccdBackPreview ? (
+                                                    <div className="relative w-full h-48 mb-2">
+                                                        <img
+                                                            src={cccdBackPreview}
+                                                            alt="CCCD mặt sau"
+                                                            className="w-full h-full object-cover rounded-lg"
+                                                        />
+                                                        <button
+                                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCccdBackFile(null);
+                                                                setCccdBackPreview(null);
+                                                            }}
+                                                        >
+                                                            <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
+                                                        <span className="font-semibold text-center mb-1">CCCD mặt sau</span>
+                                                    </>
+                                                )}
+                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                                <input
+                                                    type="file"
+                                                    ref={cccdBackRef}
+                                                    accept="image/png, image/jpeg"
+                                                    className="hidden"
+                                                    onChange={(e) => handleFileChange(e, setCccdBackFile, setCccdBackPreview)}
+                                                />
+                                            </div>
 
-                                {/* Hiển thị kết quả xác thực */}
-                                {verifyResult && (
-                                    <div className="w-full max-w-4xl mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                                        <h3 className="text-lg font-semibold mb-4">Kết quả xác thực</h3>
+                                            {/* Upload ảnh selfie hoặc chụp trực tiếp */}
+                                            <div className="flex flex-col items-center border-2 border-dashed border-blue-200 rounded-lg bg-blue-50 p-6 hover:border-blue-400 transition">
+                                                {showWebcam ? (
+                                                    <div className="relative w-full h-48">
+                                                        <Webcam
+                                                            ref={webcamRef}
+                                                            audio={false}
+                                                            screenshotFormat="image/jpeg"
+                                                            videoConstraints={{
+                                                                width: 480,
+                                                                height: 480,
+                                                                facingMode: "user"
+                                                            }}
+                                                            mirrored={true}
+                                                            className="w-full h-full object-cover rounded-lg"
+                                                        />
+                                                        <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-4">
+                                                            <button
+                                                                type="button"
+                                                                className="bg-red-500/80 hover:bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                                                                onClick={closeCamera}
+                                                            >
+                                                                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="bg-blue-500/80 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                                                                onClick={capturePhoto}
+                                                            >
+                                                                <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : selfiePreview ? (
+                                                    <div className="relative w-full h-48 mb-2">
+                                                        <img
+                                                            src={selfiePreview}
+                                                            alt="Ảnh selfie"
+                                                            className="w-full h-full object-cover rounded-lg"
+                                                        />
+                                                        <div className="absolute top-2 right-2 flex space-x-2">
+                                                            <button
+                                                                className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelfieFile(null);
+                                                                    setSelfiePreview(null);
+                                                                }}
+                                                            >
+                                                                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                className="bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openCamera();
+                                                                }}
+                                                            >
+                                                                <FontAwesomeIcon icon={faRedo} className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center w-full">
+                                                        <FontAwesomeIcon icon={faUser} className="text-4xl text-blue-400 mb-4" />
+                                                        <span className="font-semibold text-center mb-1">Ảnh selfie</span>
+                                                        <span className="text-xs text-gray-500 text-center mb-4">(Chụp ảnh hoặc tải lên)</span>
 
-                                        <div className="space-y-4">
-                                            <div className="flex items-center">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${verifyResult.isFaceMatched ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                    <FontAwesomeIcon icon={verifyResult.isFaceMatched ? faCheck : faTimes} />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">Xác thực khuôn mặt</p>
-                                                    <p className="text-sm text-gray-600">
-                                                        {verifyResult.isFaceMatched
-                                                            ? 'Khuôn mặt trong ảnh selfie khớp với ảnh trên CCCD'
-                                                            : 'Khuôn mặt trong ảnh selfie không khớp với ảnh trên CCCD'}
-                                                    </p>
-                                                </div>
+                                                        <div className="flex space-x-4 mt-2">
+                                                            <button
+                                                                type="button"
+                                                                className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center"
+                                                                onClick={openCamera}
+                                                            >
+                                                                <FontAwesomeIcon icon={faCamera} className="mr-1" /> Chụp ảnh
+                                                            </button>
+
+                                                            {/* <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
+                                                                <FontAwesomeIcon icon={faUser} className="mr-1" /> Tải lên
+                                                                <input
+                                                                    type="file"
+                                                                    ref={selfieRef}
+                                                                    accept="image/png, image/jpeg"
+                                                                    className="hidden"
+                                                                    onChange={(e) => handleFileChange(e, setSelfieFile, setSelfiePreview)}
+                                                                />
+                                                            </label> */}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Hiển thị thông tin trích xuất từ CCCD */}
-                                        {/* {extractedInfo && (
-                                            <div className="mt-6">
-                                                <h4 className="font-medium mb-3">Thông tin trích xuất từ CCCD:</h4>
-                                                {typeof extractedInfo === 'string' ? (
-                                                    <p>{extractedInfo}</p>
-                                                ) : extractedInfo.message ? (
-                                                    <p>{extractedInfo.message}</p>
-                                                ) : (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">Họ và tên:</p>
-                                                            <p className="font-medium">{extractedInfo.fullName}</p>
+                                        {/* Nút xác thực */}
+                                        <div className="w-full max-w-4xl">
+                                            <button
+                                                onClick={handleVerifyCCCD}
+                                                disabled={!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading}
+                                                className={`w-full py-3 rounded-lg font-medium transition-colors ${!cccdFrontFile || !cccdBackFile || !selfieFile || verifyLoading
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                    }`}
+                                            >
+                                                {verifyLoading ? 'Đang xác thực...' : 'Xác thực danh tính'}
+                                            </button>
+                                        </div>
+
+                                        {/* Hiển thị kết quả xác thực */}
+                                        {verifyResult && (
+                                            <div className="w-full max-w-4xl mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                                                <h3 className="text-lg font-semibold mb-4">Kết quả xác thực</h3>
+
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${verifyResult.isFaceMatched ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                            <FontAwesomeIcon icon={verifyResult.isFaceMatched ? faCheck : faTimes} />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm text-gray-500">Số CCCD:</p>
-                                                            <p className="font-medium">{extractedInfo.cccdNumber}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">Ngày sinh:</p>
-                                                            <p className="font-medium">{extractedInfo.dateOfBirth}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">Giới tính:</p>
-                                                            <p className="font-medium">{extractedInfo.gender}</p>
-                                                        </div>
-                                                        <div className="md:col-span-2">
-                                                            <p className="text-sm text-gray-500">Địa chỉ:</p>
-                                                            <p className="font-medium">{extractedInfo.address}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">Ngày cấp:</p>
-                                                            <p className="font-medium">{extractedInfo.issueDate}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">Nơi cấp:</p>
-                                                            <p className="font-medium">{extractedInfo.issuePlace}</p>
+                                                            <p className="font-medium">Xác thực khuôn mặt</p>
+                                                            <p className="text-sm text-gray-600">
+                                                                {verifyResult.isFaceMatched
+                                                                    ? 'Khuôn mặt trong ảnh selfie khớp với ảnh trên CCCD'
+                                                                    : 'Khuôn mặt trong ảnh selfie không khớp với ảnh trên CCCD'}
+                                                            </p>
                                                         </div>
                                                     </div>
+                                                </div>
+
+                                                {/* Hiển thị thông tin trích xuất từ CCCD */}
+                                                {/* {extractedInfo && (
+                                                    <div className="mt-6">
+                                                        <h4 className="font-medium mb-3">Thông tin trích xuất từ CCCD:</h4>
+                                                        {typeof extractedInfo === 'string' ? (
+                                                            <p>{extractedInfo}</p>
+                                                        ) : extractedInfo.message ? (
+                                                            <p>{extractedInfo.message}</p>
+                                                        ) : (
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Họ và tên:</p>
+                                                                    <p className="font-medium">{extractedInfo.fullName}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Số CCCD:</p>
+                                                                    <p className="font-medium">{extractedInfo.cccdNumber}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Ngày sinh:</p>
+                                                                    <p className="font-medium">{extractedInfo.dateOfBirth}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Giới tính:</p>
+                                                                    <p className="font-medium">{extractedInfo.gender}</p>
+                                                                </div>
+                                                                <div className="md:col-span-2">
+                                                                    <p className="text-sm text-gray-500">Địa chỉ:</p>
+                                                                    <p className="font-medium">{extractedInfo.address}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Ngày cấp:</p>
+                                                                    <p className="font-medium">{extractedInfo.issueDate}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm text-gray-500">Nơi cấp:</p>
+                                                                    <p className="font-medium">{extractedInfo.issuePlace}</p>
+                                                                </div>
+                                                            </div>
+                                                        )} */}
+                                                {/* </div>
                                                 )} */}
-                                        {/* </div>
-                                        )} */}
-                                    </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}

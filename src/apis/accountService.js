@@ -105,3 +105,13 @@ export const checkIsFollowing = async (followerAccountId, followingAccountId) =>
         throw error;
     }
 };
+
+// Thêm API để cập nhật trạng thái xác thực tài khoản
+export const setStatusVerified = async (accountId) => {
+    try {
+        const response = await axiosClient.post(`api/Auth/SetStatusVerified?accountId=${accountId}`);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
