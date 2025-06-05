@@ -19,12 +19,14 @@ import {
     getPostCommentCount,
     updatePost,
     deletePost,
-    hidePost
+    hidePost,
+    getNewFeed
 } from '@/apis/postService';
 import { getAccountInfo, getFollowing, getFollowers } from '@/apis/accountService';
 import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
+import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -79,6 +81,10 @@ const Home = () => {
     // Thêm state để quản lý dropdown menu
     const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
 
+    // Thêm state để quản lý modal xác nhận xóa
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [postToDelete, setPostToDelete] = useState(null);
+
     // Thêm hàm để đóng dropdown khi click ra ngoài
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -117,33 +123,94 @@ const Home = () => {
 
                 // Tách riêng phần lấy bài viết
                 try {
-                    const postsData = await getPostsByAccountId(currentUserId);
-                    // Kiểm tra nếu có dữ liệu trả về
-                    if (postsData && postsData.items) {
-                        setPosts(postsData.items || []);
+                    const postsData = await getNewFeed(currentUserId);
+                    // Kiểm tra cấu trúc dữ liệu trả về
+                    if (postsData) {
+                        // Nếu API trả về mảng trực tiếp
+                        if (Array.isArray(postsData)) {
+                            console.log('API returned array directly');
+                            setPosts(postsData);
 
-                        // Lấy thông tin like và comment count cho mỗi bài viết
-                        if (Array.isArray(postsData.items)) {
-                            for (const post of postsData.items) {
-                                const likeCount = await getPostLikeCount(post.postId);
-                                setPostLikes(prev => ({
-                                    ...prev,
-                                    [post.postId]: likeCount
-                                }));
+                            // Lấy thông tin likes và comments cho mỗi post mới
+                            for (const post of postsData) {
+                                try {
+                                    const likeCount = await getPostLikeCount(post.postId);
+                                    setPostLikes(prev => ({
+                                        ...prev,
+                                        [post.postId]: likeCount
+                                    }));
 
-                                const commentCount = await getPostCommentCount(post.postId);
-                                setPostCommentCounts(prev => ({
-                                    ...prev,
-                                    [post.postId]: commentCount
-                                }));
+                                    const commentCount = await getPostCommentCount(post.postId);
+                                    setPostCommentCounts(prev => ({
+                                        ...prev,
+                                        [post.postId]: commentCount
+                                    }));
+                                } catch (error) {
+                                    console.error('Error fetching post details:', error);
+                                }
                             }
                         }
+                        // Nếu API trả về đối tượng có thuộc tính items
+                        else if (postsData.items && Array.isArray(postsData.items)) {
+                            console.log('API returned object with items array');
+                            setPosts(postsData.items);
+
+                            // Lấy thông tin likes và comments cho mỗi post mới
+                            for (const post of postsData.items) {
+                                try {
+                                    const likeCount = await getPostLikeCount(post.postId);
+                                    setPostLikes(prev => ({
+                                        ...prev,
+                                        [post.postId]: likeCount
+                                    }));
+
+                                    const commentCount = await getPostCommentCount(post.postId);
+                                    setPostCommentCounts(prev => ({
+                                        ...prev,
+                                        [post.postId]: commentCount
+                                    }));
+                                } catch (err) {
+                                    console.error(`Error fetching details for post ${post.postId}:`, err);
+                                }
+                            }
+                        }
+                        // Nếu API trả về đối tượng có thuộc tính data
+                        // else if (postsData.data && Array.isArray(postsData.data)) {
+                        //     console.log('API returned object with data array');
+                        //     setPosts(postsData.data);
+
+                        //     // Lấy thông tin like và comment count cho mỗi bài viết
+                        //     for (const post of postsData.data) {
+                        //         try {
+                        //             const likeCount = await getPostLikeCount(post.postId);
+                        //             setPostLikes(prev => ({
+                        //                 ...prev,
+                        //                 [post.postId]: likeCount
+                        //             }));
+
+                        //             const commentCount = await getPostCommentCount(post.postId);
+                        //             setPostCommentCounts(prev => ({
+                        //                 ...prev,
+                        //                 [post.postId]: commentCount
+                        //             }));
+                        //         } catch (err) {
+                        //             console.error(`Error fetching details for post ${post.postId}:`, err);
+                        //         }
+                        //     }
+                        // }
+                        // Nếu không có cấu trúc nào phù hợp
+                        else {
+                            toast.error('Dữ liệu bài viết không đúng định dạng');
+                            setPosts([]);
+                        }
                     } else {
-                        // Không có bài viết, set mảng rỗng
+                        console.log('No posts data returned');
                         setPosts([]);
                     }
+
+                    // Kích hoạt tải lại bình luận
+                    setRefreshCommentTrigger(prev => prev + 1);
                 } catch (error) {
-                    console.error('Error fetching posts:', error);
                     // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
                     if (error.response && error.response.status !== 404) {
                         toast.error('Failed to load posts');
@@ -152,7 +219,6 @@ const Home = () => {
                     setPosts([]);
                 }
             } catch (error) {
-                console.error('Error fetching profile data:', error);
                 toast.error('Failed to load profile data');
             } finally {
                 setIsLoading(false);
@@ -169,7 +235,7 @@ const Home = () => {
     // Hàm fetch posts với phân trang
     const fetchPosts = async (page) => {
         try {
-            const response = await getPostsByAccountId(currentUserId, page, pageSize);
+            const response = await getNewFeed(currentUserId, page, pageSize);
             // Kiểm tra response an toàn hơn
             if (response && response.items) {
                 if (page === 1) {
@@ -196,8 +262,8 @@ const Home = () => {
             if (page === 1) {
                 setPosts([]);
             }
-        } finally {
-            setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
+            // } finally {
+            //     setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
         }
     };
 
@@ -260,36 +326,71 @@ const Home = () => {
 
             // Gọi API để lấy danh sách posts mới nhất
             try {
-                const postsData = await getPostsByAccountId(currentUserId, 1, pageSize);
+                const postsData = await getNewFeed(currentUserId, 1, pageSize);
+                console.log('Refreshed posts data:', postsData);
 
-                if (postsData && postsData.items) {
-                    console.log('Refreshed posts:', postsData.items);
+                // Kiểm tra cấu trúc dữ liệu trả về
+                if (postsData) {
+                    // Nếu API trả về mảng trực tiếp
+                    if (Array.isArray(postsData)) {
+                        console.log('API returned array directly');
+                        setPosts(postsData);
 
-                    // Cập nhật state với danh sách posts mới
-                    setPosts(postsData.items);
+                        // Lấy thông tin likes và comments cho mỗi post mới
+                        for (const post of postsData) {
+                            try {
+                                const likeCount = await getPostLikeCount(post.postId);
+                                setPostLikes(prev => ({
+                                    ...prev,
+                                    [post.postId]: likeCount
+                                }));
 
-                    // Lấy thông tin likes và comments cho mỗi post mới
-                    for (const post of postsData.items) {
-                        try {
-                            const likeCount = await getPostLikeCount(post.postId);
-                            setPostLikes(prev => ({
-                                ...prev,
-                                [post.postId]: likeCount
-                            }));
-
-                            const commentCount = await getPostCommentCount(post.postId);
-                            setPostCommentCounts(prev => ({
-                                ...prev,
-                                [post.postId]: commentCount
-                            }));
-                        } catch (error) {
-                            console.error('Error fetching post details:', error);
+                                const commentCount = await getPostCommentCount(post.postId);
+                                setPostCommentCounts(prev => ({
+                                    ...prev,
+                                    [post.postId]: commentCount
+                                }));
+                            } catch (error) {
+                                console.error('Error fetching post details:', error);
+                            }
                         }
                     }
+                    // // Nếu API trả về đối tượng có thuộc tính items
+                    // else if (postsData.items && Array.isArray(postsData.items)) {
+                    //     console.log('API returned object with items array');
+                    //     setPosts(postsData.items);
 
-                    // Kích hoạt tải lại bình luận
-                    setRefreshCommentTrigger(prev => prev + 1);
+                    //     // Lấy thông tin likes và comments cho mỗi post mới
+                    //     for (const post of postsData.items) {
+                    //         try {
+                    //             const likeCount = await getPostLikeCount(post.postId);
+                    //             setPostLikes(prev => ({
+                    //                 ...prev,
+                    //                 [post.postId]: likeCount
+                    //             }));
+
+                    //             const commentCount = await getPostCommentCount(post.postId);
+                    //             setPostCommentCounts(prev => ({
+                    //                 ...prev,
+                    //                 [post.postId]: commentCount
+                    //             }));
+                    //         } catch (error) {
+                    //             console.error('Error fetching post details:', error);
+                    //         }
+                    //     }
+                    // }
+                    // // Nếu không có cấu trúc nào phù hợp
+                    // else {
+                    //     console.error('Unexpected API response structure:', postsData);
+                    //     toast.error('Dữ liệu bài viết không đúng định dạng');
+                    //     setPosts([]);
+                    // }
+                } else {
+                    console.log('No posts data returned');
+                    setPosts([]);
                 }
+                // Kích hoạt tải lại bình luận
+                setRefreshCommentTrigger(prev => prev + 1);
             } catch (error) {
                 console.error('Error refreshing posts after creation:', error);
                 // Nếu không lấy được bài viết mới, gọi tải lại
@@ -479,13 +580,15 @@ const Home = () => {
         }
     };
 
-    // Hàm xử lý xóa bài viết
+    // Hàm xử lý hiển thị modal xác nhận xóa
+    const confirmDeletePost = (postId) => {
+        setPostToDelete(postId);
+        setShowDeleteConfirmModal(true);
+    };
+
+    // Hàm xử lý xóa bài viết sau khi xác nhận
     const handleDeletePost = async (postId) => {
         try {
-            if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
-                return;
-            }
-
             const result = await deletePost(postId);
             // Cập nhật state để xóa bài viết khỏi UI
             setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
@@ -493,6 +596,10 @@ const Home = () => {
         } catch (error) {
             console.error('Error deleting post:', error);
             toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+        } finally {
+            // Đóng modal xác nhận
+            setShowDeleteConfirmModal(false);
+            setPostToDelete(null);
         }
     };
 
@@ -545,9 +652,9 @@ const Home = () => {
                                     className="w-24 h-24 rounded-full mx-auto border-4 border-white -mt-12 object-cover"
                                 />
                                 <h5 className="font-bold mt-3">{profileData?.firstName} {profileData?.lastName}</h5>
-                                <p className="text-gray-600 text-sm">{profileData?.position || "No position"}</p>
+                                {/* <p className="text-gray-600 text-sm">{profileData?.position || "No position"}</p> */}
                                 <p className="text-gray-600 mb-3">
-                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> {profileData?.address || "No location"}
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" /> {profileData?.position || "No location"}
                                 </p>
                                 <div className="grid grid-cols-3 mt-3">
                                     <div className="text-center">
@@ -664,6 +771,36 @@ const Home = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Modal xác nhận xóa bài viết */}
+                        {showDeleteConfirmModal && (
+                            <Modal onClose={() => {
+                                setShowDeleteConfirmModal(false);
+                                setPostToDelete(null);
+                            }}>
+                                <div className="p-6">
+                                    <h3 className="text-xl font-semibold mb-4">Confirm post deletion</h3>
+                                    <p className="mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium"
+                                            onClick={() => {
+                                                setShowDeleteConfirmModal(false);
+                                                setPostToDelete(null);
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium"
+                                            onClick={() => postToDelete && handleDeletePost(postToDelete)}
+                                        >
+                                            Delete posts
+                                        </button>
+                                    </div>
+                                </div>
+                            </Modal>
+                        )}
 
                         {/* Post Modal */}
                         {showPostModal && (
@@ -824,7 +961,7 @@ const Home = () => {
                                             <div className="flex justify-between mb-3">
                                                 <div className="flex gap-3">
                                                     <img
-                                                        src={post.account?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        src={post.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                         alt="Profile"
                                                         className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
                                                         onError={(e) => {
@@ -834,10 +971,10 @@ const Home = () => {
                                                     />
                                                     <div>
                                                         <h6 className="font-semibold mb-0">
-                                                            {post.account?.firstName} {post.account?.lastName || "Unknown User"}
+                                                            {post.name || "Unknown User"}
                                                         </h6>
                                                         <small className="text-gray-600">
-                                                            {post.createAt ? new Date(post.createAt).toLocaleDateString('vi-VN') : "Unknown date"}
+                                                            {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                                         </small>
                                                     </div>
                                                 </div>
@@ -852,35 +989,34 @@ const Home = () => {
                                                     {/* Menu xổ xuống khi click vào nút ellipsis */}
                                                     {openDropdownPostId === post.postId && (
                                                         <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
-                                                            {post.accountId == currentUserId && (
+                                                            {post.accountID == currentUserId && (
                                                                 <div className="py-1">
                                                                     <button
                                                                         onClick={() => setEditingPost(post)}
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                                                        Chỉnh sửa
-                                                                    </button>
+                                                                        Edit                                                                    </button>
                                                                     <button
-                                                                        onClick={() => handleDeletePost(post.postId)}
+                                                                        onClick={() => confirmDeletePost(post.postId)}
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                                                        Xóa
+                                                                        Delete
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleHidePost(post.postId)}
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                                                                        Ẩn bài viết
+                                                                        Hide post
                                                                     </button>
                                                                 </div>
                                                             )}
                                                             <div className="py-1">
                                                                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                                                     <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                                                                    Chia sẻ
+                                                                    Share
                                                                 </button>
                                                             </div>
                                                         </div>

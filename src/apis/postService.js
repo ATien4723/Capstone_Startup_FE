@@ -1,11 +1,29 @@
 import axiosClient from '@/config/axiosClient';
+import { getUserId } from '@/apis/authService';
 
 // Get posts by account ID
 export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostsByAccountId?accountId=${accountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        // Lấy ID của người dùng hiện tại
+        const currentAccountId = await getUserId() || 0;
+
+        const response = await axiosClient.get(
+            `GetPostsByAccountId?accountId=${accountId}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`
+        );
         return response;
     } catch (error) {
+        throw error;
+    }
+};
+
+//New Feed
+export const getNewFeed = async (userId, page = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`NewFeed?userId=${userId}&page=${page}&pageSize=${pageSize}`);
+        console.log('Kết quả API New Feed:', response);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi gọi API New Feed:', error);
         throw error;
     }
 };
@@ -13,7 +31,6 @@ export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 
 // Get post comments by post ID
 export const getPostCommentsByPostId = async (postId, pageNumber = 1, pageSize = 10) => {
     try {
-        console.log(`Gọi API lấy bình luận: postId=${postId}, pageNumber=${pageNumber}, pageSize=${pageSize}`);
         const response = await axiosClient.get(`GetPostCommentsByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         console.log('Kết quả API bình luận:', response);
         return response;

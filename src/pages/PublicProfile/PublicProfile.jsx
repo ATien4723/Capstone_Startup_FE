@@ -28,6 +28,7 @@ import {
 import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
+import { formatPostTime } from '@/utils/dateUtils';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -105,6 +106,13 @@ const PublicProfile = () => {
     // State cho xử lý lỗi trong modal
     const [postError, setPostError] = useState('');
     const [isCreatingPost, setIsCreatingPost] = useState(false);
+    //lay user trong comment
+    const [currentUserData, setCurrentUserData] = useState(null);
+
+    // Thêm state để quản lý modal xác nhận xóa
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [postToDelete, setPostToDelete] = useState(null);
+
 
     // Hàm xử lý follow/unfollow
     const handleFollowToggle = async () => {
@@ -180,19 +188,21 @@ const PublicProfile = () => {
             try {
                 setIsLoading(true);
                 // Tách biệt việc lấy thông tin profile và bài viết
-                const [accountInfo, followingData, followersData] = await Promise.all([
+                const [accountInfo, followingData, followersData, currentUserInfo] = await Promise.all([
                     getAccountInfo(id),
                     getFollowing(id),
-                    getFollowers(id)
+                    getFollowers(id),
+                    getAccountInfo(currentUserId)
                 ]);
 
-                if (!accountInfo) {
+                if (!accountInfo || !currentUserInfo) {
                     toast.error('Failed to load profile data');
                     setIsLoading(false);
                     return;
                 }
 
                 setProfileData(accountInfo);
+                setCurrentUserData(currentUserInfo);
                 setFollowing(followingData || []);
                 setFollowers(followersData || []);
                 setFormData({
@@ -366,13 +376,16 @@ const PublicProfile = () => {
         }
     };
 
+    // Hàm xử lý hiển thị modal xác nhận xóa
+    const confirmDeletePost = (postId) => {
+        setPostToDelete(postId);
+        setShowDeleteConfirmModal(true);
+    };
+
+
     //xóa bài post
     const handleDeletePost = async (postId) => {
         try {
-            if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
-                return;
-            }
-
             const result = await deletePost(postId);
             // Cập nhật state để xóa bài viết khỏi UI
             setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
@@ -380,6 +393,10 @@ const PublicProfile = () => {
         } catch (error) {
             console.error('Error deleting post:', error);
             toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+        } finally {
+            // Đóng modal xác nhận
+            setShowDeleteConfirmModal(false);
+            setPostToDelete(null);
         }
     };
 
@@ -842,6 +859,36 @@ const PublicProfile = () => {
                             </div>
                         </div>
 
+                        {/* Modal xác nhận xóa bài viết */}
+                        {showDeleteConfirmModal && (
+                            <Modal onClose={() => {
+                                setShowDeleteConfirmModal(false);
+                                setPostToDelete(null);
+                            }}>
+                                <div className="p-6">
+                                    <h3 className="text-xl font-semibold mb-4">Confirm post deletion</h3>
+                                    <p className="mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium"
+                                            onClick={() => {
+                                                setShowDeleteConfirmModal(false);
+                                                setPostToDelete(null);
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium"
+                                            onClick={() => postToDelete && handleDeletePost(postToDelete)}
+                                        >
+                                            Delete posts
+                                        </button>
+                                    </div>
+                                </div>
+                            </Modal>
+                        )}
+
                         {showPostModal && (
                             <Modal onClose={() => {
                                 setShowPostModal(false);
@@ -968,7 +1015,7 @@ const PublicProfile = () => {
                                                     <div>
                                                         <h6 className="font-semibold mb-0">{profileData?.firstName} {profileData?.lastName}</h6>
                                                         <small className="text-gray-600">
-                                                            {new Date(post.createAt).toLocaleDateString('vi-VN')}
+                                                            {post.createAt ? formatPostTime(post.createAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                                         </small>
                                                     </div>
                                                 </div>
@@ -991,29 +1038,28 @@ const PublicProfile = () => {
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                                                        Chỉnh sửa
+                                                                        Edit
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleDeletePost(post.postId)}
+                                                                        onClick={() => confirmDeletePost(post.postId)}
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                                                        Xóa
+                                                                        Delete
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleHidePost(post.postId)}
                                                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                                     >
                                                                         <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                                                                        Ẩn bài viết
+                                                                        Hide post
                                                                     </button>
                                                                 </div>
                                                             )}
                                                             <div className="py-1">
                                                                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                                                     <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                                                                    Chia sẻ
-                                                                </button>
+                                                                    Share                                                                </button>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1059,7 +1105,7 @@ const PublicProfile = () => {
                                                 isOpen={openCommentPosts.includes(post.postId)}
                                                 onToggle={() => toggleCommentSection(post.postId)}
                                                 commentCount={postCommentCounts[post.postId] || 0}
-                                                currentUserAvatar={profileData?.avatarUrl}
+                                                currentUserAvatar={currentUserData?.avatarUrl}
                                                 refreshTrigger={refreshCommentTrigger}
                                                 onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
                                             />

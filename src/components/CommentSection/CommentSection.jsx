@@ -209,6 +209,13 @@ const CommentSection = ({
 
             // Xóa nội dung input
             setCommentContent('');
+
+            // Cập nhật số lượng bình luận và thông báo lên component cha
+            if (onCommentCountChange) {
+                // Tính toán số lượng bình luận mới (số lượng hiện tại + 1)
+                const newCommentCount = (commentCount || 0) + 1;
+                onCommentCountChange(newCommentCount);
+            }
         } catch (error) {
             toast.error('Không thể thêm bình luận');
             console.error('Lỗi khi tạo bình luận:', error);
@@ -537,7 +544,7 @@ const CommentSection = ({
                     comments.map((comment) => (
                         <div key={comment.postcommentId} className="flex gap-3 mb-5 group">
                             <img
-                                src={comment?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                src={comment?.accountInfor?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                 alt="Avatar"
                                 className="w-10 h-10 rounded-full mt-1"
                             />
@@ -569,7 +576,7 @@ const CommentSection = ({
                                     <div className="bg-gray-100 rounded-2xl px-4 py-3">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="font-semibold text-gray-900">
-                                                {comment?.userInfo?.firstName} {comment?.userInfo?.lastName}
+                                                {comment?.accountInfor?.fullName}
                                             </span>
                                         </div>
                                         <div className="text-gray-800 mb-2">{comment.content}</div>
@@ -834,3 +841,4 @@ const CommentSection = ({
 };
 
 export default CommentSection;
+

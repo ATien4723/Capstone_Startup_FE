@@ -61,3 +61,32 @@ export const formatVietnameseDate = (dateTime) => {
     year: 'numeric'
   });
 };
+
+/**
+ * Định dạng thời gian theo kiểu "Hôm qua lúc 14:14"
+ * @param {Date|string} dateTime - Thời gian cần định dạng
+ * @returns {string} Chuỗi thời gian đã định dạng
+ */
+export const formatPostTime = (dateTime) => {
+  if (!dateTime) return "Unknown date";
+
+  const date = dateTime instanceof Date ? dateTime : new Date(dateTime);
+  const now = new Date();
+
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    // Nếu là hôm nay → hiển thị thời gian tương đối
+    return getRelativeTime(date, true); // ví dụ: "2 giờ trước"
+  } else {
+    // Nếu là ngày khác → hiển thị dạng "26 tháng 6 lúc 14:32"
+    const day = date.getDate();
+    const month = date.getMonth() + 1; // tháng bắt đầu từ 0
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day} tháng ${month} lúc ${hours}:${minutes}`;
+  }
+};
