@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faEllipsisV, faReply, faTrash, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
+import {
+    faHeart, faEllipsisV, faReply, faTrash, faPencilAlt, faPaperPlane
+} from '@fortawesome/free-solid-svg-icons';
 import { faHeart as farHeart, faComment as farComment } from '@fortawesome/free-regular-svg-icons';
 import { toast } from 'react-toastify';
 import { getRelativeTime } from '@/utils/dateUtils';
@@ -527,13 +529,15 @@ const CommentSection = ({
                         value={commentContent}
                         onChange={(e) => setCommentContent(e.target.value)}
                         placeholder="Thêm bình luận..."
-                        className="w-full p-2 pl-4 pr-20 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
+                        className="w-full p-2 pl-4 pr-12 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
                     />
                     <button
                         onClick={handleCreateComment}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 font-medium"
+                        disabled={!commentContent.trim()}
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 ${commentContent.trim() ? 'text-blue-500' : 'text-gray-400'
+                            } transition-colors duration-200`}
                     >
-                        Đăng
+                        <FontAwesomeIcon icon={faPaperPlane} />
                     </button>
                 </div>
             </div>
@@ -656,13 +660,17 @@ const CommentSection = ({
                                                     }))
                                                 }
                                                 placeholder="Viết phản hồi..."
-                                                className="w-full p-2 pl-3 pr-16 border rounded-full text-sm focus:outline-none focus:border-blue-500 bg-gray-100"
+                                                className="w-full p-2 pl-3 pr-12 border rounded-full text-sm focus:outline-none focus:border-blue-500 bg-gray-100"
                                             />
                                             <button
                                                 onClick={() => handleReplyComment(comment.postcommentId)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 font-medium text-sm"
+                                                disabled={!(childCommentContents[`${postId}-${comment.postcommentId}`] || '').trim()}
+                                                className={`absolute right-3 top-1/2 -translate-y-1/2 ${(childCommentContents[`${postId}-${comment.postcommentId}`] || '').trim()
+                                                    ? 'text-blue-500'
+                                                    : 'text-gray-400'
+                                                    } transition-colors duration-200`}
                                             >
-                                                Gửi
+                                                <FontAwesomeIcon icon={faPaperPlane} />
                                             </button>
                                         </div>
                                     </div>
@@ -757,9 +765,13 @@ const CommentSection = ({
                                                                 />
                                                                 <button
                                                                     onClick={() => handleReplyToChildComment(childComment.postcommentId)}
-                                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 font-medium text-sm"
+                                                                    disabled={!(childCommentContents[`${postId}-${childComment.postcommentId}`] || '').trim()}
+                                                                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${(childCommentContents[`${postId}-${childComment.postcommentId}`] || '').trim()
+                                                                            ? 'text-blue-500'
+                                                                            : 'text-gray-400'
+                                                                        } transition-colors duration-200`}
                                                                 >
-                                                                    Gửi
+                                                                    <FontAwesomeIcon icon={faPaperPlane} />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -841,4 +853,10 @@ const CommentSection = ({
 };
 
 export default CommentSection;
+
+
+
+
+
+
 

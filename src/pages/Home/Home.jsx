@@ -27,6 +27,7 @@ import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
+import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -80,6 +81,11 @@ const Home = () => {
 
     // Thêm state để quản lý dropdown menu
     const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
+
+    // Hàm toggle dropdown
+    const toggleDropdown = (postId, isOpen) => {
+        setOpenDropdownPostId(isOpen ? postId : null);
+    };
 
     // Thêm state để quản lý modal xác nhận xóa
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
@@ -174,31 +180,6 @@ const Home = () => {
                                 }
                             }
                         }
-                        // Nếu API trả về đối tượng có thuộc tính data
-                        // else if (postsData.data && Array.isArray(postsData.data)) {
-                        //     console.log('API returned object with data array');
-                        //     setPosts(postsData.data);
-
-                        //     // Lấy thông tin like và comment count cho mỗi bài viết
-                        //     for (const post of postsData.data) {
-                        //         try {
-                        //             const likeCount = await getPostLikeCount(post.postId);
-                        //             setPostLikes(prev => ({
-                        //                 ...prev,
-                        //                 [post.postId]: likeCount
-                        //             }));
-
-                        //             const commentCount = await getPostCommentCount(post.postId);
-                        //             setPostCommentCounts(prev => ({
-                        //                 ...prev,
-                        //                 [post.postId]: commentCount
-                        //             }));
-                        //         } catch (err) {
-                        //             console.error(`Error fetching details for post ${post.postId}:`, err);
-                        //         }
-                        //     }
-                        // }
-                        // Nếu không có cấu trúc nào phù hợp
                         else {
                             toast.error('Dữ liệu bài viết không đúng định dạng');
                             setPosts([]);
@@ -978,50 +959,16 @@ const Home = () => {
                                                         </small>
                                                     </div>
                                                 </div>
-                                                <div className="relative post-menu-container">
-                                                    <button
-                                                        onClick={() => setOpenDropdownPostId(openDropdownPostId === post.postId ? null : post.postId)}
-                                                        className="text-gray-600 hover:text-gray-900"
-                                                    >
-                                                        <FontAwesomeIcon icon={faEllipsisH} />
-                                                    </button>
-
-                                                    {/* Menu xổ xuống khi click vào nút ellipsis */}
-                                                    {openDropdownPostId === post.postId && (
-                                                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
-                                                            {post.accountID == currentUserId && (
-                                                                <div className="py-1">
-                                                                    <button
-                                                                        onClick={() => setEditingPost(post)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                                                        Edit                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => confirmDeletePost(post.postId)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                                                        Delete
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleHidePost(post.postId)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                                                                        Hide post
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            <div className="py-1">
-                                                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                    <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                                                                    Share
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <PostDropdownMenu
+                                                    post={post}
+                                                    currentUserIdHome={currentUserId}
+                                                    isOpen={openDropdownPostId === post.postId}
+                                                    onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
+                                                    onEdit={setEditingPost}
+                                                    onDelete={confirmDeletePost}
+                                                    onHide={handleHidePost}
+                                                    onShare={(post) => console.log('Share post:', post)}
+                                                />
                                             </div>
                                             <div>
                                                 {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}

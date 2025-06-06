@@ -29,6 +29,7 @@ import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { formatPostTime } from '@/utils/dateUtils';
+import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -95,7 +96,7 @@ const PublicProfile = () => {
     const observer = useRef();
     const pageSize = 10;
 
-    const [openDropdownPostId, setOpenDropdownPostId] = useState({});
+    const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
     const [editingPost, setEditingPost] = useState(null);
     const [editedPostContent, setEditedPostContent] = useState('');
 
@@ -113,6 +114,10 @@ const PublicProfile = () => {
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [postToDelete, setPostToDelete] = useState(null);
 
+    // Hàm toggle dropdown
+    const toggleDropdown = (postId, isOpen) => {
+        setOpenDropdownPostId(isOpen ? postId : null);
+    };
 
     // Hàm xử lý follow/unfollow
     const handleFollowToggle = async () => {
@@ -381,7 +386,6 @@ const PublicProfile = () => {
         setPostToDelete(postId);
         setShowDeleteConfirmModal(true);
     };
-
 
     //xóa bài post
     const handleDeletePost = async (postId) => {
@@ -1019,54 +1023,19 @@ const PublicProfile = () => {
                                                         </small>
                                                     </div>
                                                 </div>
-                                                <div className="relative group">
-                                                    <button
-                                                        onClick={() =>
-                                                            setOpenDropdownPostId(openDropdownPostId === post.postId ? null : post.postId)
-                                                        }
-                                                        className="text-gray-600 hover:text-gray-900" >
-                                                        <FontAwesomeIcon icon={faEllipsisH} />
-                                                    </button>
-
-                                                    {/* Menu xổ xuống khi click vào nút ellipsis */}
-                                                    {openDropdownPostId === post.postId && (
-                                                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
-                                                            {post.accountId == currentUserId && (
-                                                                <div className="py-1">
-                                                                    <button
-                                                                        onClick={() => setEditingPost(post)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => confirmDeletePost(post.postId)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                                                        Delete
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleHidePost(post.postId)}
-                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                                                                        Hide post
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            <div className="py-1">
-                                                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                    <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                                                                    Share                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <PostDropdownMenu
+                                                    post={post}
+                                                    currentUserId={currentUserId}
+                                                    isOpen={openDropdownPostId === post.postId}
+                                                    onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
+                                                    onEdit={setEditingPost}
+                                                    onDelete={confirmDeletePost}
+                                                    onHide={handleHidePost}
+                                                    onShare={(post) => console.log('Share post:', post)}
+                                                />
                                             </div>
                                             <div>
-                                                <p className="text-gray-800">{post.content}</p>
+                                                <p className="text-gray-800 ml-5">{post.content}</p>
                                                 {post.postMedia && post.postMedia.length > 0 && (
                                                     <PostMediaGrid media={post.postMedia} />
                                                 )}
@@ -1235,6 +1204,7 @@ const PublicProfile = () => {
 
 
 export default PublicProfile;
+
 
 
 
