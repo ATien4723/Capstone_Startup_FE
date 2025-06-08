@@ -9,6 +9,8 @@ const Register = lazy(() => import('@/pages/Register/Register'));
 const Settings = lazy(() => import('@/pages/Settings/Setting'));
 const OTPVerification = lazy(() => import('@/components/OTPVerification/OTPVerification'));
 const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPassword'));
+const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
+const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
 
 const routers = [
     {
@@ -22,6 +24,18 @@ const routers = [
     {
         path: "/home",
         component: Home
+    },
+    {
+        path: "/mynetwork",
+        component: MyNetwork
+    },
+    {
+        path: "/network/following",
+        component: NetworkList
+    },
+    {
+        path: "/network/followers",
+        component: NetworkList
     },
     {
         path: "/profile/:id",

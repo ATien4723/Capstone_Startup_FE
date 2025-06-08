@@ -351,6 +351,7 @@ export default function Navbar() {
 
     const navItems = [
         { label: 'Home', to: '/home' },
+        { label: 'My Network', to: '/mynetwork' },
         { label: 'Startups', to: '/startups' },
         { label: 'InvestmentEvents', to: '/investment-events' },
         { label: 'Policy', to: '/policy' },
