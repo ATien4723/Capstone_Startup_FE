@@ -147,19 +147,17 @@ export default function Navbar() {
 
                 // Xử lý từng thông báo và lấy thông tin người dùng ngay lập tức
                 const processedItemsPromises = response.items.map(async (item, idx) => {
-                    // Kiểm tra xem item có trường nào khác có thể là ID không
-                    const possibleId = item.notificationId;
+                    // Luôn ưu tiên sử dụng notificationId nếu có
+                    const notificationId = item.notificationId;
                     let processedItem = item;
 
-                    // Nếu không có ID, thêm một ID tạm thời
-                    if (!possibleId) {
-                        console.log('Thông báo không có ID:', item);
+                    // Sử dụng notificationId hoặc tạo ID tạm thời nếu không có
+                    if (notificationId) {
+                        processedItem = { ...item, id: notificationId };
+                        // console.log(`Sử dụng notificationId: ${notificationId}`);
+                    } else {
                         processedItem = { ...item, id: `temp-id-${Date.now()}-${idx}` };
-                    }
-                    // Sử dụng ID từ trường thích hợp
-                    else if (!item.id && possibleId) {
-                        console.log(`Sử dụng ID từ trường khác: ${possibleId}`);
-                        processedItem = { ...item, id: possibleId };
+                        console.log('Thông báo không có notificationId, tạo ID tạm thời:', processedItem.id);
                     }
 
                     // Lấy thông tin người dùng cho thông báo này
@@ -483,7 +481,7 @@ export default function Navbar() {
                                                             >
                                                                 <div className="relative mr-3">
                                                                     <img
-                                                                        src={senderInfo?.avatarUrl || "/api/placeholder/40/40"}
+                                                                        src={senderInfo?.avartarURL || "/api/placeholder/40/40"}
                                                                         alt={senderInfo?.firstName || "User"}
                                                                         className="w-12 h-12 rounded-full"
                                                                     />

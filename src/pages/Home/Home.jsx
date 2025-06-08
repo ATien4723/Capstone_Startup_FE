@@ -1,3 +1,6 @@
+import { useProfileData } from '@/hooks/useProfileHooks';
+import { useNewsFeedData } from '@/hooks/useNewsFeedData';
+import { usePostActions, useInfiniteScroll } from '@/hooks/useProfileHooks';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -7,23 +10,6 @@ import {
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getUserId, getUserInfoFromToken } from '@/apis/authService';
-import {
-    createPost,
-    getPostsByAccountId,
-    likePost,
-    unlikePost,
-    getPostLikeCount,
-    isPostLiked,
-    createPostComment,
-    getPostCommentsByPostId,
-    getPostCommentCount,
-    updatePost,
-    deletePost,
-    hidePost,
-    getNewFeed
-} from '@/apis/postService';
-import { getAccountInfo, getFollowing, getFollowers } from '@/apis/accountService';
-import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
@@ -45,576 +31,59 @@ const Modal = ({ children, onClose }) => (
 );
 
 const Home = () => {
-    const [showPostModal, setShowPostModal] = useState(false);
-    const [newPost, setNewPost] = useState({
-        content: '',
-        files: []
-    });
-    const [posts, setPosts] = useState([]);
-    const [postLikes, setPostLikes] = useState({});
-    const [postComments, setPostComments] = useState({});
-    const [openCommentPosts, setOpenCommentPosts] = useState([]);
-    const [commentContents, setCommentContents] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [pageNumber, setPageNumber] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const pageSize = 10;
-    const observer = useRef();
     const currentUserId = getUserId();
+    const {
+        profileData, following, followers, isLoading: isLoadingProfile
+    } = useProfileData(currentUserId);
+
+    const {
+        posts, postLikes, postCommentCounts, openCommentPosts, refreshCommentTrigger,
+        isLoading: isLoadingPosts, isLoadingMore,
+        loadMorePosts, handleLikePost, toggleCommentSection, handleCommentCountChange,
+        hasMore
+    } = useNewsFeedData(currentUserId);
+
+    const postActions = usePostActions(currentUserId, null);
+    const {
+        showPostModal, setShowPostModal, newPost, setNewPost, postError, isCreatingPost,
+        editingPost, setEditingPost, editedPostContent, setEditedPostContent,
+        showDeleteConfirmModal, setShowDeleteConfirmModal, postToDelete, openDropdownPostId,
+        handleCreatePost, handleFileUpload, toggleDropdown, confirmDeletePost,
+        handleDeletePost, handleUpdatePost, handleHidePost
+    } = postActions;
+
+    // const { lastElementRef } = useInfiniteScroll(loadMorePosts, true, isLoadingMore);
+
     const userInfo = getUserInfoFromToken();
-    const [postCommentCounts, setPostCommentCounts] = useState({});
-    // Thêm state cho thông tin profile
-    const [profileData, setProfileData] = useState(null);
-    const [following, setFollowing] = useState([]);
-    const [followers, setFollowers] = useState([]);
 
-    // Thêm các state mới
-    const [openPostMenus, setOpenPostMenus] = useState([]);
-    const [editingPost, setEditingPost] = useState(null);
-    const [editedPostContent, setEditedPostContent] = useState('');
-    const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
+    const { lastElementRef } = useInfiniteScroll(loadMorePosts, hasMore, isLoadingMore);
 
-    // Thêm state để hiển thị lỗi khi tạo bài viết
-    const [postError, setPostError] = useState('');
-    const [isCreatingPost, setIsCreatingPost] = useState(false);
-
-    // Thêm state để quản lý dropdown menu
-    const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
-
-    // Hàm toggle dropdown
-    const toggleDropdown = (postId, isOpen) => {
-        setOpenDropdownPostId(isOpen ? postId : null);
-    };
-
-    // Thêm state để quản lý modal xác nhận xóa
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-    const [postToDelete, setPostToDelete] = useState(null);
+    // Đóng dropdown khi click ra ngoài
+    // (giữ lại nếu còn dùng openDropdownPostId)
+    // ...
 
     // Thêm hàm để đóng dropdown khi click ra ngoài
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (openDropdownPostId && !event.target.closest('.post-menu-container')) {
-                setOpenDropdownPostId(null);
-            }
-        };
+    //  useEffect(() => {
+    //     const handleClickOutside = (event) => {
+    //         if (openDropdownPostId && !event.target.closest('.post-menu-container')) {
+    //             setOpenDropdownPostId(null);
+    //         }
+    //     };
+    //     document.addEventListener('mousedown', handleClickOutside);
+    //     return () => {
+    //         document.removeEventListener('mousedown', handleClickOutside);
+    //     };
+    // }, [openDropdownPostId]);
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [openDropdownPostId]);
-
-    // Thêm useEffect để fetch dữ liệu profile và bài viết
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            try {
-                setIsLoading(true);
-                // Tách biệt việc lấy thông tin profile và bài viết
-                const [accountInfo, followingData, followersData] = await Promise.all([
-                    getAccountInfo(currentUserId),
-                    getFollowing(currentUserId),
-                    getFollowers(currentUserId)
-                ]);
-
-                if (!accountInfo) {
-                    toast.error('Failed to load profile data');
-                    setIsLoading(false);
-                    return;
-                }
-
-                setProfileData(accountInfo);
-                setFollowing(followingData || []);
-                setFollowers(followersData || []);
-
-                // Tách riêng phần lấy bài viết
-                try {
-                    const postsData = await getNewFeed(currentUserId);
-                    // Kiểm tra cấu trúc dữ liệu trả về
-                    if (postsData) {
-                        // Nếu API trả về mảng trực tiếp
-                        if (Array.isArray(postsData)) {
-                            console.log('API returned array directly');
-                            setPosts(postsData);
-
-                            // Lấy thông tin likes và comments cho mỗi post mới
-                            for (const post of postsData) {
-                                try {
-                                    const likeCount = await getPostLikeCount(post.postId);
-                                    setPostLikes(prev => ({
-                                        ...prev,
-                                        [post.postId]: likeCount
-                                    }));
-
-                                    const commentCount = await getPostCommentCount(post.postId);
-                                    setPostCommentCounts(prev => ({
-                                        ...prev,
-                                        [post.postId]: commentCount
-                                    }));
-                                } catch (error) {
-                                    console.error('Error fetching post details:', error);
-                                }
-                            }
-                        }
-                        // Nếu API trả về đối tượng có thuộc tính items
-                        else if (postsData.items && Array.isArray(postsData.items)) {
-                            console.log('API returned object with items array');
-                            setPosts(postsData.items);
-
-                            // Lấy thông tin likes và comments cho mỗi post mới
-                            for (const post of postsData.items) {
-                                try {
-                                    const likeCount = await getPostLikeCount(post.postId);
-                                    setPostLikes(prev => ({
-                                        ...prev,
-                                        [post.postId]: likeCount
-                                    }));
-
-                                    const commentCount = await getPostCommentCount(post.postId);
-                                    setPostCommentCounts(prev => ({
-                                        ...prev,
-                                        [post.postId]: commentCount
-                                    }));
-                                } catch (err) {
-                                    console.error(`Error fetching details for post ${post.postId}:`, err);
-                                }
-                            }
-                        }
-                        else {
-                            toast.error('Dữ liệu bài viết không đúng định dạng');
-                            setPosts([]);
-                        }
-                    } else {
-                        console.log('No posts data returned');
-                        setPosts([]);
-                    }
-
-                    // Kích hoạt tải lại bình luận
-                    setRefreshCommentTrigger(prev => prev + 1);
-                } catch (error) {
-                    // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
-                    if (error.response && error.response.status !== 404) {
-                        toast.error('Failed to load posts');
-                    }
-                    // Vẫn tiếp tục hiển thị profile ngay cả khi không lấy được bài viết
-                    setPosts([]);
-                }
-            } catch (error) {
-                toast.error('Failed to load profile data');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (currentUserId) {
-            fetchProfileData();
-        }
-    }, [currentUserId]);
-
-    // Thêm các hàm và useEffect cần thiết cho infinite scrolling
-
-    // Hàm fetch posts với phân trang
-    const fetchPosts = async (page) => {
-        try {
-            const response = await getNewFeed(currentUserId, page, pageSize);
-            // Kiểm tra response an toàn hơn
-            if (response && response.items) {
-                if (page === 1) {
-                    setPosts(response.items);
-                } else {
-                    setPosts(prevPosts => [...prevPosts, ...response.items]);
-                }
-                setHasMore(response.items.length === pageSize);
-            } else {
-                // Nếu không có items hoặc response không hợp lệ
-                if (page === 1) {
-                    setPosts([]);
-                }
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error('Error fetching posts:', error);
-            // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
-            if (error.response && error.response.status === 404) {
-                console.log('No posts found for this user');
-            }
-            setHasMore(false);
-            // Nếu là trang đầu tiên và xảy ra lỗi, set posts là mảng rỗng
-            if (page === 1) {
-                setPosts([]);
-            }
-            // } finally {
-            //     setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
-        }
-    };
-
-    // Hàm load more posts
-    const loadMorePosts = useCallback(() => {
-        if (isLoadingMore || !hasMore) return;
-        setIsLoadingMore(true);
-        setPageNumber(prev => prev + 1);
-    }, [isLoadingMore, hasMore]);
-
-    // Observer cho infinite scroll
-    const lastPostElementRef = useCallback(node => {
-        if (isLoadingMore) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                loadMorePosts();
-            }
-        });
-        if (node) observer.current.observe(node);
-    }, [isLoadingMore, hasMore, loadMorePosts]);
-
-    //Fetch posts khi component mount hoặc pageNumber thay đổi
-    useEffect(() => {
-        if (pageNumber === 1) {
-            setIsLoading(true);
-            fetchPosts(1).finally(() => {
-                setIsLoading(false);
-            });
-        } else {
-            fetchPosts(pageNumber).finally(() => {
-                setIsLoadingMore(false);
-            });
-        }
-    }, [pageNumber, currentUserId]);
-
-    // Hàm xử lý tạo bài viết mới
-    const handleCreatePost = async () => {
-        try {
-            setIsCreatingPost(true);
-            setPostError(''); // Reset lỗi trước đó
-
-            const formData = new FormData();
-            formData.append('content', newPost.content);
-            newPost.files.forEach(file => {
-                formData.append('MediaFiles', file);
-            });
-            formData.append('accountId', currentUserId);
-
-            // Hiển thị thông báo đang xử lý
-            toast.info('Đang tạo bài viết...');
-
-            // Tạo post mới
-            const result = await createPost(formData);
-
-            // Reset form trước khi refresh
-            setNewPost({ content: '', files: [] });
-            setShowPostModal(false);
-            setPostError('');
-
-            // Gọi API để lấy danh sách posts mới nhất
-            try {
-                const postsData = await getNewFeed(currentUserId, 1, pageSize);
-                console.log('Refreshed posts data:', postsData);
-
-                // Kiểm tra cấu trúc dữ liệu trả về
-                if (postsData) {
-                    // Nếu API trả về mảng trực tiếp
-                    if (Array.isArray(postsData)) {
-                        console.log('API returned array directly');
-                        setPosts(postsData);
-
-                        // Lấy thông tin likes và comments cho mỗi post mới
-                        for (const post of postsData) {
-                            try {
-                                const likeCount = await getPostLikeCount(post.postId);
-                                setPostLikes(prev => ({
-                                    ...prev,
-                                    [post.postId]: likeCount
-                                }));
-
-                                const commentCount = await getPostCommentCount(post.postId);
-                                setPostCommentCounts(prev => ({
-                                    ...prev,
-                                    [post.postId]: commentCount
-                                }));
-                            } catch (error) {
-                                console.error('Error fetching post details:', error);
-                            }
-                        }
-                    }
-                    // // Nếu API trả về đối tượng có thuộc tính items
-                    // else if (postsData.items && Array.isArray(postsData.items)) {
-                    //     console.log('API returned object with items array');
-                    //     setPosts(postsData.items);
-
-                    //     // Lấy thông tin likes và comments cho mỗi post mới
-                    //     for (const post of postsData.items) {
-                    //         try {
-                    //             const likeCount = await getPostLikeCount(post.postId);
-                    //             setPostLikes(prev => ({
-                    //                 ...prev,
-                    //                 [post.postId]: likeCount
-                    //             }));
-
-                    //             const commentCount = await getPostCommentCount(post.postId);
-                    //             setPostCommentCounts(prev => ({
-                    //                 ...prev,
-                    //                 [post.postId]: commentCount
-                    //             }));
-                    //         } catch (error) {
-                    //             console.error('Error fetching post details:', error);
-                    //         }
-                    //     }
-                    // }
-                    // // Nếu không có cấu trúc nào phù hợp
-                    // else {
-                    //     console.error('Unexpected API response structure:', postsData);
-                    //     toast.error('Dữ liệu bài viết không đúng định dạng');
-                    //     setPosts([]);
-                    // }
-                } else {
-                    console.log('No posts data returned');
-                    setPosts([]);
-                }
-                // Kích hoạt tải lại bình luận
-                setRefreshCommentTrigger(prev => prev + 1);
-            } catch (error) {
-                console.error('Error refreshing posts after creation:', error);
-                // Nếu không lấy được bài viết mới, gọi tải lại
-                fetchPosts(1);
-            }
-
-            toast.success('Bài viết đã được tạo thành công');
-        } catch (error) {
-            console.error('Error creating post:', error);
-
-            // Xử lý lỗi từ API
-            if (error.response) {
-                const status = error.response.status;
-                const errorData = error.response.data;
-
-                if (status === 400 && errorData) {
-                    // Hiển thị lỗi trong modal thay vì toast
-                    setPostError(errorData.message || 'Bài viết vi phạm nguyên tắc cộng đồng');
-                } else {
-                    setPostError('Có lỗi xảy ra khi tạo bài viết. Vui lòng thử lại.');
-                }
-            } else {
-                setPostError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
-            }
-
-            // Vẫn hiển thị toast để thông báo tổng quát
-            toast.error('Không thể tạo bài viết');
-        } finally {
-            setIsCreatingPost(false);
-        }
-    };
-
-    // Hàm xử lý thích/bỏ thích bài viết
-    const handleLikePost = async (postId) => {
-        if (!currentUserId) {
-            toast.error('Please login to like posts');
-            return;
-        }
-
-        try {
-            const likeData = {
-                postId,
-                accountId: currentUserId
-            };
-
-            const isLiked = await isPostLiked(likeData);
-            if (isLiked) {
-                await unlikePost(likeData);
-            } else {
-                await likePost(likeData);
-            }
-            // Sau khi like/unlike, cập nhật lại số lượng like từ backend
-            const likeCount = await getPostLikeCount(postId);
-            setPostLikes(prev => ({
-                ...prev,
-                [postId]: likeCount
-            }));
-        } catch (error) {
-            toast.error('Failed to update like');
-            console.error('Error updating like:', error);
-        }
-    };
-
-    // Hàm xử lý upload file
-    const handleFileUpload = (event) => {
-        const files = Array.from(event.target.files);
-        setNewPost(prev => ({
-            ...prev,
-            files: [...prev.files, ...files]
-        }));
-    };
-
-    // Hàm lấy comments của một bài viết
-    const fetchPostComments = async (postId) => {
-        try {
-            const comments = await getPostCommentsByPostId(postId);
-            setPostComments(prev => ({
-                ...prev,
-                [postId]: comments
-            }));
-        } catch (error) {
-            console.error('Error fetching comments:', error);
-        }
-    };
-
-    // Hàm xử lý tạo comment
-    const handleCreateComment = async (postId, content) => {
-        if (!content.trim()) {
-            toast.error('Please enter a comment');
-            return;
-        }
-
-        if (!currentUserId) {
-            toast.error('Please login to comment');
-            return;
-        }
-
-        try {
-            const commentData = {
-                postId: postId,
-                accountId: currentUserId,
-                content: content
-            };
-
-            // Gửi request tạo comment
-            await createPostComment(commentData);
-
-            // Lấy lại danh sách comments mới
-            const updatedComments = await getPostCommentsByPostId(postId);
-
-            // Cập nhật state với danh sách comments mới
-            setPostComments(prev => ({
-                ...prev,
-                [postId]: updatedComments || []
-            }));
-
-            // Reset input
-            setCommentContents(prev => ({
-                ...prev,
-                [postId]: ''
-            }));
-
-            toast.success('Comment added successfully');
-        } catch (error) {
-            toast.error('Failed to add comment');
-            console.error('Error creating comment:', error);
-        }
-    };
-
-    // Hàm này để toggle comment section
-    const toggleCommentSection = (postId) => {
-        setOpenCommentPosts(prev => {
-            if (prev.includes(postId)) {
-                return prev.filter(id => id !== postId);
-            } else {
-                // Nếu chưa có trong danh sách, thêm vào và fetch comments
-                fetchPostComments(postId);
-                return [...prev, postId];
-            }
-        });
-    };
-
-    // Hàm này để cập nhật nội dung comment cho từng bài viết
-    const updateCommentContent = (postId, content) => {
-        setCommentContents(prev => ({
-            ...prev,
-            [postId]: content
-        }));
-    };
-
-    // Hàm toggle menu của bài post
-    const togglePostMenu = (postId) => {
-        setOpenPostMenus(prev => {
-            if (prev.includes(postId)) {
-                return prev.filter(id => id !== postId);
-            } else {
-                return [...prev, postId];
-            }
-        });
-    };
-
-    // Hàm xử lý cập nhật bài viết
-    const handleUpdatePost = async (postId, content) => {
-        try {
-            if (!content.trim()) {
-                toast.error('Nội dung bài viết không được để trống');
-                return;
-            }
-
-            const updatePostDTO = {
-                content: content
-            };
-
-            const result = await updatePost(postId, updatePostDTO);
-
-            // Cập nhật bài viết trong state
-            setPosts(prevPosts =>
-                prevPosts.map(post =>
-                    post.postId === postId ? { ...post, content: content } : post
-                )
-            );
-
-            toast.success('Bài viết đã được cập nhật thành công');
-        } catch (error) {
-            console.error('Error updating post:', error);
-            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
-        }
-    };
-
-    // Hàm xử lý hiển thị modal xác nhận xóa
-    const confirmDeletePost = (postId) => {
-        setPostToDelete(postId);
-        setShowDeleteConfirmModal(true);
-    };
-
-    // Hàm xử lý xóa bài viết sau khi xác nhận
-    const handleDeletePost = async (postId) => {
-        try {
-            const result = await deletePost(postId);
-            // Cập nhật state để xóa bài viết khỏi UI
-            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
-            toast.success('Bài viết đã được xóa thành công');
-        } catch (error) {
-            console.error('Error deleting post:', error);
-            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
-        } finally {
-            // Đóng modal xác nhận
-            setShowDeleteConfirmModal(false);
-            setPostToDelete(null);
-        }
-    };
-
-    // Hàm xử lý cập nhật số lượng comment
-    const handleCommentCountChange = (postId, newCount) => {
-        setPostCommentCounts(prev => ({
-            ...prev,
-            [postId]: newCount
-        }));
-    };
-
-    // Hàm xử lý ẩn bài viết
-    const handleHidePost = async (postId) => {
-        try {
-            // Lấy ID của người dùng hiện tại
-            const currentUserId = await getUserId();
-
-            if (!currentUserId) {
-                toast.error('Please login to hide posts');
-                return;
-            }
-
-            // Gọi API ẩn bài viết
-            await hidePost(currentUserId, postId);
-
-            // Cập nhật UI để ẩn bài viết
-            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
-
-            toast.success('Post hidden successfully');
-        } catch (error) {
-            console.error('Error hiding post:', error);
-            toast.error('Failed to hide post. Please try again.');
-        }
-    };
+    // Render UI
+    if (isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="ml-4 text-lg">Đang tải thông tin cá nhân...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-100 min-h-screen">
@@ -928,13 +397,18 @@ const Home = () => {
                             </Modal>
                         )}
 
-                        {/* PostList */}
+                        {/* Danh sách bài viết */}
                         <div className="space-y-6">
-                            {posts && posts.length > 0 ? (
+                            {isLoadingPosts ? (
+                                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
+                                </div>
+                            ) : posts && posts.length > 0 ? (
                                 posts.map((post, index) => (
                                     <div
                                         key={`post-${post.postId}-${index}`}
-                                        ref={index === posts.length - 1 ? lastPostElementRef : null}
+                                        ref={index === posts.length - 1 ? lastElementRef : null}
                                         className="bg-white rounded-lg shadow-md"
                                     >
                                         <div className="p-4">
@@ -942,7 +416,7 @@ const Home = () => {
                                             <div className="flex justify-between mb-3">
                                                 <div className="flex gap-3">
                                                     <img
-                                                        src={post.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                         alt="Profile"
                                                         className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
                                                         onError={(e) => {
@@ -952,7 +426,7 @@ const Home = () => {
                                                     />
                                                     <div>
                                                         <h6 className="font-semibold mb-0">
-                                                            {post.name || "Unknown User"}
+                                                            {post.name || post.fullName || post.firstName || "Unknown User"}
                                                         </h6>
                                                         <small className="text-gray-600">
                                                             {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
@@ -1018,11 +492,6 @@ const Home = () => {
                                         </div>
                                     </div>
                                 ))
-                            ) : isLoading ? (
-                                <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
-                                </div>
                             ) : (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <img
@@ -1034,7 +503,7 @@ const Home = () => {
                                             e.target.style.display = 'none';
                                         }}
                                     />
-                                    <p className="text-gray-600 text-lg font-medium mb-2">Chưa có bài viết nào</p>
+                                    <p className="text-gray-600 text-lg font-medium mb-2">Không có bài viết nào</p>
                                     <p className="text-gray-500 mb-4">Hãy chia sẻ trải nghiệm của bạn ngay bây giờ</p>
                                     <button
                                         onClick={() => setShowPostModal(true)}
@@ -1046,24 +515,13 @@ const Home = () => {
                                 </div>
                             )}
 
-                            {/* Loading indicator */}
+                            {/* Loading indicator cho load more */}
                             {isLoadingMore && (
                                 <div className="flex justify-center py-4">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                 </div>
                             )}
                         </div>
-
-                        {/* Thay thế tạm thời */}
-                        {/* <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                            <p className="text-gray-500 text-lg">Danh sách bài viết đang được cập nhật</p>
-                        </div> */}
-                        {/* Loading indicator */}
-                        {isLoadingMore && (
-                            <div className="flex justify-center py-4">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Right Column - Trending */}

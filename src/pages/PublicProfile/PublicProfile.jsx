@@ -10,26 +10,11 @@ import {
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
-import { getUserId } from "@/apis/authService";
-import { getAccountInfo, getFollowing, getFollowers, updateBio, followUser, unfollowUser, checkIsFollowing } from '@/apis/accountService';
-import {
-    getPostsByAccountId,
-    createPost,
-    likePost,
-    unlikePost,
-    getPostLikeCount,
-    getPostCommentCount,
-    isPostLiked,
-    updatePost,
-    deletePost,
-    hidePost
-}
-    from '@/apis/postService';
-import { toast } from 'react-toastify';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
+import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll } from '@/hooks/useProfileHooks';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -48,575 +33,42 @@ const Modal = ({ children, onClose }) => (
 
 const PublicProfile = () => {
     const { id } = useParams();
-    const currentUserId = getUserId();
-    const [showPostModal, setShowPostModal] = useState(false);
-    const [profileData, setProfileData] = useState(null);
-    const [following, setFollowing] = useState([]);
-    const [followers, setFollowers] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [editBio, setEditBio] = useState(false);
-
-    // Thêm state cho bài viết
-    const [posts, setPosts] = useState([]);
-    const [newPost, setNewPost] = useState({
-        content: '',
-        files: []
-    });
-    const [postLikes, setPostLikes] = useState({});
-    const [postCommentCounts, setPostCommentCounts] = useState({});
-    const [openCommentPosts, setOpenCommentPosts] = useState([]);
-    const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
-
-    // Gộp formData
-    const [formData, setFormData] = useState({
-        // Profile fields
-        firstName: '',
-        lastName: '',
-        gender: '',
-        dob: '',
-        address: '',
-        phoneNumber: '',
-        avatarUrl: '',
-        // Bio fields
-        introTitle: '',
-        position: '',
-        workplace: '',
-        facebookUrl: '',
-        linkedinUrl: '',
-        githubUrl: '',
-        portfolioUrl: '',
-        country: '',
-    });
-
-    const [activeButton, setActiveButton] = useState('all');
-    const [previousActiveButton, setPreviousActiveButton] = useState('all');
-    const [pageNumber, setPageNumber] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const observer = useRef();
-    const pageSize = 10;
-
-    const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
-    const [editingPost, setEditingPost] = useState(null);
-    const [editedPostContent, setEditedPostContent] = useState('');
-
-    // Thêm state để theo dõi trạng thái follow
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [followLoading, setFollowLoading] = useState(false);
-
-    // State cho xử lý lỗi trong modal
-    const [postError, setPostError] = useState('');
-    const [isCreatingPost, setIsCreatingPost] = useState(false);
-    //lay user trong comment
-    const [currentUserData, setCurrentUserData] = useState(null);
-
-    // Thêm state để quản lý modal xác nhận xóa
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-    const [postToDelete, setPostToDelete] = useState(null);
-
-    // Hàm toggle dropdown
-    const toggleDropdown = (postId, isOpen) => {
-        setOpenDropdownPostId(isOpen ? postId : null);
-    };
-
-    // Hàm xử lý follow/unfollow
-    const handleFollowToggle = async () => {
-        if (followLoading) return;
-
-        try {
-            setFollowLoading(true);
-
-            // Lấy ID của người dùng hiện tại
-            const currentUserId = await getUserId();
-
-            if (currentUserId === id) {
-                toast.warning("Bạn không thể theo dõi chính mình");
-                return;
-            }
-
-            // Gọi API follow/unfollow
-            if (isFollowing) {
-                // Gọi API unfollow
-                await unfollowUser(currentUserId, id);
-                setIsFollowing(false);
-                toast.success(`Đã hủy theo dõi ${profileData.firstName} ${profileData.lastName}`);
-
-                // Cập nhật lại danh sách followers
-                const updatedFollowers = followers.filter(f => f.accountId !== currentUserId);
-                setFollowers(updatedFollowers);
-            } else {
-                // Gọi API follow
-                await followUser(currentUserId, id);
-                setIsFollowing(true);
-                toast.success(`Đã theo dõi ${profileData.firstName} ${profileData.lastName}`);
-
-                // Cập nhật lại danh sách followers
-                const currentUserInfo = await getAccountInfo(currentUserId);
-                if (currentUserInfo) {
-                    setFollowers(prev => [...prev, currentUserInfo]);
-                }
-            }
-        } catch (error) {
-            console.error('Error toggling follow:', error);
-            toast.error('Không thể thực hiện thao tác. Vui lòng thử lại sau.');
-        } finally {
-            setFollowLoading(false);
-        }
-    };
-
-    // Kiểm tra trạng thái follow khi component mount
-    useEffect(() => {
-        const checkFollowStatus = async () => {
-            try {
-                // Lấy ID của người dùng hiện tại
-                const currentUserId = await getUserId();
-
-                // Nếu đang xem profile của chính mình, không cần kiểm tra
-                if (currentUserId === id) return;
-
-                // Gọi API kiểm tra trạng thái follow
-                const status = await checkIsFollowing(currentUserId, id);
-                setIsFollowing(status);
-            } catch (error) {
-                console.error('Error checking follow status:', error);
-            }
-        };
-
-        if (id) {
-            checkFollowStatus();
-        }
-    }, [id]);
-
-    // Lấy thông tin profile và bài viết
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            try {
-                setIsLoading(true);
-                // Tách biệt việc lấy thông tin profile và bài viết
-                const [accountInfo, followingData, followersData, currentUserInfo] = await Promise.all([
-                    getAccountInfo(id),
-                    getFollowing(id),
-                    getFollowers(id),
-                    getAccountInfo(currentUserId)
-                ]);
-
-                if (!accountInfo || !currentUserInfo) {
-                    toast.error('Failed to load profile data');
-                    setIsLoading(false);
-                    return;
-                }
-
-                setProfileData(accountInfo);
-                setCurrentUserData(currentUserInfo);
-                setFollowing(followingData || []);
-                setFollowers(followersData || []);
-                setFormData({
-                    firstName: accountInfo?.firstName || '',
-                    lastName: accountInfo?.lastName || '',
-                    gender: accountInfo?.gender || '',
-                    dob: accountInfo?.dob || '',
-                    address: accountInfo?.address || '',
-                    phoneNumber: accountInfo?.phoneNumber || '',
-                    avatarUrl: accountInfo?.avatarUrl || '',
-                    introTitle: accountInfo?.introTitle || '',
-                    position: accountInfo?.position || '',
-                    workplace: accountInfo?.workplace || '',
-                    facebookUrl: accountInfo?.facebookUrl || '',
-                    linkedinUrl: accountInfo?.linkedinUrl || '',
-                    githubUrl: accountInfo?.githubUrl || '',
-                    portfolioUrl: accountInfo?.portfolioUrl || '',
-                    country: accountInfo?.country || '',
-                });
-
-                // Tách riêng phần lấy bài viết
-                try {
-                    const postsData = await getPostsByAccountId(id);
-                    // Kiểm tra nếu có dữ liệu trả về
-                    if (postsData && postsData.items) {
-                        setPosts(postsData.items || []);
-
-                        // Lấy thông tin like và comment count cho mỗi bài viết
-                        if (Array.isArray(postsData.items)) {
-                            for (const post of postsData.items) {
-                                const likeCount = await getPostLikeCount(post.postId);
-                                setPostLikes(prev => ({
-                                    ...prev,
-                                    [post.postId]: likeCount
-                                }));
-
-                                const commentCount = await getPostCommentCount(post.postId);
-                                setPostCommentCounts(prev => ({
-                                    ...prev,
-                                    [post.postId]: commentCount
-                                }));
-                            }
-                        }
-                    } else {
-                        // Không có bài viết, set mảng rỗng
-                        setPosts([]);
-                    }
-                } catch (error) {
-                    console.error('Error fetching posts:', error);
-                    // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
-                    if (error.response && error.response.status !== 404) {
-                        toast.error('Failed to load posts');
-                    }
-                    // Vẫn tiếp tục hiển thị profile ngay cả khi không lấy được bài viết
-                    setPosts([]);
-                }
-            } catch (error) {
-                console.error('Error fetching profile data:', error);
-                toast.error('Failed to load profile data');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (id) {
-            fetchProfileData();
-        }
-    }, [id]);
-
-    // Chỉ lấy các trường bio để gửi API
-    const getBioFields = (data) => {
-        const { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country } = data;
-        return { introTitle, position, workplace, facebookUrl, linkedinUrl, githubUrl, portfolioUrl, country };
-    };
-
-    const handleUpdateBio = async () => {
-        try {
-            const updatedProfile = await updateBio(id, getBioFields(formData));
-            setProfileData(updatedProfile);
-            toast.success('Bio updated successfully');
-        } catch (error) {
-            toast.error('Failed to update bio');
-        }
-    };
-
-    // Hàm xử lý tạo bài viết mới
-    const handleCreatePost = async () => {
-        try {
-            setIsCreatingPost(true);
-            setPostError(''); // Reset lỗi trước đó
-
-            const formData = new FormData();
-            formData.append('content', newPost.content);
-            newPost.files.forEach(file => {
-                formData.append('MediaFiles', file);
-            });
-            formData.append('accountId', id);
-
-            // Hiển thị thông báo đang xử lý
-            toast.info('Đang tạo bài viết...');
-
-            // Tạo post mới
-            const result = await createPost(formData);
-
-            // Reset form trước khi refresh
-            setNewPost({ content: '', files: [] });
-            setShowPostModal(false);
-            setPostError('');
-
-            // Gọi API để lấy danh sách posts mới nhất
-            try {
-                const postsData = await getPostsByAccountId(id, 1, pageSize);
-
-                if (postsData && postsData.items) {
-                    console.log('Refreshed posts:', postsData.items);
-
-                    // Cập nhật state với danh sách posts mới
-                    setPosts(postsData.items);
-
-                    // Lấy thông tin likes và comments cho mỗi post mới
-                    for (const post of postsData.items) {
-                        try {
-                            const likeCount = await getPostLikeCount(post.postId);
-                            setPostLikes(prev => ({
-                                ...prev,
-                                [post.postId]: likeCount
-                            }));
-
-                            const commentCount = await getPostCommentCount(post.postId);
-                            setPostCommentCounts(prev => ({
-                                ...prev,
-                                [post.postId]: commentCount
-                            }));
-                        } catch (error) {
-                            console.error('Error fetching post details:', error);
-                        }
-                    }
-
-                    // Kích hoạt tải lại bình luận
-                    setRefreshCommentTrigger(prev => prev + 1);
-                }
-            } catch (error) {
-                console.error('Error refreshing posts after creation:', error);
-                // Nếu không lấy được bài viết mới, gọi tải lại
-                fetchPosts(1);
-            }
-
-            toast.success('Bài viết đã được tạo thành công');
-        } catch (error) {
-            console.error('Error creating post:', error);
-
-            // Xử lý lỗi từ API
-            if (error.response) {
-                const status = error.response.status;
-                const errorData = error.response.data;
-
-                if (status === 400 && errorData) {
-                    // Hiển thị lỗi trong modal thay vì toast
-                    setPostError(errorData.message || 'Bài viết vi phạm nguyên tắc cộng đồng');
-                } else {
-                    setPostError('Có lỗi xảy ra khi tạo bài viết. Vui lòng thử lại.');
-                }
-            } else {
-                setPostError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
-            }
-
-            // Vẫn hiển thị toast để thông báo tổng quát
-            toast.error('Không thể tạo bài viết');
-        } finally {
-            setIsCreatingPost(false);
-        }
-    };
-
-    // Hàm xử lý hiển thị modal xác nhận xóa
-    const confirmDeletePost = (postId) => {
-        setPostToDelete(postId);
-        setShowDeleteConfirmModal(true);
-    };
-
-    //xóa bài post
-    const handleDeletePost = async (postId) => {
-        try {
-            const result = await deletePost(postId);
-            // Cập nhật state để xóa bài viết khỏi UI
-            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
-            toast.success('Bài viết đã được xóa thành công');
-        } catch (error) {
-            console.error('Error deleting post:', error);
-            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
-        } finally {
-            // Đóng modal xác nhận
-            setShowDeleteConfirmModal(false);
-            setPostToDelete(null);
-        }
-    };
-
-    // Hàm xử lý cập nhật bài viết
-    const handleUpdatePost = async (postId, content) => {
-        try {
-            if (!content.trim()) {
-                toast.error('Nội dung bài viết không được để trống');
-                return;
-            }
-
-            const updatePostDTO = {
-                content: content
-            };
-
-            const result = await updatePost(postId, updatePostDTO);
-
-            // Cập nhật bài viết trong state
-            setPosts(prevPosts =>
-                prevPosts.map(post =>
-                    post.postId === postId ? { ...post, content: content } : post
-                )
-            );
-
-            toast.success('Bài viết đã được cập nhật thành công');
-        } catch (error) {
-            console.error('Error updating post:', error);
-            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
-        }
-    };
-
-    // Hàm xử lý thích/bỏ thích bài viết
-    const handleLikePost = async (postId) => {
-        try {
-            const likeData = {
-                postId,
-                accountId: currentUserId
-            };
-
-            // Kiểm tra trạng thái like hiện tại
-            const isLiked = await isPostLiked(likeData);
-
-            if (isLiked) {
-                // Nếu đã like, thực hiện unlike
-                await unlikePost(likeData);
-            } else {
-                // Nếu chưa like, thực hiện like
-                await likePost(likeData);
-            }
-
-            // Sau khi like/unlike, cập nhật lại số lượng like từ backend
-            const likeCount = await getPostLikeCount(postId);
-            setPostLikes(prev => ({
-                ...prev,
-                [postId]: likeCount
-            }));
-
-            // Kích hoạt tải lại bình luận (vì like có thể ảnh hưởng đến hiển thị bình luận)
-            setRefreshCommentTrigger(prev => prev + 1);
-        } catch (error) {
-            console.error('Error updating like:', error);
-
-            // Hiển thị thông báo lỗi cụ thể nếu có
-            if (error.response && error.response.data) {
-                toast.error(`Không thể thích bài viết: ${error.response.data}`);
-            } else {
-                toast.error('Không thể cập nhật trạng thái thích');
-            }
-        }
-    };
-
-    // Hàm xử lý upload file
-    const handleFileUpload = (event) => {
-        const files = Array.from(event.target.files);
-        setNewPost(prev => ({
-            ...prev,
-            files: [...prev.files, ...files]
-        }));
-    };
-
-    // Hàm fetch posts với phân trang
-    const fetchPosts = async (page) => {
-        try {
-            const response = await getPostsByAccountId(id, page, pageSize);
-            // Kiểm tra response an toàn hơn
-            if (response && response.items) {
-                if (page === 1) {
-                    setPosts(response.items);
-                } else {
-                    setPosts(prevPosts => [...prevPosts, ...response.items]);
-                }
-                setHasMore(response.items.length === pageSize);
-            } else {
-                // Nếu không có items hoặc response không hợp lệ
-                if (page === 1) {
-                    setPosts([]);
-                }
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error('Error fetching posts:', error);
-            // Kiểm tra nếu lỗi là 404 thì không hiển thị toast lỗi
-            if (error.response && error.response.status === 404) {
-                console.log('No posts found for this user');
-            }
-            setHasMore(false);
-            // Nếu là trang đầu tiên và xảy ra lỗi, set posts là mảng rỗng
-            if (page === 1) {
-                setPosts([]);
-            }
-        } finally {
-            setIsLoading(false); // Đảm bảo setIsLoading được gọi dù thành công hay thất bại
-        }
-    };
-
-    // Hàm load more posts
-    const loadMorePosts = useCallback(() => {
-        if (isLoadingMore || !hasMore) return;
-        setIsLoadingMore(true);
-        setPageNumber(prev => prev + 1);
-    }, [isLoadingMore, hasMore]);
-
-    // Observer cho infinite scroll
-    const lastPostElementRef = useCallback(node => {
-        if (isLoadingMore) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                loadMorePosts();
-            }
-        });
-        if (node) observer.current.observe(node);
-    }, [isLoadingMore, hasMore, loadMorePosts]);
-
-    // Fetch posts khi component mount hoặc pageNumber thay đổi
-    useEffect(() => {
-        if (pageNumber === 1) {
-            fetchPosts(1);
-        } else {
-            fetchPosts(pageNumber).finally(() => {
-                setIsLoadingMore(false);
-            });
-        }
-    }, [pageNumber, id]);
-
-    // Hàm này để toggle comment section
-    const toggleCommentSection = (postId) => {
-        setOpenCommentPosts(prev => {
-            const isOpen = prev.includes(postId);
-
-            if (isOpen) {
-                // Nếu đang mở, đóng lại
-                return prev.filter(id => id !== postId);
-            } else {
-                // Nếu đang đóng, mở ra
-                return [...prev, postId];
-            }
-        });
-    };
-
-    // Hàm xử lý khi số lượng comment thay đổi
-    const handleCommentCountChange = (postId, newCount) => {
-        setPostCommentCounts(prev => ({
-            ...prev,
-            [postId]: newCount
-        }));
-
-        // Kích hoạt tải lại bình luận
-        setRefreshCommentTrigger(prev => prev + 1);
-    };
-
-    // Cập nhật số lượng comment khi có thay đổi
-    useEffect(() => {
-        if (posts && posts.length > 0) {
-            const updateCommentCounts = async () => {
-                for (const post of posts) {
-                    try {
-                        const commentCount = await getPostCommentCount(post.postId);
-                        setPostCommentCounts(prev => ({
-                            ...prev,
-                            [post.postId]: commentCount
-                        }));
-                    } catch (error) {
-                        console.error('Error fetching comment count:', error);
-                    }
-                }
-            };
-
-            updateCommentCounts();
-        }
-    }, [posts]);
-
-
-    // Hàm xử lý ẩn bài viết
-    const handleHidePost = async (postId) => {
-        try {
-            // Lấy ID của người dùng hiện tại
-            const currentUserId = await getUserId();
-
-            if (!currentUserId) {
-                toast.error('Please login to hide posts');
-                return;
-            }
-
-            // Gọi API ẩn bài viết
-            await hidePost(currentUserId, postId);
-
-            // Cập nhật UI để ẩn bài viết
-            setPosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
-
-            toast.success('Post hidden successfully');
-        } catch (error) {
-            console.error('Error hiding post:', error);
-            toast.error('Failed to hide post. Please try again.');
-        }
-    };
+    // Hook quản lý profile
+    const {
+        profileData, following, followers, isLoading, isFollowing, followLoading,
+        currentUserData, currentUserId, formData, setFormData,
+        handleFollowToggle, handleUpdateBio, handleUpdateCover
+    } = useProfileData(id);
+
+    // Hook quản lý UI
+    const {
+        activeButton, previousActiveButton, editBio, setEditBio,
+        handleTabChange, handleCloseBioModal
+    } = useUIStates();
+
+    // Hook quản lý posts
+    const {
+        posts, setPosts, postLikes, postCommentCounts, openCommentPosts, refreshCommentTrigger,
+        pageNumber, hasMore, isLoading: isLoadingPosts, isLoadingMore, observer,
+        loadMorePosts, handleLikePost, toggleCommentSection, handleCommentCountChange, fetchPosts
+    } = usePostsData(id, currentUserId);
+
+    // Hook quản lý các action với post
+    const postActions = usePostActions(id, fetchPosts);
+
+    // destructuring các biến cần thiết từ postActions
+    const {
+        showPostModal, setShowPostModal, newPost, setNewPost, postError, isCreatingPost,
+        editingPost, setEditingPost, editedPostContent, setEditedPostContent,
+        showDeleteConfirmModal, setShowDeleteConfirmModal, postToDelete, openDropdownPostId,
+        handleCreatePost, handleFileUpload, toggleDropdown, confirmDeletePost,
+        handleDeletePost, handleUpdatePost, handleHidePost
+    } = postActions;
+
+    // Infinite scroll
+    const { lastElementRef } = useInfiniteScroll(loadMorePosts, hasMore, isLoadingMore);
+
+    const fileInputRef = useRef(null);
 
     if (isLoading) {
         return (
@@ -670,9 +122,26 @@ const PublicProfile = () => {
 
                     {/* Edit Cover Button - Chỉ hiển thị khi xem profile của chính mình */}
                     {currentUserId === id && (
-                        <button className="bg-white px-4 py-2 rounded-lg text-gray-800 font-medium shadow flex items-center gap-2 hover:bg-gray-100">
-                            <FontAwesomeIcon icon={faCamera} /> Edit cover
-                        </button>
+                        <>
+                            <button
+                                className="bg-white px-4 py-2 rounded-lg text-gray-800 font-medium shadow flex items-center gap-2 hover:bg-gray-100"
+                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                            >
+                                <FontAwesomeIcon icon={faCamera} /> Edit cover
+                            </button>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        await handleUpdateCover(file);
+                                    }
+                                }}
+                            />
+                        </>
                     )}
                 </div>
             </div>
@@ -710,7 +179,7 @@ const PublicProfile = () => {
                                             ? 'bg-blue-600 text-white'
                                             : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                                             }`}
-                                        onClick={() => setActiveButton('all')}
+                                        onClick={() => handleTabChange('all')}
                                     >
                                         All Post
                                     </button>
@@ -719,7 +188,7 @@ const PublicProfile = () => {
                                             ? 'bg-blue-600 text-white'
                                             : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                                             }`}
-                                        onClick={() => setActiveButton('media')}
+                                        onClick={() => handleTabChange('media')}
                                     >
                                         Media
                                     </button>
@@ -728,11 +197,7 @@ const PublicProfile = () => {
                                             ? 'bg-blue-600 text-white'
                                             : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                                             }`}
-                                        onClick={() => {
-                                            setPreviousActiveButton(activeButton);
-                                            setActiveButton('bio');
-                                            setEditBio(true);
-                                        }}
+                                        onClick={() => handleTabChange('bio')}
                                     >
                                         Update Bio
                                     </button>
@@ -782,10 +247,7 @@ const PublicProfile = () => {
                                 {/* Update Bio Button and Modal */}
                                 <div>
                                     {editBio && (
-                                        <Modal onClose={() => {
-                                            setEditBio(false);
-                                            setActiveButton(previousActiveButton);
-                                        }}>
+                                        <Modal onClose={handleCloseBioModal}>
                                             <h2 className="text-xl font-bold mb-4">Update Bio</h2>
                                             <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
                                             <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
@@ -800,18 +262,14 @@ const PublicProfile = () => {
                                                     className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
                                                     onClick={async () => {
                                                         await handleUpdateBio();
-                                                        setEditBio(false);
-                                                        setActiveButton(previousActiveButton);
+                                                        handleCloseBioModal();
                                                     }}
                                                 >
                                                     Save Bio
                                                 </button>
                                                 <button
                                                     className="px-4 py-2"
-                                                    onClick={() => {
-                                                        setEditBio(false);
-                                                        setActiveButton(previousActiveButton);
-                                                    }}
+                                                    onClick={handleCloseBioModal}
                                                 >
                                                     Cancel
                                                 </button>
@@ -1005,7 +463,7 @@ const PublicProfile = () => {
                                 posts.map((post, index) => (
                                     <div
                                         key={`post-${post.postId}-${index}`}
-                                        ref={index === posts.length - 1 ? lastPostElementRef : null}
+                                        ref={index === posts.length - 1 ? lastElementRef : null}
                                         className="bg-white rounded-lg shadow-md"
                                     >
                                         <div className="p-4">
@@ -1081,7 +539,7 @@ const PublicProfile = () => {
                                         </div>
                                     </div>
                                 ))
-                            ) : isLoading ? (
+                            ) : isLoadingPosts ? (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
                                     <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
@@ -1201,7 +659,6 @@ const PublicProfile = () => {
         </div >
     );
 };
-
 
 export default PublicProfile;
 

@@ -45,13 +45,13 @@ const CommentSection = ({
 
     // Lấy danh sách bình luận khi component được mở hoặc refreshTrigger thay đổi
     useEffect(() => {
-        console.log(`[DEBUG] CommentSection useEffect - postId: ${postId}, isOpen: ${isOpen}, refreshTrigger: ${refreshTrigger}`);
+        // console.log(`[DEBUG] CommentSection useEffect - postId: ${postId}, isOpen: ${isOpen}, refreshTrigger: ${refreshTrigger}`);
 
         if (isOpen) {
-            console.log(`[DEBUG] CommentSection - Fetching comments for post ${postId}`);
+            // console.log(`[DEBUG] CommentSection - Fetching comments for post ${postId}`);
             fetchComments();
         } else {
-            console.log(`[DEBUG] CommentSection - Not fetching comments because isOpen is false`);
+            // console.log(`[DEBUG] CommentSection - Not fetching comments because isOpen is false`);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, postId, refreshTrigger]);
@@ -767,8 +767,8 @@ const CommentSection = ({
                                                                     onClick={() => handleReplyToChildComment(childComment.postcommentId)}
                                                                     disabled={!(childCommentContents[`${postId}-${childComment.postcommentId}`] || '').trim()}
                                                                     className={`absolute right-3 top-1/2 -translate-y-1/2 ${(childCommentContents[`${postId}-${childComment.postcommentId}`] || '').trim()
-                                                                            ? 'text-blue-500'
-                                                                            : 'text-gray-400'
+                                                                        ? 'text-blue-500'
+                                                                        : 'text-gray-400'
                                                                         } transition-colors duration-200`}
                                                                 >
                                                                     <FontAwesomeIcon icon={faPaperPlane} />
