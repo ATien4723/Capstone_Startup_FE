@@ -3,6 +3,10 @@ import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { getUserId } from '@/apis/authService';
+import { useProfileData } from '@/hooks/useProfileHooks';
+import { toast } from 'react-toastify';
+import useFollow from '@/hooks/useFollow';
 
 const NetworkList = () => {
     const location = useLocation();
@@ -13,22 +17,11 @@ const NetworkList = () => {
 
     // Đặt activeTab dựa trên đường dẫn URL
     const [activeTab, setActiveTab] = useState(pathType);
-
-    // Giả sử chúng ta lấy tên người dùng từ localStorage hoặc context
-    const userName = "Anh Tiến"; // Thay thế bằng tên thực tế từ context hoặc API
-
-    // Danh sách người theo dõi và đang theo dõi (hiện đang trống)
-    // const [following, setFollowing] = useState([]);
-    // const [followers, setFollowers] = useState([]);
-
-    const [following, setFollowing] = useState([
-        { id: 1, name: 'Nguyễn Văn A', position: 'Developer', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
-        { id: 2, name: 'Trần Thị B', position: 'Designer', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }
-    ]);
-    const [followers, setFollowers] = useState([
-        { id: 3, name: 'Lê Văn C', position: 'Manager', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }
-    ]);
-
+    // Lấy accountId của user hiện tại
+    const accountId = getUserId();
+    const { handleFollow, followLoading, following, followers, loading } = useFollow(accountId);
+    const [error, setError] = useState(null);
+    const { profileData } = useProfileData(accountId);
     // Cập nhật activeTab khi URL thay đổi
     useEffect(() => {
         const currentType = location.pathname.includes('followers') ? 'followers' : 'following';
@@ -40,6 +33,11 @@ const NetworkList = () => {
         navigate(`/network/${tab}`);
     };
 
+    // Hàm xử lý follow lại
+    const handleFollowBack = async (userId) => {
+        await handleFollow(userId);
+    };
+
     return (
         <div className="bg-gray-100 min-h-screen">
             <Navbar />
@@ -47,7 +45,7 @@ const NetworkList = () => {
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     {/* Header */}
                     <div className="p-4 border-b">
-                        <h1 className="text-xl font-bold">Mạng lưới của {userName}</h1>
+                        <h1 className="text-xl font-bold">Mạng lưới của {profileData?.firstName}</h1>
                     </div>
 
                     {/* Tabs */}
@@ -67,36 +65,44 @@ const NetworkList = () => {
                     </div>
 
                     {/* Empty state */}
-                    {((activeTab === 'following' && following.length === 0) ||
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4">
+                            <div className="text-lg text-gray-500">Đang tải dữ liệu...</div>
+                        </div>
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4">
+                            <div className="text-lg text-red-500">{error}</div>
+                        </div>
+                    ) : ((activeTab === 'following' && following.length === 0) ||
                         (activeTab === 'followers' && followers.length === 0)) && (
-                            <div className="flex flex-col items-center justify-center py-10 px-4">
-                                <img
-                                    src="https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-cuoi-34.jpg"
-                                    alt="Empty network"
-                                    className="w-64 h-64 mb-4"
-                                />
-                                <h2 className="text-2xl font-bold mb-2">
-                                    {activeTab === 'following'
-                                        ? "You are not following anyone"
-                                        : "You don't have any followers yet"}
-                                </h2>
-                                <p className="text-gray-600 text-center max-w-md mb-6">
-                                    {activeTab === 'following'
-                                        ? "Follow creators based on your interest to see their latest news and updates."
-                                        : "When people follow you, they'll appear here."}
-                                </p>
-                            </div>
-                        )}
+                        <div className="flex flex-col items-center justify-center py-10 px-4">
+                            <img
+                                src="https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-cuoi-34.jpg"
+                                alt="Empty network"
+                                className="w-64 h-64 mb-4"
+                            />
+                            <h2 className="text-2xl font-bold mb-2">
+                                {activeTab === 'following'
+                                    ? "You are not following anyone"
+                                    : "You don't have any followers yet"}
+                            </h2>
+                            <p className="text-gray-600 text-center max-w-md mb-6">
+                                {activeTab === 'following'
+                                    ? "Follow creators based on your interest to see their latest news and updates."
+                                    : "When people follow you, they'll appear here."}
+                            </p>
+                        </div>
+                    )}
 
                     {/* List of connections (if any) */}
                     {activeTab === 'following' && following.length > 0 && (
                         <div className="p-4">
                             {following.map(user => (
-                                <div key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                                <div key={user.accountId} className="flex items-center justify-between p-3 hover:bg-gray-50">
                                     <div className="flex items-center">
-                                        <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full mr-3" />
+                                        <img src={user.avatarUrl} className="w-12 h-12 rounded-full mr-3" />
                                         <div>
-                                            <h3 className="font-medium">{user.name}</h3>
+                                            <h3 className="font-medium">{user.firstName}{user.lastName}</h3>
                                             <p className="text-sm text-gray-600">{user.position}</p>
                                         </div>
                                     </div>
@@ -119,8 +125,12 @@ const NetworkList = () => {
                                             <p className="text-sm text-gray-600">{user.position}</p>
                                         </div>
                                     </div>
-                                    <button className="px-3 py-1 border border-blue-600 text-blue-600 rounded-full text-sm hover:bg-blue-50">
-                                        Theo dõi lại
+                                    <button
+                                        className="px-3 py-1 border border-blue-600 text-blue-600 rounded-full text-sm hover:bg-blue-50"
+                                        onClick={() => handleFollowBack(user.id)}
+                                        disabled={followLoading}
+                                    >
+                                        {followLoading ? 'Đang theo dõi...' : 'Theo dõi lại'}
                                     </button>
                                 </div>
                             ))}

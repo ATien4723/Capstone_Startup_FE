@@ -11,7 +11,7 @@ import Cookies from "js-cookie";
 import { toast } from 'react-toastify';
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
-
+import { useProfileData } from '@/hooks/useProfileHooks';
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -24,6 +24,8 @@ export default function Navbar() {
     const isAuthenticated = !!Cookies.get("accessToken");
     const currentUserId = getUserId();
     const userInfo = getUserInfoFromToken();
+    const { profileData } = useProfileData(currentUserId);
+
 
     // Sử dụng custom hook cho notification
     const {
@@ -122,7 +124,7 @@ export default function Navbar() {
     const dropdownItems = [
         { label: 'Profile', to: `/profile/${currentUserId}`, icon: faUser },
         { label: 'Settings', to: `/settings/${currentUserId}`, icon: faCog },
-        { label: 'My startups', to: `/startup/${currentUserId}`, icon: faBuildingUser },
+        { label: 'My startups', to: `/dashboard`, icon: faBuildingUser },
         { label: 'Messages', to: '/messages', icon: faEnvelope },
         { label: 'Help Center', to: '/help', icon: faQuestionCircle },
         { label: 'Contact Support', to: '/support', icon: faHeadset },
@@ -493,7 +495,7 @@ export default function Navbar() {
                             >
                                 <button className="flex items-center text-white text-sm">
                                     <img src="/api/placeholder/40/40" className="w-8 h-8 rounded-full mr-2 border border-white/20" alt="User" />
-                                    <span>TienDz</span>
+                                    <span>{profileData?.firstName} {profileData?.lastName}</span>
                                     <FontAwesomeIcon
                                         icon={faCaretDown}
                                         className={`ml-2 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}

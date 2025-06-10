@@ -5,17 +5,31 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faUserPlus, faTimes, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { getUserId } from '@/apis/authService';
 import { useRecommendAccounts } from '@/hooks/useProfileHooks';
-import { toast } from 'react-toastify';
+import useFollow from '@/hooks/useFollow';
 
 const MyNetwork = () => {
     const currentUserId = getUserId();
     const { data: suggestedConnections, isLoading, error, refetch } = useRecommendAccounts(currentUserId, 1, 10);
-    const [pendingInvitations, setPendingInvitations] = useState([]);
+    const { handleFollow, handleUnfollow, following, followers } = useFollow(currentUserId);
+    const [loadingMap, setLoadingMap] = useState({});
+    const [followedMap, setFollowedMap] = useState({});
 
-    const handleConnect = (id) => {
-        toast.success('Đã gửi lời mời kết nối');
-        // Cập nhật UI
-        // setStats(prev => ({ ...prev, sent: prev.sent + 1 }));
+    const handleConnect = async (id) => {
+        setLoadingMap(prev => ({ ...prev, [id]: true }));
+        let success;
+        if (!followedMap[id]) {
+            success = await handleFollow(id);
+            if (success) {
+                setFollowedMap(prev => ({ ...prev, [id]: true }));
+            }
+        } else {
+            success = await handleUnfollow(id);
+            if (success) {
+                setFollowedMap(prev => ({ ...prev, [id]: false }));
+            }
+        }
+        setLoadingMap(prev => ({ ...prev, [id]: false }));
+        // refetch nếu muốn
     };
 
     const handleIgnore = (id) => {
@@ -41,13 +55,13 @@ const MyNetwork = () => {
                                 </div> */}
                                 <div>
                                     <Link to="/network/following" className="block">
-                                        <div className="font-bold text-xl hover:text-blue-600">0</div>
+                                        <div className="font-bold text-xl hover:text-blue-600">{following.length}</div>
                                         <div className="text-sm text-gray-600 hover:text-blue-600">Following</div>
                                     </Link>
                                 </div>
                                 <div>
                                     <Link to="/network/followers" className="block">
-                                        <div className="font-bold text-xl hover:text-blue-600">0</div>
+                                        <div className="font-bold text-xl hover:text-blue-600">{followers.length}</div>
                                         <div className="text-sm text-gray-600 hover:text-blue-600">Followers</div>
                                     </Link>
                                 </div>
@@ -117,9 +131,14 @@ const MyNetwork = () => {
                                                     <button
                                                         className="w-full border border-blue-600 text-blue-600 hover:bg-blue-50 py-1 px-3 rounded-full text-sm font-medium flex items-center justify-center"
                                                         onClick={() => handleConnect(person.accountId)}
+                                                        disabled={loadingMap[person.accountId]}
                                                     >
                                                         <FontAwesomeIcon icon={faUserPlus} className="mr-1" />
-                                                        Follow
+                                                        {loadingMap[person.accountId]
+                                                            ? (followedMap[person.accountId] ? 'Đang hủy...' : 'Đang theo dõi...')
+                                                            : followedMap[person.accountId]
+                                                                ? 'Đã follow'
+                                                                : 'Follow'}
                                                     </button>
                                                 </div>
                                             </div>
