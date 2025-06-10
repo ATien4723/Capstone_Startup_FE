@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAccountInfo, getFollowing, getFollowers, checkIsFollowing, followUser, unfollowUser, updateBio, updateProfile } from '@/apis/accountService';
+import { getAccountInfo, getFollowing, getFollowers, checkIsFollowing, followUser, unfollowUser, updateBio, updateProfile, recommendAccounts } from '@/apis/accountService';
 import { getUserId } from "@/apis/authService";
 import {
     getPostsByAccountId,
@@ -87,7 +87,7 @@ export const useProfileData = (profileId) => {
                 // Kiểm tra trạng thái follow nếu không phải profile của chính mình
                 if (currentUserId !== profileId) {
                     const status = await checkIsFollowing(currentUserId, profileId);
-                    setIsFollowing(status);
+                    setIsFollowing(status?.isFollowing ?? false);
                 }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
@@ -120,20 +120,18 @@ export const useProfileData = (profileId) => {
                 setIsFollowing(false);
                 toast.success(`Đã hủy theo dõi ${profileData.firstName} ${profileData.lastName}`);
 
-                // Cập nhật lại danh sách followers
-                const updatedFollowers = followers.filter(f => f.accountId !== currentUserId);
-                setFollowers(updatedFollowers);
+                // Refetch lại danh sách followers từ server
+                const updatedFollowers = await getFollowers(profileId);
+                setFollowers(updatedFollowers || []);
             } else {
                 // Gọi API follow
                 await followUser(currentUserId, profileId);
                 setIsFollowing(true);
                 toast.success(`Đã theo dõi ${profileData.firstName} ${profileData.lastName}`);
 
-                // Cập nhật lại danh sách followers
-                const currentUserInfo = await getAccountInfo(currentUserId);
-                if (currentUserInfo) {
-                    setFollowers(prev => [...prev, currentUserInfo]);
-                }
+                // Refetch lại danh sách followers từ server
+                const updatedFollowers = await getFollowers(profileId);
+                setFollowers(updatedFollowers || []);
             }
         } catch (error) {
             console.error('Error toggling follow:', error);
@@ -598,4 +596,60 @@ export const useInfiniteScroll = (loadMoreCallback, hasMore, isLoading) => {
     }, [isLoading, hasMore, loadMoreCallback]);
 
     return { lastElementRef };
+};
+
+// Hook kiểm tra trạng thái follow giữa 2 user
+export const useCheckIsFollowing = (currentUserId, profileId, trigger = 0) => {
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            if (!currentUserId || !profileId || currentUserId === profileId) {
+                setIsFollowing(false);
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            try {
+                const status = await checkIsFollowing(currentUserId, profileId);
+                setIsFollowing(status?.isFollowing ?? false);
+            } catch (error) {
+                setIsFollowing(false);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchStatus();
+    }, [currentUserId, profileId, trigger]);
+
+    return { isFollowing, isLoading };
+};
+
+// Hook lấy danh sách tài khoản gợi ý kết nối
+export const useRecommendAccounts = (currentUserId, pageNumber = 1, pageSize = 10) => {
+    const [data, setData] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await recommendAccounts(currentUserId, pageNumber, pageSize);
+            setData(res.items || res.data || []);
+        } catch (err) {
+            setError(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (currentUserId) {
+            fetchData();
+        }
+    }, [currentUserId, pageNumber, pageSize]);
+
+    return { data, isLoading, error, refetch: fetchData };
 }; 

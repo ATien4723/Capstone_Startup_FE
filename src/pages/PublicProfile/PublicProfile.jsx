@@ -14,7 +14,7 @@ import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
-import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll } from '@/hooks/useProfileHooks';
+import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -35,10 +35,14 @@ const PublicProfile = () => {
     const { id } = useParams();
     // Hook quản lý profile
     const {
-        profileData, following, followers, isLoading, isFollowing, followLoading,
+        profileData, following, followers, isLoading, followLoading,
         currentUserData, currentUserId, formData, setFormData,
         handleFollowToggle, handleUpdateBio, handleUpdateCover
     } = useProfileData(id);
+
+    // Sử dụng hook kiểm tra trạng thái follow
+    const [followStatusChanged, setFollowStatusChanged] = useState(0);
+    const { isFollowing, isLoading: isCheckingFollow } = useCheckIsFollowing(currentUserId, id, followStatusChanged);
 
     // Hook quản lý UI
     const {
@@ -70,6 +74,12 @@ const PublicProfile = () => {
 
     const fileInputRef = useRef(null);
 
+    // Hàm mới để xử lý toggle và cập nhật trạng thái follow
+    const handleFollowToggleWithRefresh = async () => {
+        await handleFollowToggle();
+        setFollowStatusChanged(prev => prev + 1);
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -96,7 +106,7 @@ const PublicProfile = () => {
             {/* Cover Image Section */}
             <div className="container mb-2 mx-auto rounded-bl-lg rounded-br-lg relative h-60 bg-gray-400 rounded-b-lg mt-4">
                 <img
-                    src={profileData.coverImage || "aaaa"}
+                    src={profileData.backgroundUrl || "aaaa"}
                     alt="Cover"
                     className="w-full h-full object-cover"
                 />
@@ -112,11 +122,11 @@ const PublicProfile = () => {
                                 ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                                 : 'bg-blue-600 text-white hover:bg-blue-700'
                                 }`}
-                            onClick={handleFollowToggle}
-                            disabled={followLoading}
+                            onClick={handleFollowToggleWithRefresh}
+                            disabled={followLoading || isCheckingFollow}
                         >
                             <FontAwesomeIcon icon={isFollowing ? faUserCheck : faUserPlus} />
-                            {followLoading ? 'Processing...' : isFollowing ? 'Following' : 'Follow'}
+                            {followLoading || isCheckingFollow ? 'Processing...' : isFollowing ? 'Following' : 'Follow'}
                         </button>
                     )}
 
@@ -192,15 +202,17 @@ const PublicProfile = () => {
                                     >
                                         Media
                                     </button>
-                                    <button
-                                        className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'bio'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
-                                            }`}
-                                        onClick={() => handleTabChange('bio')}
-                                    >
-                                        Update Bio
-                                    </button>
+                                    {currentUserId === id && (
+                                        <button
+                                            className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'bio'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                                                }`}
+                                            onClick={() => handleTabChange('bio')}
+                                        >
+                                            Update Bio
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-3 mb-4">
                                     <div className="text-center">
@@ -245,38 +257,36 @@ const PublicProfile = () => {
                                     <p className="text-gray-600">{profileData.introTitle}</p>
                                 </div>
                                 {/* Update Bio Button and Modal */}
-                                <div>
-                                    {editBio && (
-                                        <Modal onClose={handleCloseBioModal}>
-                                            <h2 className="text-xl font-bold mb-4">Update Bio</h2>
-                                            <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.workplace} onChange={e => setFormData(f => ({ ...f, workplace: e.target.value }))} placeholder="Workplace" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.facebookUrl} onChange={e => setFormData(f => ({ ...f, facebookUrl: e.target.value }))} placeholder="Facebook URL" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.linkedinUrl} onChange={e => setFormData(f => ({ ...f, linkedinUrl: e.target.value }))} placeholder="LinkedIn URL" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.githubUrl} onChange={e => setFormData(f => ({ ...f, githubUrl: e.target.value }))} placeholder="GitHub URL" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.portfolioUrl} onChange={e => setFormData(f => ({ ...f, portfolioUrl: e.target.value }))} placeholder="Portfolio URL" className="input mb-2 w-full border p-2 rounded" />
-                                            <input value={formData.country} onChange={e => setFormData(f => ({ ...f, country: e.target.value }))} placeholder="Country" className="input mb-2 w-full border p-2 rounded" />
-                                            <div className="flex gap-2 mt-4">
-                                                <button
-                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
-                                                    onClick={async () => {
-                                                        await handleUpdateBio();
-                                                        handleCloseBioModal();
-                                                    }}
-                                                >
-                                                    Save Bio
-                                                </button>
-                                                <button
-                                                    className="px-4 py-2"
-                                                    onClick={handleCloseBioModal}
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </Modal>
-                                    )}
-                                </div>
+                                {currentUserId === id && editBio && (
+                                    <Modal onClose={handleCloseBioModal}>
+                                        <h2 className="text-xl font-bold mb-4">Update Bio</h2>
+                                        <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.workplace} onChange={e => setFormData(f => ({ ...f, workplace: e.target.value }))} placeholder="Workplace" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.facebookUrl} onChange={e => setFormData(f => ({ ...f, facebookUrl: e.target.value }))} placeholder="Facebook URL" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.linkedinUrl} onChange={e => setFormData(f => ({ ...f, linkedinUrl: e.target.value }))} placeholder="LinkedIn URL" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.githubUrl} onChange={e => setFormData(f => ({ ...f, githubUrl: e.target.value }))} placeholder="GitHub URL" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.portfolioUrl} onChange={e => setFormData(f => ({ ...f, portfolioUrl: e.target.value }))} placeholder="Portfolio URL" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.country} onChange={e => setFormData(f => ({ ...f, country: e.target.value }))} placeholder="Country" className="input mb-2 w-full border p-2 rounded" />
+                                        <div className="flex gap-2 mt-4">
+                                            <button
+                                                className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+                                                onClick={async () => {
+                                                    await handleUpdateBio();
+                                                    handleCloseBioModal();
+                                                }}
+                                            >
+                                                Save Bio
+                                            </button>
+                                            <button
+                                                className="px-4 py-2"
+                                                onClick={handleCloseBioModal}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </Modal>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -286,40 +296,42 @@ const PublicProfile = () => {
                         {/* Posts Filter */}
 
                         {/* Create Post Card */}
-                        <div className="bg-white rounded-lg shadow-md mb-6">
-                            <div className="p-4">
-                                <div className="flex gap-3">
-                                    <img
-                                        src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                        alt="Profile"
-                                        className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
-                                    />
-                                    <div className="flex-grow">
-                                        <button
-                                            className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
-                                            onClick={() => setShowPostModal(true)}
-                                        >
-                                            What would you like to talk about?
-                                        </button>
-                                        <div className="flex justify-between items-center mt-2">
-                                            <div className="space-x-2">
-                                                <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                    onClick={() => setShowPostModal(true)}
-                                                >
-                                                    <FontAwesomeIcon icon={faImage} className="mr-1" /> Photo/Video
-                                                </button>
-                                                <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
-                                                    <FontAwesomeIcon icon={faPaperclip} className="mr-1" /> Attachment
+                        {currentUserId === id && (
+                            <div className="bg-white rounded-lg shadow-md mb-6">
+                                <div className="p-4">
+                                    <div className="flex gap-3">
+                                        <img
+                                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                            alt="Profile"
+                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                        />
+                                        <div className="flex-grow">
+                                            <button
+                                                className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
+                                                onClick={() => setShowPostModal(true)}
+                                            >
+                                                What would you like to talk about?
+                                            </button>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <div className="space-x-2">
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        onClick={() => setShowPostModal(true)}
+                                                    >
+                                                        <FontAwesomeIcon icon={faImage} className="mr-1" /> Photo/Video
+                                                    </button>
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                        <FontAwesomeIcon icon={faPaperclip} className="mr-1" /> Attachment
+                                                    </button>
+                                                </div>
+                                                <button className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-all">
+                                                    Post
                                                 </button>
                                             </div>
-                                            <button className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-all">
-                                                Post
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Modal xác nhận xóa bài viết */}
                         {showDeleteConfirmModal && (

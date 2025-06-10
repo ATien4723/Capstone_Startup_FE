@@ -11,6 +11,7 @@ const OTPVerification = lazy(() => import('@/components/OTPVerification/OTPVerif
 const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPassword'));
 const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
+const Dashboard = lazy(() => import('@/pages/Dashboard/Dashboard'));
 
 const routers = [
     {
@@ -60,6 +61,10 @@ const routers = [
     {
         path: '/forget-password',
         component: FortgetPassword
+    },
+    {
+        path: '/dashboard',
+        component: Dashboard
     }
 ];
 export default routers;

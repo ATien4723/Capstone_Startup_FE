@@ -3,29 +3,26 @@ import { Link } from 'react-router-dom';
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faUserPlus, faTimes, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { getUserId } from "@/apis/authService";
+import { getUserId } from '@/apis/authService';
+import { useRecommendAccounts } from '@/hooks/useProfileHooks';
 import { toast } from 'react-toastify';
 
 const MyNetwork = () => {
-    const [suggestedConnections, setSuggestedConnections] = useState([
-        { id: 1, name: 'Thuy Bui', position: 'Deputy CEO at VINFAST', imgUrl: 'https://randomuser.me/api/portraits/women/44.jpg' },
-        { id: 2, name: 'Quang-Hue Vo', position: 'Chairman', imgUrl: 'https://randomuser.me/api/portraits/men/32.jpg' },
-        { id: 3, name: 'Thuy Le', position: 'Our mission is to make EVs accessible to ...', imgUrl: 'https://randomuser.me/api/portraits/women/68.jpg' },
-        { id: 4, name: 'Thanh Cong (Harry) Do', position: 'Director of Operations at Xanh SM', imgUrl: 'https://randomuser.me/api/portraits/men/75.jpg' },
-        { id: 5, name: 'Nguyen Van A', position: 'Software Engineer', imgUrl: 'https://randomuser.me/api/portraits/men/22.jpg' },
-    ]);
-
+    const currentUserId = getUserId();
+    const { data: suggestedConnections, isLoading, error, refetch } = useRecommendAccounts(currentUserId, 1, 10);
     const [pendingInvitations, setPendingInvitations] = useState([]);
 
     const handleConnect = (id) => {
         toast.success('Đã gửi lời mời kết nối');
         // Cập nhật UI
-        setStats(prev => ({ ...prev, sent: prev.sent + 1 }));
+        // setStats(prev => ({ ...prev, sent: prev.sent + 1 }));
     };
 
     const handleIgnore = (id) => {
         // Loại bỏ người dùng khỏi danh sách gợi ý
-        setSuggestedConnections(prev => prev.filter(conn => conn.id !== id));
+        // setSuggestedConnections(prev => prev.filter(conn => conn.id !== id));
+        // Nếu muốn cập nhật UI, có thể refetch hoặc filter tạm thời ở đây
+        refetch();
     };
 
     return (
@@ -89,43 +86,47 @@ const MyNetwork = () => {
                                 {/* <button className="text-blue-600 font-medium text-sm">Hiển thị tất cả</button> */}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {suggestedConnections.map(person => (
-                                    <div key={person.id} className="border rounded-lg relative">
-                                        <button
-                                            className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 rounded-full p-1"
-                                            onClick={() => handleIgnore(person.id)}
-                                        >
-                                            <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
-                                        </button>
-
-
-                                        <div className="p-3 text-center flex flex-col h-auto">
-                                            <div className="mb-2">
-                                                <img
-                                                    src={person.imgUrl}
-                                                    alt={person.name}
-                                                    className="w-20 h-20 rounded-full mx-auto object-cover"
-                                                />
-                                            </div>
-                                            <h3 className="font-medium text-sm">{person.name}</h3>
-                                            <div className="flex-grow">
-                                                <p className="text-xs text-gray-600 mb-3 line-clamp-2 h-8">{person.position}</p>
-                                                <p className="text-xs text-gray-500 mb-2">Dựa trên hồ sơ của bạn</p>
-                                            </div>
-                                            <div className="mt-auto">
-                                                <button
-                                                    className="w-full border border-blue-600 text-blue-600 hover:bg-blue-50 py-1 px-3 rounded-full text-sm font-medium flex items-center justify-center"
-                                                    onClick={() => handleConnect(person.id)}
-                                                >
-                                                    <FontAwesomeIcon icon={faUserPlus} className="mr-1" />
-                                                    Follow
-                                                </button>
+                            {isLoading ? (
+                                <div className="text-center py-8 text-gray-500">Đang tải gợi ý...</div>
+                            ) : error ? (
+                                <div className="text-center py-8 text-red-500">Không thể tải danh sách gợi ý kết nối</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {suggestedConnections.map(person => (
+                                        <div key={person.accountId} className="border rounded-lg relative">
+                                            <button
+                                                className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 rounded-full p-1"
+                                                onClick={() => handleIgnore(person.accountId)}
+                                            >
+                                                <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+                                            </button>
+                                            <div className="p-3 text-center flex flex-col h-auto">
+                                                <div className="mb-2">
+                                                    <img
+                                                        src={person.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
+                                                        alt={person.fullName}
+                                                        className="w-20 h-20 rounded-full mx-auto object-cover"
+                                                    />
+                                                </div>
+                                                <h3 className="font-medium text-sm">{person.fullName}</h3>
+                                                <div className="flex-grow">
+                                                    <p className="text-xs text-gray-600 mb-3 line-clamp-2 h-8">{person.position || ''}</p>
+                                                    <p className="text-xs text-gray-500 mb-2">Followers: {person.totalFollowers}</p>
+                                                </div>
+                                                <div className="mt-auto">
+                                                    <button
+                                                        className="w-full border border-blue-600 text-blue-600 hover:bg-blue-50 py-1 px-3 rounded-full text-sm font-medium flex items-center justify-center"
+                                                        onClick={() => handleConnect(person.accountId)}
+                                                    >
+                                                        <FontAwesomeIcon icon={faUserPlus} className="mr-1" />
+                                                        Follow
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

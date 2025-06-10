@@ -99,7 +99,7 @@ export const unfollowUser = async (followerAccountId, followingAccountId) => {
 // Thêm API kiểm tra trạng thái follow
 export const checkIsFollowing = async (followerAccountId, followingAccountId) => {
     try {
-        const response = await axiosClient.get(`api/Account/check-following/${followerAccountId}/${followingAccountId}`);
+        const response = await axiosClient.get(`api/Account/is-following?followerAccountId=${followerAccountId}&followingAccountId=${followingAccountId}`);
         return response;
     } catch (error) {
         throw error;
@@ -110,6 +110,22 @@ export const checkIsFollowing = async (followerAccountId, followingAccountId) =>
 export const setStatusVerified = async (accountId) => {
     try {
         const response = await axiosClient.post(`api/Auth/SetStatusVerified?accountId=${accountId}`);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// API gợi ý tài khoản
+export const recommendAccounts = async (currentAccountId, pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`api/Account/recommend`, {
+            params: {
+                currentAccountId,
+                pageNumber,
+                pageSize
+            }
+        });
         return response;
     } catch (error) {
         throw error;
