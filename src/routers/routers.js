@@ -12,6 +12,7 @@ const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPas
 const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
 const Dashboard = lazy(() => import('@/pages/Dashboard/Dashboard'));
+const CreateStartup = lazy(() => import('@/pages/Startups/CreateStartup'));
 
 const routers = [
     {
@@ -65,6 +66,10 @@ const routers = [
     {
         path: '/dashboard',
         component: Dashboard
+    },
+    {
+        path: '/create-startup',
+        component: CreateStartup
     }
 ];
 export default routers;
