@@ -1,24 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
+import { createStartup, getStage } from '@/apis/startupService';
+import { getAllCategories } from '@/apis/categoryService';
 
-
-const stages = [
-    { id: 1, name: 'Idea' },
-    { id: 2, name: 'Seed' },
-    { id: 3, name: 'Growth' },
-    { id: 4, name: 'Expansion' },
-];
-
-const categories = [
-    { id: 1, name: 'Fintech' },
-    { id: 2, name: 'Edtech' },
-    { id: 3, name: 'Healthtech' },
-    { id: 4, name: 'E-commerce' },
-];
 
 const validationSchema = Yup.object({
     StartupName: Yup.string().required('Startup Name is required'),
@@ -43,6 +31,29 @@ export default function CreateStartup() {
     const [inviteEmails, setInviteEmails] = useState([]);
     const [inviteError, setInviteError] = useState('');
     const inviteInputRef = useRef(null);
+    const [stages, setStages] = useState([]);
+    const [categories, setCategories] = useState([]);
+
+    // Lấy danh sách Stage và Category khi component mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Lấy danh sách Stage
+                const stageData = await getStage();
+                console.log("Stage Data:", stageData); // Xem dữ liệu có đúng không
+
+                setStages(stageData || []);
+
+                // Lấy danh sách Category
+                const categoryData = await getAllCategories();
+                setCategories(categoryData || []);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const formik = useFormik({
         initialValues: {
@@ -61,7 +72,7 @@ export default function CreateStartup() {
             CategoryIds: [],
         },
         validationSchema,
-        onSubmit: (values, { resetForm }) => {
+        onSubmit: async (values, { resetForm }) => {
             const formData = new FormData();
             Object.entries({ ...values, InviteAccountIds: inviteEmails }).forEach(([key, value]) => {
                 if (key === 'Logo' || key === 'BackgroundUrl') {
@@ -74,10 +85,14 @@ export default function CreateStartup() {
                     formData.append(key, value);
                 }
             });
-            // TODO: Gửi formData lên API
-            alert('Startup created!');
-            resetForm();
-            setInviteEmails([]);
+            try {
+                await createStartup(formData);
+                alert('Tạo startup thành công!');
+                resetForm();
+                setInviteEmails([]);
+            } catch (error) {
+                alert('Có lỗi khi tạo startup!');
+            }
         },
     });
 
@@ -255,7 +270,9 @@ export default function CreateStartup() {
                                 className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.StageId && formik.errors.StageId ? 'border-red-500' : 'border-blue-200'}`}
                             >
                                 <option value="">Select stage</option>
-                                {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {stages.map(s => (
+                                    <option key={s.stageId} value={s.stageId}>{s.stageName}</option>
+                                ))}
                             </select>
                             {formik.touched.StageId && formik.errors.StageId && <p className="text-red-500 text-sm mt-1">{formik.errors.StageId}</p>}
                         </div>
@@ -330,20 +347,23 @@ export default function CreateStartup() {
                             <label className="block text-gray-700 font-semibold mb-1">Categories</label>
                             <select
                                 name="CategoryIds"
-                                multiple
-                                value={formik.values.CategoryIds}
                                 onChange={e => {
-                                    const selected = Array.from(e.target.selectedOptions, option => Number(option.value));
-                                    formik.setFieldValue('CategoryIds', selected);
+                                    formik.setFieldValue('CategoryIds', [Number(e.target.value)]);
                                 }}
                                 onBlur={formik.handleBlur}
-                                className={`rounded-xl border-2 w-full px-4 py-2 h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CategoryIds && formik.errors.CategoryIds ? 'border-red-500' : 'border-blue-200'}`}
+                                value={formik.values.CategoryIds[0] || ''}
+                                className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CategoryIds && formik.errors.CategoryIds ? 'border-red-500' : 'border-blue-200'}`}
                             >
+                                <option value="">Chọn danh mục</option>
                                 {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    <option key={cat.category_ID} value={cat.category_ID}>
+                                        {cat.category_Name}
+                                    </option>
                                 ))}
                             </select>
-                            {formik.touched.CategoryIds && formik.errors.CategoryIds && <p className="text-red-500 text-sm mt-1">{formik.errors.CategoryIds}</p>}
+                            {formik.touched.CategoryIds && formik.errors.CategoryIds && (
+                                <p className="text-red-500 text-sm mt-1">{formik.errors.CategoryIds}</p>
+                            )}
                         </div>
                     </div>
                     <button type="submit" className="mt-8 w-full bg-blue-600 text-white text-lg py-3 rounded-xl font-bold shadow-md hover:bg-blue-700 hover:shadow-xl transition-all">Create Startup</button>

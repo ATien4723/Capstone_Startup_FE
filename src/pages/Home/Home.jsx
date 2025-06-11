@@ -334,7 +334,7 @@ const Home = () => {
                         {editingPost && (
                             <Modal onClose={() => {
                                 setEditingPost(null);
-                                setEditedPostContent('');
+                                setEditedPostContent(undefined);
                             }}>
                                 <div className="flex items-center gap-3 p-6 border-b">
                                     <img
@@ -353,7 +353,7 @@ const Home = () => {
                                         className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
                                         rows={4}
                                         placeholder="Nội dung bài viết..."
-                                        value={editedPostContent || editingPost.content}
+                                        value={editedPostContent === undefined ? editingPost.content : editedPostContent}
                                         onChange={(e) => setEditedPostContent(e.target.value)}
                                     />
                                     {editingPost.postMedia && editingPost.postMedia.length > 0 && (
@@ -387,7 +387,7 @@ const Home = () => {
                                     <button
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
                                         onClick={() => {
-                                            handleUpdatePost(editingPost.postId, editedPostContent || editingPost.content);
+                                            handleUpdatePost(editingPost.postId, editedPostContent === undefined ? editingPost.content : editedPostContent);
                                             setEditingPost(null);
                                         }}
                                     >
@@ -438,7 +438,7 @@ const Home = () => {
                                                     currentUserIdHome={currentUserId}
                                                     isOpen={openDropdownPostId === post.postId}
                                                     onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
-                                                    onEdit={setEditingPost}
+                                                    onEdit={(post) => { setEditingPost(post); setEditedPostContent(undefined); }}
                                                     onDelete={confirmDeletePost}
                                                     onHide={handleHidePost}
                                                     onShare={(post) => console.log('Share post:', post)}
