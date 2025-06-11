@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faBell, faCaretDown, faBars, faTimes, faUser,
@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
+import { checkMembership } from '@/apis/startupService';
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function Navbar() {
     const currentUserId = getUserId();
     const userInfo = getUserInfoFromToken();
     const { profileData } = useProfileData(currentUserId);
-
+    const navigate = useNavigate();
 
     // Sử dụng custom hook cho notification
     const {
@@ -121,10 +122,24 @@ export default function Navbar() {
         { label: 'Policy', to: '/policy' },
     ];
 
+    const handleMyStartupsClick = async () => {
+        try {
+            const res = await checkMembership(currentUserId);
+            console.log('checkMembership result:', res);
+            if (res.isMember) {
+                navigate('/dashboard');
+            } else {
+                navigate('/create-startup');
+            }
+        } catch (error) {
+            console.error('Error in checkMembership:', error);
+        }
+    };
+
     const dropdownItems = [
         { label: 'Profile', to: `/profile/${currentUserId}`, icon: faUser },
         { label: 'Settings', to: `/settings/${currentUserId}`, icon: faCog },
-        { label: 'My startups', to: `/dashboard`, icon: faBuildingUser },
+        { label: 'My startups', isMyStartup: true, icon: faBuildingUser },
         { label: 'Messages', to: '/messages', icon: faEnvelope },
         { label: 'Help Center', to: '/help', icon: faQuestionCircle },
         { label: 'Contact Support', to: '/support', icon: faHeadset },
@@ -275,12 +290,31 @@ export default function Navbar() {
                                 onClick={() => setMobileAvatarDropdownOpen(open => !open)}
                                 className="block focus:outline-none"
                             >
-                                <img src="/api/placeholder/40/40" className="w-8 h-8 rounded-full border border-white/20" alt="User" />
+                                <img src={profileData?.avatarUrl} className="w-8 h-8 rounded-full border border-white/20" />
                             </button>
                             {mobileAvatarDropdownOpen && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50">
                                     <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Account</div>
-                                    {dropdownItems.slice(0, 3).map((item) => (
+                                    {dropdownItems.slice(0, 3).map((item) =>
+                                        item.isMyStartup ? (
+                                            <button
+                                                key={item.label}
+                                                className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
+                                                onClick={() => { handleMyStartupsClick(); setMobileAvatarDropdownOpen(false); }}
+                                                type="button"
+                                            >
+                                                <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                                {item.label}
+                                            </button>
+                                        ) : (
+                                            <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
+                                                <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                                {item.label}
+                                            </Link>
+                                        )
+                                    )}
+                                    {/* Các mục còn lại */}
+                                    {dropdownItems.slice(3, 4).map((item) => (
                                         <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
                                             <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                             {item.label}
@@ -288,7 +322,7 @@ export default function Navbar() {
                                     ))}
                                     <hr className="my-2" />
                                     <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Support</div>
-                                    {dropdownItems.slice(3, 5).map((item) => (
+                                    {dropdownItems.slice(4, 5).map((item) => (
                                         <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
                                             <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                             {item.label}
@@ -494,7 +528,7 @@ export default function Navbar() {
                                 onMouseLeave={handleMouseLeave}
                             >
                                 <button className="flex items-center text-white text-sm">
-                                    <img src="/api/placeholder/40/40" className="w-8 h-8 rounded-full mr-2 border border-white/20" alt="User" />
+                                    <img src={profileData?.avartarURL} className="w-8 h-8 rounded-full mr-2 border border-white/20" alt="User" />
                                     <span>{profileData?.firstName} {profileData?.lastName}</span>
                                     <FontAwesomeIcon
                                         icon={faCaretDown}
@@ -511,7 +545,26 @@ export default function Navbar() {
                                         onMouseLeave={handleMouseLeave}
                                     >
                                         <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Account</div>
-                                        {dropdownItems.slice(0, 3).map((item) => (
+                                        {dropdownItems.slice(0, 3).map((item) =>
+                                            item.isMyStartup ? (
+                                                <button
+                                                    key={item.label}
+                                                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
+                                                    onClick={handleMyStartupsClick}
+                                                    type="button"
+                                                >
+                                                    <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                                    {item.label}
+                                                </button>
+                                            ) : (
+                                                <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
+                                                    <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                                    {item.label}
+                                                </Link>
+                                            )
+                                        )}
+                                        {/* Các mục còn lại */}
+                                        {dropdownItems.slice(3, 4).map((item) => (
                                             <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
                                                 <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                                 {item.label}
@@ -519,7 +572,7 @@ export default function Navbar() {
                                         ))}
                                         <hr className="my-2" />
                                         <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Support</div>
-                                        {dropdownItems.slice(3, 5).map((item) => (
+                                        {dropdownItems.slice(4, 5).map((item) => (
                                             <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
                                                 <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                                 {item.label}

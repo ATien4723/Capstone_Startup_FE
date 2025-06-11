@@ -3,6 +3,8 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import Navbar from '@components/Navbar/Navbar';
+
 
 const stages = [
     { id: 1, name: 'Idea' },
@@ -128,9 +130,10 @@ export default function CreateStartup() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-white py-8">
+            <Navbar />
             <div className="w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden">
-                <div className="h-32 bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center">
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">Create Startup</h2>
+                <div className="h-20 mt-10 bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center rounded-lg">
+                    <h2 className="text-3xl md:text-4xl font-semibold text-white drop-shadow-lg ">Create Startup</h2>
                 </div>
                 <form onSubmit={formik.handleSubmit} className="bg-white px-8 py-10 md:px-12 md:py-12">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

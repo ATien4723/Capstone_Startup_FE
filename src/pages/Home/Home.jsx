@@ -40,10 +40,10 @@ const Home = () => {
         posts, postLikes, postCommentCounts, openCommentPosts, refreshCommentTrigger,
         isLoading: isLoadingPosts, isLoadingMore,
         loadMorePosts, handleLikePost, toggleCommentSection, handleCommentCountChange,
-        hasMore
+        hasMore, fetchPosts
     } = useNewsFeedData(currentUserId);
 
-    const postActions = usePostActions(currentUserId, null);
+    const postActions = usePostActions(currentUserId, fetchPosts);
     const {
         showPostModal, setShowPostModal, newPost, setNewPost, postError, isCreatingPost,
         editingPost, setEditingPost, editedPostContent, setEditedPostContent,
