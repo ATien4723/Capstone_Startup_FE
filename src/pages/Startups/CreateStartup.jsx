@@ -4,8 +4,10 @@ import * as Yup from 'yup';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
-import { createStartup, getStage } from '@/apis/startupService';
+import { createStartup, getStage, checkMembership } from '@/apis/startupService';
 import { getAllCategories } from '@/apis/categoryService';
+import { getUserId, getUserInfoFromToken } from "@/apis/authService";
+import { useNavigate } from 'react-router-dom';
 
 
 const validationSchema = Yup.object({
@@ -33,6 +35,10 @@ export default function CreateStartup() {
     const inviteInputRef = useRef(null);
     const [stages, setStages] = useState([]);
     const [categories, setCategories] = useState([]);
+    const currentUserId = getUserId();
+    const navigate = useNavigate();
+    const [checkingMembership, setCheckingMembership] = useState(true);
+
 
     // Lấy danh sách Stage và Category khi component mount
     useEffect(() => {
@@ -40,7 +46,7 @@ export default function CreateStartup() {
             try {
                 // Lấy danh sách Stage
                 const stageData = await getStage();
-                console.log("Stage Data:", stageData); // Xem dữ liệu có đúng không
+                // console.log("Stage Data:", stageData); // Xem dữ liệu có đúng không
 
                 setStages(stageData || []);
 
@@ -55,6 +61,23 @@ export default function CreateStartup() {
         fetchData();
     }, []);
 
+    // Kiểm tra membership khi vào trang
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const res = await checkMembership(currentUserId);
+                if (res) {
+                    navigate('/me/dashboard');
+                } else {
+                    setCheckingMembership(false);
+                }
+            } catch (e) {
+                setCheckingMembership(false);
+            }
+        };
+        check();
+    }, [currentUserId, navigate]);
+
     const formik = useFormik({
         initialValues: {
             StartupName: '',
@@ -67,7 +90,7 @@ export default function CreateStartup() {
             WebsiteUrl: '',
             Email: '',
             StageId: '',
-            CreatorAccountId: '',
+            CreatorAccountId: currentUserId,
             InviteAccountIds: [],
             CategoryIds: [],
         },
@@ -142,6 +165,14 @@ export default function CreateStartup() {
             inviteInputRef.current.focus();
         }
     }, [showInviteInput]);
+
+    if (checkingMembership) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-lg">Đang kiểm tra quyền truy cập...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-white py-8">
@@ -281,9 +312,8 @@ export default function CreateStartup() {
                             <input
                                 type="number"
                                 name="CreatorAccountId"
-                                onChange={formik.handleChange}
-                                onBlur={formik.handleBlur}
                                 value={formik.values.CreatorAccountId}
+                                readOnly
                                 className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CreatorAccountId && formik.errors.CreatorAccountId ? 'border-red-500' : 'border-blue-200'}`}
                                 placeholder="ID người tạo"
                             />

@@ -8,7 +8,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
 import Cookies from "js-cookie";
-import { toast } from 'react-toastify';
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
@@ -127,7 +126,7 @@ export default function Navbar() {
             const res = await checkMembership(currentUserId);
             console.log('checkMembership result:', res);
             if (res) {
-                navigate('/dashboard');
+                navigate('/me/dashboard');
             } else {
                 navigate('/create-startup');
             }
@@ -528,7 +527,7 @@ export default function Navbar() {
                                 onMouseLeave={handleMouseLeave}
                             >
                                 <button className="flex items-center text-white text-sm">
-                                    <img src={profileData?.avartarURL} className="w-8 h-8 rounded-full mr-2 border border-white/20" alt="User" />
+                                    <img src={profileData?.avatarUrl} className="w-8 h-8 rounded-full mr-2 border border-white/20" alt="User" />
                                     <span>{profileData?.firstName} {profileData?.lastName}</span>
                                     <FontAwesomeIcon
                                         icon={faCaretDown}

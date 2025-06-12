@@ -11,8 +11,13 @@ const OTPVerification = lazy(() => import('@/components/OTPVerification/OTPVerif
 const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPassword'));
 const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
-const Dashboard = lazy(() => import('@/pages/Dashboard/Dashboard'));
 const CreateStartup = lazy(() => import('@/pages/Startups/CreateStartup'));
+
+// Thêm các component mới
+const Me = lazy(() => import('@/pages/Me/Me'));
+const MeDashboard = lazy(() => import('@/pages/Me/Dashboard/Dashboard'));
+const MeChat = lazy(() => import('@/pages/Me/Chat/Chat'));
+const MePost = lazy(() => import('@/pages/Me/Post/Post'));
 
 const routers = [
     {
@@ -64,12 +69,29 @@ const routers = [
         component: FortgetPassword
     },
     {
-        path: '/dashboard',
-        component: Dashboard
-    },
-    {
         path: '/create-startup',
         component: CreateStartup
+    },
+    // Thêm các đường dẫn mới
+    {
+        path: '/me',
+        component: Me,
+        children: true
+    },
+    {
+        path: '/me/dashboard',
+        component: MeDashboard,
+        parent: '/me'
+    },
+    {
+        path: '/me/chat',
+        component: MeChat,
+        parent: '/me'
+    },
+    {
+        path: '/me/post',
+        component: MePost,
+        parent: '/me'
     }
 ];
 export default routers;
