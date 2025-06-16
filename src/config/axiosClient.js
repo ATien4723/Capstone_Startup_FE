@@ -37,7 +37,6 @@ axiosClient.interceptors.response.use(
             //Kiểm tra refreshToken trước khi thực hiện refresh
             const hasRefreshToken = Cookies.get("refreshToken");
             if (!hasRefreshToken) {
-                // Nếu không có refresh token, xóa access token và chuyển về trang login
                 Cookies.remove("accessToken");
                 return Promise.reject(error.response?.data || error);
             }
@@ -51,7 +50,6 @@ axiosClient.interceptors.response.use(
                 originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
                 return axiosClient(originalRequest);
             } catch (refreshError) {
-                // Clear tokens and redirect to login
                 Cookies.remove("accessToken");
                 Cookies.remove("refreshToken");
                 window.location.href = '/login';

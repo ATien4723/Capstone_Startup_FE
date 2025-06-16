@@ -66,7 +66,7 @@ export default function CreateStartup() {
         const check = async () => {
             try {
                 const res = await checkMembership(currentUserId);
-                if (res) {
+                if (res.data === true) {
                     navigate('/me/dashboard');
                 } else {
                     setCheckingMembership(false);

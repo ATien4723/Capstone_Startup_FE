@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import MeSidebar from "@/components/Sidebar/MeSidebar";
-import Navbar from "@/components/Navbar/Navbar";
+import MeNavbar from "@/components/Navbar/MeNavbar";
 
 const Me = () => {
     const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Me = () => {
             <div className="flex-1 flex flex-col ml-64">
                 {/* Navbar (Topbar) fixed */}
                 <div className="fixed top-0 left-64 right-0 z-30 w-[calc(100%-16rem)]">
-                    <Navbar />
+                    <MeNavbar />
                 </div>
 
                 {/* Content Area */}

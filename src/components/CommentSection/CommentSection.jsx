@@ -682,7 +682,7 @@ const CommentSection = ({
                                         {childComments[comment.postcommentId].map((childComment) => (
                                             <div key={childComment.postcommentId} className="flex gap-2 mb-3 group">
                                                 <img
-                                                    src={childComment?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                    src={childComment?.accountInfor?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                     alt="Avatar"
                                                     className="w-8 h-8 rounded-full mt-1"
                                                 />
@@ -690,7 +690,7 @@ const CommentSection = ({
                                                     <div className="bg-gray-100 rounded-2xl px-3 py-2">
                                                         <div className="flex items-center gap-1">
                                                             <span className="font-semibold text-gray-900 text-sm">
-                                                                {childComment?.userInfo?.firstName} {childComment?.userInfo?.lastName}
+                                                                {childComment?.accountInfor?.fullName}
                                                             </span>
                                                         </div>
                                                         <div className="text-gray-800 text-sm">{childComment.content}</div>
@@ -784,7 +784,7 @@ const CommentSection = ({
                                                                 childReplies[childComment.postcommentId].map((reply) => (
                                                                     <div key={reply.postcommentId} className="flex gap-2 mb-2 group">
                                                                         <img
-                                                                            src={reply?.userInfo?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                            src={reply?.accountInfor?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                                             alt="Avatar"
                                                                             className="w-6 h-6 rounded-full mt-1"
                                                                         />
@@ -792,7 +792,7 @@ const CommentSection = ({
                                                                             <div className="bg-gray-100 rounded-2xl px-3 py-2">
                                                                                 <div className="flex items-center gap-1">
                                                                                     <span className="font-semibold text-gray-900 text-xs">
-                                                                                        {reply?.userInfo?.firstName} {reply?.userInfo?.lastName}
+                                                                                        {reply?.accountInfor?.fullName}
                                                                                     </span>
                                                                                 </div>
                                                                                 <div className="text-gray-800 text-xs">{reply.content}</div>

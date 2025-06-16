@@ -4,16 +4,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faBell, faCaretDown, faBars, faTimes, faUser,
     faCog, faEnvelope, faQuestionCircle, faHeadset, faSignOutAlt,
-    faCheck, faCommentAlt, faShare, faBuildingUser
+    faCheck, faCommentAlt, faShare, faHome
 } from '@fortawesome/free-solid-svg-icons';
 import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
 import Cookies from "js-cookie";
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
-import { checkMembership } from '@/apis/startupService';
 
-export default function Navbar() {
+export default function MeNavbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -113,32 +112,10 @@ export default function Navbar() {
         }
     };
 
-    const navItems = [
-        { label: 'Home', to: '/home' },
-        { label: 'My Network', to: '/mynetwork' },
-        { label: 'Startups', to: '/startups' },
-        { label: 'InvestmentEvents', to: '/investment-events' },
-        { label: 'Policy', to: '/policy' },
-    ];
-
-    const handleMyStartupsClick = async () => {
-        try {
-            const res = await checkMembership(currentUserId);
-            console.log('checkMembership result:', res);
-            if (res.data) {
-                navigate('/me/dashboard');
-            } else {
-                navigate('/create-startup');
-            }
-        } catch (error) {
-            console.error('Error in checkMembership:', error);
-        }
-    };
-
     const dropdownItems = [
         { label: 'Profile', to: `/profile/${currentUserId}`, icon: faUser },
         { label: 'Settings', to: `/settings/${currentUserId}`, icon: faCog },
-        { label: 'My startups', isMyStartup: true, icon: faBuildingUser },
+        { label: 'Back to Home', to: '/home', icon: faHome },
         { label: 'Messages', to: '/messages', icon: faEnvelope },
         { label: 'Help Center', to: '/help', icon: faQuestionCircle },
         { label: 'Contact Support', to: '/support', icon: faHeadset },
@@ -287,31 +264,19 @@ export default function Navbar() {
                         <div className="relative">
                             <button
                                 onClick={() => setMobileAvatarDropdownOpen(open => !open)}
-                                className="block focus:outline-none"
+                                className="block focus:outline-none mobile-avatar-btn"
                             >
                                 <img src={profileData?.avatarUrl} className="w-8 h-8 rounded-full border border-white/20" />
                             </button>
                             {mobileAvatarDropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50">
+                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50 mobile-avatar-dropdown">
                                     <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Account</div>
-                                    {dropdownItems.slice(0, 3).map((item) =>
-                                        item.isMyStartup ? (
-                                            <button
-                                                key={item.label}
-                                                className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
-                                                onClick={() => { handleMyStartupsClick(); setMobileAvatarDropdownOpen(false); }}
-                                                type="button"
-                                            >
-                                                <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
-                                                {item.label}
-                                            </button>
-                                        ) : (
-                                            <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
-                                                <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
-                                                {item.label}
-                                            </Link>
-                                        )
-                                    )}
+                                    {dropdownItems.slice(0, 3).map((item) => (
+                                        <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
+                                            <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                            {item.label}
+                                        </Link>
+                                    ))}
                                     {/* Các mục còn lại */}
                                     {dropdownItems.slice(3, 4).map((item) => (
                                         <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
@@ -321,7 +286,7 @@ export default function Navbar() {
                                     ))}
                                     <hr className="my-2" />
                                     <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Support</div>
-                                    {dropdownItems.slice(4, 5).map((item) => (
+                                    {dropdownItems.slice(4, 6).map((item) => (
                                         <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMobileAvatarDropdownOpen(false)}>
                                             <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                             {item.label}
@@ -345,33 +310,8 @@ export default function Navbar() {
                     </div>
                 )}
 
-                {/* Hamburger button (mobile) */}
-                <button
-                    className="lg:hidden text-white text-2xl focus:outline-none"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                >
-                    <FontAwesomeIcon icon={menuOpen ? faTimes : faBars} />
-                </button>
-
-                {/* Menu (desktop) */}
-                <ul className="hidden lg:flex space-x-6 text-sm font-medium">
-                    {navItems.map((item) => (
-                        <li key={item.label}>
-                            <Link
-                                to={item.to}
-                                className={`px-4 py-2 rounded-lg transition-all duration-300 ${window.location.pathname === item.to
-                                    ? 'bg-white/20 text-black'
-                                    : 'text-white hover:bg-white/10'
-                                    }`}
-                            >
-                                {item.label}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-
                 {/* Right section (notification & user) */}
-                <div className="hidden lg:flex items-center space-x-4">
+                <div className="flex items-center space-x-4 ml-auto">
                     {isAuthenticated ? (
                         <>
                             {/* Notification */}
@@ -544,24 +484,12 @@ export default function Navbar() {
                                         onMouseLeave={handleMouseLeave}
                                     >
                                         <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Account</div>
-                                        {dropdownItems.slice(0, 3).map((item) =>
-                                            item.isMyStartup ? (
-                                                <button
-                                                    key={item.label}
-                                                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
-                                                    onClick={handleMyStartupsClick}
-                                                    type="button"
-                                                >
-                                                    <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
-                                                    {item.label}
-                                                </button>
-                                            ) : (
-                                                <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
-                                                    <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
-                                                    {item.label}
-                                                </Link>
-                                            )
-                                        )}
+                                        {dropdownItems.slice(0, 3).map((item) => (
+                                            <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
+                                                <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
+                                                {item.label}
+                                            </Link>
+                                        ))}
                                         {/* Các mục còn lại */}
                                         {dropdownItems.slice(3, 4).map((item) => (
                                             <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
@@ -571,7 +499,7 @@ export default function Navbar() {
                                         ))}
                                         <hr className="my-2" />
                                         <div className="px-4 py-2 text-gray-500 text-xs font-semibold uppercase">Support</div>
-                                        {dropdownItems.slice(4, 5).map((item) => (
+                                        {dropdownItems.slice(4, 6).map((item) => (
                                             <Link key={item.label} to={item.to} className="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50">
                                                 <FontAwesomeIcon icon={item.icon} className="mr-3 w-5 text-gray-500" />
                                                 {item.label}
@@ -602,34 +530,6 @@ export default function Navbar() {
                     )}
                 </div>
             </div>
-
-            {/* Mobile Menu */}
-            {menuOpen && (
-                <div className="lg:hidden bg-blue-800 px-4 py-3 space-y-2">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            to={item.to}
-                            className={`block px-4 py-2 rounded-md ${window.location.pathname === item.to
-                                ? 'bg-white/20 text-black'
-                                : 'text-white hover:bg-white/10'
-                                }`}
-                            onClick={() => setMenuOpen(false)}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                    {!isAuthenticated && (
-                        <Link
-                            to="/login"
-                            className="block px-4 py-2 bg-white text-blue-600 rounded-md font-semibold hover:bg-blue-50 transition-all duration-300"
-                            onClick={() => setMenuOpen(false)}
-                        >
-                            Login
-                        </Link>
-                    )}
-                </div>
-            )}
         </nav>
     );
 }

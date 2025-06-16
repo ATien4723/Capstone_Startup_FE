@@ -13,6 +13,8 @@ class SignalRService {
             onNotificationRead: null,
             onUserInfoReceived: null
         };
+        this.chatConnection = null;
+        this.chatConnected = false;
     }
 
     // Khởi tạo kết nối SignalR
@@ -121,6 +123,42 @@ class SignalRService {
         }
     }
 
+    // --- CHAT REALTIME ---
+    async initChatConnection(chatRoomId, onReceiveMessage) {
+        if (!chatRoomId) return;
+        if (this.chatConnection && this.chatConnected) return;
+
+        this.chatConnection = new signalR.HubConnectionBuilder()
+            .withUrl(`${URL_API}hubs/chat`)
+            .withAutomaticReconnect()
+            .build();
+
+        this.chatConnection.on('ReceiveMessage', (message) => {
+            if (onReceiveMessage) onReceiveMessage(message);
+        });
+
+        try {
+            await this.chatConnection.start();
+            await this.chatConnection.invoke("JoinGroup", chatRoomId.toString());
+            this.chatConnected = true;
+            console.log('SignalR chat connected & joined group', chatRoomId);
+        } catch (err) {
+            console.error('SignalR Chat Connection Error:', err);
+            this.chatConnected = false;
+        }
+    }
+
+    async disconnectChat() {
+        if (this.chatConnection) {
+            try {
+                await this.chatConnection.stop();
+                this.chatConnected = false;
+                console.log('SignalR chat disconnected');
+            } catch (err) {
+                console.error('Lỗi khi dừng kết nối SignalR chat:', err);
+            }
+        }
+    }
 }
 
 // Tạo một instance duy nhất của service
