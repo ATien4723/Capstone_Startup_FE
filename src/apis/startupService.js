@@ -76,3 +76,28 @@ export const getMessagesInRoom = async (chatRoomId, pageNumber = 1, pageSize = 1
     return response;
 };
 
+// API: Thêm thành viên vào startup
+export const inviteUserToStartup = async (data) => {
+    const response = await axiosClient.post('/api/Startup/invite-member', data);
+    return response;
+};
+
+// API: Cập nhật vai trò của thành viên trong startup
+export const updateMemberRole = async (data) => {
+    const response = await axiosClient.put('/api/Startup/update-member-role', data);
+    return response;
+};
+
+// API: Xóa thành viên khỏi startup
+export const removeMemberFromStartup = async (startupId, memberId) => {
+    const response = await axiosClient.delete(`/api/Startup/${startupId}/remove-member/${memberId}`);
+    return response;
+};
+
+// API: Tìm kiếm người dùng theo email
+export const searchAccountByEmail = async (keyword) => {
+    const response = await axiosClient.get('/api/Startup/search-account-by-email', {
+        params: { keyword }
+    });
+    return response;
+};

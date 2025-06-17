@@ -13,7 +13,7 @@ const meMenu = [
     { label: "Dashboard", icon: faTachometerAlt, to: "/me/dashboard" },
     { label: "Chat", icon: faComments, to: "/me/chat" },
     { label: "Posts", icon: faNewspaper, to: "/me/post" },
-    { label: "Profile", icon: faUser, to: "/me/profile" },
+    { label: "Member", icon: faUser, to: "/me/member" },
     { label: "Statistics", icon: faChartLine, to: "/me/stats" },
     { label: "Settings", icon: faCog, to: "/me/settings" },
 ];

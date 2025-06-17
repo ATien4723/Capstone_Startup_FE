@@ -129,7 +129,7 @@ class SignalRService {
         if (this.chatConnection && this.chatConnected) return;
 
         this.chatConnection = new signalR.HubConnectionBuilder()
-            .withUrl(`${URL_API}hubs/chat`)
+            .withUrl(`${URL_API}messagehub`)
             .withAutomaticReconnect()
             .build();
 

@@ -125,7 +125,7 @@ export default function Navbar() {
         try {
             const res = await checkMembership(currentUserId);
             console.log('checkMembership result:', res);
-            if (res.data) {
+            if (res.isMember) {
                 navigate('/me/dashboard');
             } else {
                 navigate('/create-startup');
