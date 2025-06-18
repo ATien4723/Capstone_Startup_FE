@@ -13,7 +13,7 @@ import Navbar from '@components/Navbar/Navbar';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { formatPostTime } from '@/utils/dateUtils';
-import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
+import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
 
 // Modal component

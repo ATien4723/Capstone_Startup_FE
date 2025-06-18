@@ -23,6 +23,13 @@ export default function useChat(currentUserId) {
     const [selectedUser, setSelectedUser] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
 
+    // Thêm state cho danh sách thành viên và chỉnh sửa thành viên
+    const [chatRoomMembers, setChatRoomMembers] = useState([]);
+    const [showEditMember, setShowEditMember] = useState(false);
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [editMemberTitle, setEditMemberTitle] = useState('');
+    const [showMembersSidebar, setShowMembersSidebar] = useState(true);
+
     // Ref để theo dõi kết nối SignalR
     const signalRConnected = useRef(false);
 
@@ -240,6 +247,103 @@ export default function useChat(currentUserId) {
             setLoading(false);
         }
     };
+
+    // Fetch và cập nhật danh sách thành viên trong phòng chat
+    const fetchChatRoomMembers = useCallback(async () => {
+        if (!selectedChannel) return;
+
+        try {
+            const res = await getChatRoomMembers(selectedChannel);
+            const members = Array.isArray(res.items) ? res.items : Array.isArray(res) ? res : [];
+            setChatRoomMembers(members);
+            console.log("Chat room members:", members);
+        } catch (err) {
+            console.error("Error fetching chat room members:", err);
+            setChatRoomMembers([]);
+        }
+    }, [selectedChannel]);
+
+    // Cập nhật danh sách thành viên khi chuyển phòng chat
+    useEffect(() => {
+        if (selectedChannel) {
+            fetchChatRoomMembers();
+        } else {
+            setChatRoomMembers([]);
+        }
+    }, [selectedChannel, fetchChatRoomMembers]);
+
+    // Xử lý cập nhật tên hiển thị của thành viên
+    const handleUpdateMemberTitle = async (e) => {
+        e.preventDefault();
+        if (!selectedMember) return;
+
+        try {
+            // Chuẩn bị dữ liệu cập nhật
+            const updateData = {
+                chatRoomId: selectedChannel,
+                memberId: selectedMember.memberId,
+                memberTitle: editMemberTitle
+            };
+
+            // Gọi API cập nhật thành viên (cần thêm API này vào startupService)
+            // await startupService.updateChatRoomMember(updateData);
+
+            // Cập nhật local state để hiển thị ngay lập tức
+            setChatRoomMembers(prev =>
+                prev.map(member =>
+                    member.memberId === selectedMember.memberId
+                        ? { ...member, memberTitle: editMemberTitle }
+                        : member
+                )
+            );
+
+            // Đóng form
+            setShowEditMember(false);
+            setSelectedMember(null);
+            setEditMemberTitle('');
+            toast.success("Member updated successfully");
+        } catch (err) {
+            console.error("Error updating member:", err);
+            toast.error("Failed to update member");
+        }
+    };
+
+    // Xử lý xóa thành viên khỏi phòng chat
+    const handleRemoveMember = async (memberId) => {
+        if (!selectedChannel || !memberId) return;
+
+        if (window.confirm("Are you sure you want to remove this member from the chat group?")) {
+            try {
+                // Chuẩn bị dữ liệu xóa thành viên
+                const removeData = {
+                    chatRoomId: selectedChannel,
+                    memberId: memberId
+                };
+
+                // Gọi API xóa thành viên (cần thêm API này vào startupService)
+                // await startupService.removeChatRoomMember(removeData);
+
+                // Cập nhật local state để hiển thị ngay lập tức
+                setChatRoomMembers(prev =>
+                    prev.filter(member => member.memberId !== memberId)
+                );
+
+                toast.success("Member removed from chat group");
+            } catch (err) {
+                console.error("Error removing member:", err);
+                toast.error("Failed to remove member");
+            }
+        }
+    };
+
+    // Xử lý khi chọn thành viên để chỉnh sửa
+    const handleEditMember = (member) => {
+        setSelectedMember(member);
+        setEditMemberTitle(member.memberTitle || '');
+        setShowEditMember(true);
+    };
+
+    //tu 251 - 345
 
     // Lấy các chatroom mà account thuộc về
     const getChatRoomsForAccount = async (accountId, pageNumber = 1, pageSize = 10) => {
@@ -476,6 +580,11 @@ export default function useChat(currentUserId) {
         searchResults,
         selectedUser,
         isSearching,
+        chatRoomMembers,
+        showEditMember,
+        selectedMember,
+        editMemberTitle,
+        showMembersSidebar,
 
         // Actions
         setSelectedChannel,
@@ -488,6 +597,10 @@ export default function useChat(currentUserId) {
         setNewMemberEmail,
         setNewMemberTitle,
         setSelectedUser,
+        setShowEditMember,
+        setSelectedMember,
+        setEditMemberTitle,
+        setShowMembersSidebar,
 
         // Methods
         fetchChatRooms,
@@ -497,6 +610,7 @@ export default function useChat(currentUserId) {
         handleAddMember,
         getStartupMembers,
         getChatRoomMembers,
+        fetchChatRoomMembers,
         getChatRoomsForAccount,
         sendMessage,
         handleSendMessage,
@@ -506,6 +620,9 @@ export default function useChat(currentUserId) {
         handleEmailInputChange,
         handleSelectUser,
         handleDeleteChatRoom,
+        handleUpdateMemberTitle,
+        handleRemoveMember,
+        handleEditMember,
 
         // SignalR methods
         connectToSignalR,

@@ -27,6 +27,11 @@ export default function Chat() {
         searchResults,
         selectedUser,
         isSearching,
+        chatRoomMembers,
+        showEditMember,
+        selectedMember,
+        editMemberTitle,
+        showMembersSidebar,
 
         // Actions
         setSelectedChannel,
@@ -39,6 +44,10 @@ export default function Chat() {
         setNewMemberEmail,
         setNewMemberTitle,
         setSelectedUser,
+        setShowEditMember,
+        setSelectedMember,
+        setEditMemberTitle,
+        setShowMembersSidebar,
         fetchChatRooms,
 
         // Methods
@@ -48,6 +57,9 @@ export default function Chat() {
         handleSelectUser,
         handleAddMember,
         handleDeleteChatRoom,
+        handleUpdateMemberTitle,
+        handleRemoveMember,
+        handleEditMember,
     } = useChat(currentUserId);
 
     // Lấy danh sách chatroom khi vào trang
@@ -72,6 +84,16 @@ export default function Chat() {
             {/* Header */}
             <header className="bg-white shadow px-4 py-4 flex justify-between items-center mb-6 rounded-lg">
                 <h1 className="text-2xl font-bold text-gray-800">Chat</h1>
+                <div className="flex space-x-2">
+                    <button
+                        className={`p-2 rounded-lg text-sm font-medium ${showMembersSidebar ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+                        onClick={() => setShowMembersSidebar(!showMembersSidebar)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </button>
+                </div>
             </header>
 
             {/* Chat Interface */}
@@ -105,7 +127,7 @@ export default function Chat() {
                 </div>
 
                 {/* Khung chat chính */}
-                <div className="flex-1 flex flex-col bg-white">
+                <div className={`flex-1 flex flex-col bg-white ${showMembersSidebar ? 'border-r border-gray-200' : ''}`}>
                     {/* Header */}
                     <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 bg-white">
                         <span className="text-lg font-bold text-gray-800">
@@ -213,6 +235,69 @@ export default function Chat() {
                         </div>
                     </form>
                 </div>
+
+                {/* Sidebar phải: Danh sách thành viên */}
+                {showMembersSidebar && (
+                    <div className="w-64 bg-gray-50 flex flex-col">
+                        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h2 className="font-bold text-gray-800">Members</h2>
+                            <button
+                                className="ml-2 p-1 bg-blue-100 hover:bg-blue-600 hover:text-white text-blue-600 rounded-full shadow transition-all duration-200 focus:outline-none flex items-center justify-center"
+                                title="Add member"
+                                onClick={() => setShowAddMember(true)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                        </div>
+                        <ul className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
+                            {(chatRoomMembers || []).map(member => (
+                                <li key={member.memberId} className="group">
+                                    <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
+                                        <div className="flex items-center space-x-2">
+                                            <img
+                                                src={member.avatarUrl || 'https://via.placeholder.com/32'}
+                                                alt="avatar"
+                                                className="w-8 h-8 rounded-full object-cover"
+                                            />
+                                            <div>
+                                                <div className="font-medium text-sm">
+                                                    {member.memberTitle || 'No name'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    {member.accountId == currentUserId ? 'You' : 'Member'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="hidden group-hover:flex space-x-1">
+                                            <button
+                                                className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
+                                                onClick={() => handleEditMember(member)}
+                                                title="Edit"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            {member.accountId !== currentUserId && (
+                                                <button
+                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
+                                                    onClick={() => handleRemoveMember(member.memberId)}
+                                                    title="Remove from group"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             {/* Popup tạo group chat */}
@@ -371,6 +456,62 @@ export default function Chat() {
                                 disabled={loading || !selectedUser}
                             >
                                 Add Member
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Popup chỉnh sửa thành viên */}
+            {showEditMember && (
+                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-80 relative">
+                        <button
+                            className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl"
+                            onClick={() => {
+                                setShowEditMember(false);
+                                setSelectedMember(null);
+                                setEditMemberTitle('');
+                            }}
+                        >
+                            ×
+                        </button>
+                        <h3 className="text-lg font-bold mb-4 text-gray-800">Edit Member</h3>
+
+                        {/* Thông tin thành viên đang chỉnh sửa */}
+                        {selectedMember && (
+                            <div className="mb-4 p-3 bg-blue-50 rounded flex items-center">
+                                <img
+                                    src={selectedMember.avatarUrl || 'https://via.placeholder.com/32'}
+                                    alt="avatar"
+                                    className="w-8 h-8 rounded-full mr-2 object-cover"
+                                />
+                                <div>
+                                    <div className="font-medium">{selectedMember.fullName || 'No name'}</div>
+                                    <div className="text-sm text-gray-600">{selectedMember.accountId === currentUserId ? 'You' : 'Member'}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Form chỉnh sửa tên hiển thị */}
+                        <form onSubmit={handleUpdateMemberTitle}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 mb-1">Display Name</label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={editMemberTitle}
+                                    onChange={e => setEditMemberTitle(e.target.value)}
+                                    placeholder="Enter display name..."
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-all font-bold"
+                                disabled={loading}
+                            >
+                                Update
                             </button>
                         </form>
                     </div>

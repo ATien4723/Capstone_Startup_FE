@@ -101,3 +101,33 @@ export const searchAccountByEmail = async (keyword) => {
     });
     return response;
 };
+
+// API: Lấy thông tin vai trò theo roleId
+export const getRole = async (roleId) => {
+    const response = await axiosClient.get(`/api/Startup/rolestartup/${roleId}`);
+    return response;
+};
+
+// API: Lấy tất cả vai trò của một startup
+export const getRolesByStartup = async (startupId) => {
+    const response = await axiosClient.get(`/api/Startup/Getall-rolestartup/${startupId}`);
+    return response;
+};
+
+// API: Tạo vai trò mới
+export const createRole = async (data) => {
+    const response = await axiosClient.post('/api/Startup/Create-role', data);
+    return response;
+};
+
+// API: Cập nhật vai trò
+export const updateRole = async (data) => {
+    const response = await axiosClient.put('/api/Startup/Update-role', data);
+    return response;
+};
+
+// API: Xóa vai trò
+export const deleteRole = async (roleId) => {
+    const response = await axiosClient.delete(`/api/Startup/Update-role/${roleId}`);
+    return response;
+};

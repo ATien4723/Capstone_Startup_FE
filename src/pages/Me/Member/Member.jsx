@@ -4,25 +4,27 @@ import useMemberManagement from '@/hooks/useMemberManagement';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUserPlus, faUserEdit, faUserMinus,
-    faSearch, faTimes, faCheck, faSpinner
+    faSearch, faTimes, faCheck, faSpinner, faEllipsisV
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
+import Dropdownstartup from '@/components/Dropdown/Dropdownstartup';
 
 const roleOptions = [
-    { value: 'Owner', label: 'Chủ startup' },
+    { value: 'Founder', label: 'Chủ startup' },
     { value: 'Admin', label: 'Quản trị viên' },
     { value: 'Member', label: 'Thành viên' }
 ];
 
 const Member = () => {
     const [startupId, setStartupId] = useState(null);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [openMenuIndex, setOpenMenuIndex] = useState(null);
 
     // Lấy ID startup từ localStorage hoặc context
     useEffect(() => {
         // Trong thực tế, bạn nên lấy startupId từ context hoặc API
         const fetchStartupId = async () => {
             try {
-                // Giả định startupId được lưu trong localStorage
                 // Hoặc bạn có thể gọi API để lấy startupId của người dùng hiện tại
                 const tempStartupId = localStorage.getItem('startupId') || 1;
                 setStartupId(Number(tempStartupId));
@@ -45,7 +47,6 @@ const Member = () => {
         searchEmail,
         searchResults,
         isSearching,
-        selectedUser,
         newMemberRole,
 
         setSelectedMember,
@@ -56,7 +57,6 @@ const Member = () => {
 
         fetchMembers,
         handleEmailInputChange,
-        handleSelectUser,
         inviteMember,
         updateMemberRole,
         removeMember
@@ -65,7 +65,7 @@ const Member = () => {
     // Xử lý mở modal sửa thành viên
     const handleOpenEditModal = (member) => {
         setSelectedMember(member);
-        setNewMemberRole(member.role);
+        setNewMemberRole(member.roleName);
         setShowEditMemberModal(true);
     };
 
@@ -73,6 +73,11 @@ const Member = () => {
     const handleSaveRoleChange = () => {
         if (!selectedMember) return;
         updateMemberRole(selectedMember.memberId, newMemberRole);
+    };
+
+    // Xử lý chọn người dùng từ kết quả tìm kiếm
+    const handleSelectUser = (user) => {
+        setSelectedUser(user);
     };
 
     // Render kết quả tìm kiếm
@@ -117,6 +122,19 @@ const Member = () => {
             </div>
         ));
     };
+
+    // Đóng menu khi click ra ngoài
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.member-action-menu')) {
+                setOpenMenuIndex(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     if (loading && members.length === 0) {
         return (
@@ -176,67 +194,88 @@ const Member = () => {
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Ngày tham gia
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                            {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                                 Thao tác
-                            </th>
+                            </th> */}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {members.length > 0 ? (
-                            members.map((member, index) => (
-                                <tr key={member.memberId || index} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {index + 1}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <img
-                                                className="h-10 w-10 rounded-full object-cover"
-                                                src={member.avatarUrl || '/placeholder-avatar.png'}
-                                                alt={member.displayName}
-                                            />
-                                            <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                    {member.displayName || 'Chưa có tên'}
+                            members.map((member, index) => {
+                                const ellipsisRef = React.createRef();
+                                return (
+                                    <tr key={member.memberId || index} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {index + 1}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <img
+                                                    className="h-10 w-10 rounded-full object-cover"
+                                                    src={member.avatarUrl || '/placeholder-avatar.png'}
+                                                />
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {member.fullName || 'Chưa có tên'}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {member.email}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                            ${member.role === 'Owner' ? 'bg-red-100 text-red-800' :
-                                                member.role === 'Admin' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-blue-100 text-blue-800'}`}>
-                                            {member.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(member.joinDate).toLocaleDateString('vi-VN')}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex space-x-2">
-                                            <button
-                                                className="text-blue-600 hover:text-blue-900"
-                                                onClick={() => handleOpenEditModal(member)}
-                                                title="Chỉnh sửa vai trò"
-                                            >
-                                                <FontAwesomeIcon icon={faUserEdit} />
-                                            </button>
-                                            <button
-                                                className={`text-red-600 hover:text-red-900 ${member.role === 'Owner' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                onClick={() => removeMember(member.memberId)}
-                                                disabled={member.role === 'Owner'}
-                                                title="Xóa thành viên"
-                                            >
-                                                <FontAwesomeIcon icon={faUserMinus} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {member.email}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                ${member.roleName === 'Founder' ? 'bg-red-100 text-red-800' :
+                                                    member.roleName === 'Admin' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-blue-100 text-blue-800'}`}>
+                                                {member.roleName}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(member.joinAT).toLocaleDateString('vi-VN')}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div className="relative">
+                                                <button
+                                                    ref={ellipsisRef}
+                                                    className="text-gray-600 hover:text-gray-900 focus:outline-none"
+                                                    onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
+                                                    title="Thao tác"
+                                                >
+                                                    <FontAwesomeIcon icon={faEllipsisV} />
+                                                </button>
+                                                {openMenuIndex === index && (
+                                                    <Dropdownstartup anchorRef={ellipsisRef} onClose={() => setOpenMenuIndex(null)}>
+                                                        <button
+                                                            className="w-full flex items-center px-2 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                                                            onClick={() => {
+                                                                handleOpenEditModal(member);
+                                                                setOpenMenuIndex(null);
+                                                            }}
+                                                            disabled={member.roleName === 'Founder'}
+                                                        >
+                                                            <FontAwesomeIcon icon={faUserEdit} className="mr-2" />
+                                                            Chỉnh sửa vai trò
+                                                        </button>
+                                                        <button
+                                                            className={`w-full flex items-center px-2 py-2 text-sm text-red-600 hover:bg-gray-100 ${member.roleName === 'Founder' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            onClick={() => {
+                                                                removeMember(member.memberId);
+                                                                setOpenMenuIndex(null);
+                                                            }}
+                                                            disabled={member.roleName === 'Founder'}
+                                                        >
+                                                            <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
+                                                            Xóa thành viên
+                                                        </button>
+                                                    </Dropdownstartup>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
                                 <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
@@ -422,16 +461,16 @@ const Member = () => {
                                             Vai trò
                                         </label>
                                         <select
-                                            className={`w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${selectedMember.role === 'Owner' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                            className={`w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${selectedMember.roleName === 'Founder' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                             value={newMemberRole}
                                             onChange={(e) => setNewMemberRole(e.target.value)}
-                                            disabled={selectedMember.role === 'Owner'}
+                                            disabled={selectedMember.roleName === 'Founder'}
                                         >
                                             {roleOptions.map(option => (
                                                 <option
                                                     key={option.value}
                                                     value={option.value}
-                                                    disabled={option.value === 'Owner' && selectedMember.role !== 'Owner'}
+                                                    disabled={option.value === 'Founder' && selectedMember.roleName !== 'Founder'}
                                                 >
                                                     {option.label}
                                                 </option>
@@ -439,7 +478,7 @@ const Member = () => {
                                         </select>
                                     </div>
 
-                                    {selectedMember.role === 'Owner' && (
+                                    {selectedMember.roleName === 'Founder' && (
                                         <p className="mt-2 text-xs text-red-500">
                                             Không thể thay đổi vai trò của chủ startup
                                         </p>
@@ -450,9 +489,9 @@ const Member = () => {
                             <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                                 <button
                                     type="button"
-                                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${(!selectedMember || loading || selectedMember.role === 'Owner') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${(!selectedMember || loading || selectedMember.roleName === 'Founder') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     onClick={handleSaveRoleChange}
-                                    disabled={!selectedMember || loading || selectedMember.role === 'Owner'}
+                                    disabled={!selectedMember || loading || selectedMember.roleName === 'Founder'}
                                 >
                                     {loading ? (
                                         <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />

@@ -13,7 +13,7 @@ import { getUserId, getUserInfoFromToken } from '@/apis/authService';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
-import PostDropdownMenu from '@/components/PostDropdownMenu/PostDropdownMenu';
+import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
