@@ -9,6 +9,9 @@ export default function useMemberManagement(startupId) {
     const [selectedMember, setSelectedMember] = useState(null);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+    const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+    const [roles, setRoles] = useState([]);
+    const [newRole, setNewRole] = useState({ roleName: '' }); // Chỉ cần roleName, không cần description
 
     // State cho phần mời thành viên
     const [searchEmail, setSearchEmail] = useState('');
@@ -33,12 +36,54 @@ export default function useMemberManagement(startupId) {
         }
     }, [startupId]);
 
+    // Lấy danh sách vai trò của startup
+    const fetchRoles = useCallback(async () => {
+        if (!startupId) return;
+
+        setLoading(true);
+        try {
+            const response = await startupService.getRolesByStartup(startupId);
+            setRoles(Array.isArray(response) ? response : (response?.data || []));
+        } catch (err) {
+            console.error("Không thể tải danh sách vai trò:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [startupId]);
+
+    // Tạo vai trò mới
+    const createRole = async () => {
+        if (!newRole.roleName?.trim()) {
+            toast.warning("Vui lòng nhập tên vai trò");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await startupService.createRole({
+                startup_ID: startupId,
+                roleName: newRole.roleName
+            });
+
+            toast.success("Đã tạo vai trò mới thành công");
+            setShowAddRoleModal(false);
+            setNewRole({ roleName: '' });
+            fetchRoles(); // Cập nhật danh sách vai trò
+        } catch (err) {
+            toast.error("Không thể tạo vai trò mới");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Tải danh sách thành viên khi component mount
     useEffect(() => {
         if (startupId) {
             fetchMembers();
+            fetchRoles();
         }
-    }, [startupId, fetchMembers]);
+    }, [startupId, fetchMembers, fetchRoles]);
 
     // Debounce function để tránh gọi API quá nhiều lần
     const debounce = (func, delay) => {
@@ -184,6 +229,50 @@ export default function useMemberManagement(startupId) {
         }
     };
 
+    // Cập nhật vai trò
+    const updateRole = async (roleData) => {
+        if (!roleData.roleName?.trim()) {
+            toast.warning("Vui lòng nhập tên vai trò");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await startupService.updateRole({
+                role_ID: roleData.roleId,
+                roleName: roleData.roleName
+            });
+
+            toast.success("Đã cập nhật vai trò thành công");
+            fetchRoles(); // Cập nhật danh sách vai trò
+        } catch (err) {
+            toast.error("Không thể cập nhật vai trò");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Xóa vai trò
+    const deleteRole = async (roleId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa vai trò này không?")) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await startupService.deleteRole(roleId);
+
+            toast.success("Đã xóa vai trò thành công");
+            fetchRoles(); // Cập nhật danh sách vai trò
+        } catch (err) {
+            toast.error("Không thể xóa vai trò");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         // State
         members,
@@ -192,25 +281,34 @@ export default function useMemberManagement(startupId) {
         selectedMember,
         showAddMemberModal,
         showEditMemberModal,
+        showAddRoleModal,
         searchEmail,
         searchResults,
         isSearching,
         selectedUser,
         newMemberRole,
+        roles,
+        newRole,
 
         // Actions
         setSelectedMember,
         setShowAddMemberModal,
         setShowEditMemberModal,
+        setShowAddRoleModal,
         setSearchEmail,
         setNewMemberRole,
+        setNewRole,
 
         // Methods
         fetchMembers,
+        fetchRoles,
         handleEmailInputChange,
         handleSelectUser,
         inviteMember,
         updateMemberRole,
-        removeMember
+        removeMember,
+        createRole,
+        updateRole,
+        deleteRole
     };
 } 

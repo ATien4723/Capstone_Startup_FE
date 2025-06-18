@@ -4,10 +4,16 @@ import useMemberManagement from '@/hooks/useMemberManagement';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUserPlus, faUserEdit, faUserMinus,
-    faSearch, faTimes, faCheck, faSpinner, faEllipsisV
+    faSearch, faTimes, faCheck, faSpinner, faEllipsisV,
+    faPlus, faTags
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import Dropdownstartup from '@/components/Dropdown/Dropdownstartup';
+import { getStartupIdByAccountId } from '@/apis/startupService';
+
+// Import SVG icons
+import updateSvg from '/update-icon-svgrepo-com.svg';
+import deleteSvg from '/delete-svgrepo-com.svg';
 
 const roleOptions = [
     { value: 'Founder', label: 'Chủ startup' },
@@ -19,15 +25,19 @@ const Member = () => {
     const [startupId, setStartupId] = useState(null);
     const [selectedUser, setSelectedUser] = useState(null);
     const [openMenuIndex, setOpenMenuIndex] = useState(null);
+    const [editingRoleId, setEditingRoleId] = useState(null);
+    const [editingRoleName, setEditingRoleName] = useState("");
 
-    // Lấy ID startup từ localStorage hoặc context
     useEffect(() => {
-        // Trong thực tế, bạn nên lấy startupId từ context hoặc API
         const fetchStartupId = async () => {
             try {
-                // Hoặc bạn có thể gọi API để lấy startupId của người dùng hiện tại
-                const tempStartupId = localStorage.getItem('startupId') || 1;
-                setStartupId(Number(tempStartupId));
+                const userId = await getUserId();
+                const response = await getStartupIdByAccountId(userId);
+                if (response) {
+                    setStartupId(response);
+                } else {
+                    toast.warning('Bạn chưa thuộc về startup nào');
+                }
             } catch (error) {
                 console.error('Error fetching startup ID:', error);
                 toast.error('Không thể xác định startup của bạn');
@@ -37,6 +47,7 @@ const Member = () => {
         fetchStartupId();
     }, []);
 
+
     const {
         members,
         loading,
@@ -44,23 +55,56 @@ const Member = () => {
         selectedMember,
         showAddMemberModal,
         showEditMemberModal,
+        showAddRoleModal,
         searchEmail,
         searchResults,
         isSearching,
         newMemberRole,
+        roles,
+        newRole,
 
         setSelectedMember,
         setShowAddMemberModal,
         setShowEditMemberModal,
+        setShowAddRoleModal,
         setSearchEmail,
         setNewMemberRole,
+        setNewRole,
 
         fetchMembers,
+        fetchRoles,
         handleEmailInputChange,
         inviteMember,
         updateMemberRole,
-        removeMember
+        removeMember,
+        createRole,
+        updateRole,
+        deleteRole
     } = useMemberManagement(startupId);
+
+    // Bắt đầu chỉnh sửa vai trò
+    const handleStartEditRole = (role) => {
+        setEditingRoleId(role.roleId);
+        setEditingRoleName(role.roleName);
+    };
+
+    // Lưu chỉnh sửa vai trò
+    const handleSaveRoleEdit = () => {
+        if (editingRoleId && editingRoleName.trim()) {
+            updateRole({
+                roleId: editingRoleId,
+                roleName: editingRoleName
+            });
+            setEditingRoleId(null);
+            setEditingRoleName("");
+        }
+    };
+
+    // Hủy chỉnh sửa vai trò
+    const handleCancelRoleEdit = () => {
+        setEditingRoleId(null);
+        setEditingRoleName("");
+    };
 
     // Xử lý mở modal sửa thành viên
     const handleOpenEditModal = (member) => {
@@ -166,13 +210,22 @@ const Member = () => {
                 <h1 className="text-2xl font-bold">
                     Quản lý thành viên
                 </h1>
-                <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition"
-                    onClick={() => setShowAddMemberModal(true)}
-                >
-                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                    Mời thành viên
-                </button>
+                <div className="flex space-x-3">
+                    <button
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        onClick={() => setShowAddRoleModal(true)}
+                    >
+                        <FontAwesomeIcon icon={faTags} className="mr-2" />
+                        Thêm vai trò mới
+                    </button>
+                    <button
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        onClick={() => setShowAddMemberModal(true)}
+                    >
+                        <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                        Mời thành viên
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -512,8 +565,151 @@ const Member = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal thêm vai trò mới */}
+            {showAddRoleModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="flex justify-between items-center pb-3 border-b">
+                                    <h3 className="text-lg font-medium text-gray-900" id="modal-title">
+                                        Quản lý vai trò
+                                    </h3>
+                                    <button
+                                        className="text-gray-400 hover:text-gray-500"
+                                        onClick={() => setShowAddRoleModal(false)}
+                                    >
+                                        <FontAwesomeIcon icon={faTimes} />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4">
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Tên vai trò mới *
+                                        </label>
+                                        <div className="flex">
+                                            <input
+                                                type="text"
+                                                className="flex-1 border border-gray-300 rounded-l-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                value={newRole.roleName}
+                                                onChange={(e) => setNewRole({ ...newRole, roleName: e.target.value })}
+                                                placeholder="Nhập tên vai trò"
+                                            />
+                                            <button
+                                                type="button"
+                                                className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-r-lg flex items-center transition ${loading || !newRole.roleName?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                onClick={createRole}
+                                                disabled={loading || !newRole.roleName?.trim()}
+                                            >
+                                                {loading ? (
+                                                    <FontAwesomeIcon icon={faSpinner} spin />
+                                                ) : (
+                                                    <FontAwesomeIcon icon={faPlus} />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6">
+                                        <h4 className="text-md font-medium mb-3">Vai trò hiện có</h4>
+                                        {roles.length > 0 ? (
+                                            <div className="border rounded-lg overflow-hidden">
+                                                <table className="min-w-full divide-y divide-gray-200">
+                                                    <thead className="">
+                                                        <tr>
+                                                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Tên vai trò
+                                                            </th>
+                                                            {/* <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                                                                Hành động
+                                                            </th> */}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-gray-200">
+                                                        {roles.map((role) => (
+                                                            <tr key={role.roleId} className="hover:bg-gray-50">
+                                                                <td className="px-3 py-2">
+                                                                    {editingRoleId === role.roleId ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            className="w-full border border-gray-300 rounded py-1 px-2 text-sm"
+                                                                            value={editingRoleName}
+                                                                            onChange={(e) => setEditingRoleName(e.target.value)}
+                                                                            autoFocus
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="text-sm">{role.roleName}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-right text-sm font-medium whitespace-nowrap">
+                                                                    {editingRoleId === role.roleId ? (
+                                                                        <div className="flex space-x-2 justify-end">
+                                                                            <button
+                                                                                className="text-green-600 hover:text-green-800"
+                                                                                onClick={handleSaveRoleEdit}
+                                                                                disabled={!editingRoleName.trim()}
+                                                                            >
+                                                                                <FontAwesomeIcon icon={faCheck} />
+                                                                            </button>
+                                                                            <button
+                                                                                className="text-gray-600 hover:text-gray-800"
+                                                                                onClick={handleCancelRoleEdit}
+                                                                            >
+                                                                                <FontAwesomeIcon icon={faTimes} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex space-x-3 justify-end">
+                                                                            <button
+                                                                                className="text-blue-600 hover:text-blue-800"
+                                                                                onClick={() => handleStartEditRole(role)}
+                                                                            >
+                                                                                <img src={updateSvg} alt="Edit role" className="w-5 h-5" />
+                                                                            </button>
+                                                                            <button
+                                                                                className="text-red-600 hover:text-red-800"
+                                                                                onClick={() => deleteRole(role.roleId)}
+                                                                            >
+                                                                                <img src={deleteSvg} alt="Delete role" className="w-5 h-5" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4 border rounded-lg bg-gray-50">
+                                                <p className="text-sm text-gray-500">Chưa có vai trò nào được tạo</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                                    onClick={() => setShowAddRoleModal(false)}
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-export default Member; 
+export default Member;

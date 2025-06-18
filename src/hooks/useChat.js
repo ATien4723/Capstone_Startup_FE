@@ -280,20 +280,29 @@ export default function useChat(currentUserId) {
         try {
             // Chuẩn bị dữ liệu cập nhật
             const updateData = {
-                chatRoomId: selectedChannel,
-                memberId: selectedMember.memberId,
+                chatRoom_ID: selectedChannel,
+                account_ID: selectedMember.accountId,
                 memberTitle: editMemberTitle
             };
 
             // Gọi API cập nhật thành viên (cần thêm API này vào startupService)
-            // await startupService.updateChatRoomMember(updateData);
+            await startupService.updateMemberTitle(updateData);
 
             // Cập nhật local state để hiển thị ngay lập tức
             setChatRoomMembers(prev =>
                 prev.map(member =>
-                    member.memberId === selectedMember.memberId
+                    member.accountId === selectedMember.accountId || member.account_ID === selectedMember.accountId
                         ? { ...member, memberTitle: editMemberTitle }
                         : member
+                )
+            );
+
+            // Cập nhật tên hiển thị trong tin nhắn chat
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg.accountId == selectedMember.accountId
+                        ? { ...msg, memberTitle: editMemberTitle }
+                        : msg
                 )
             );
 

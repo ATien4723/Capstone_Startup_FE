@@ -102,32 +102,50 @@ export const searchAccountByEmail = async (keyword) => {
     return response;
 };
 
-// API: Lấy thông tin vai trò theo roleId
+// API lay role theo roleId
 export const getRole = async (roleId) => {
     const response = await axiosClient.get(`/api/Startup/rolestartup/${roleId}`);
     return response;
 };
 
-// API: Lấy tất cả vai trò của một startup
+// API lay tat ca role
 export const getRolesByStartup = async (startupId) => {
     const response = await axiosClient.get(`/api/Startup/Getall-rolestartup/${startupId}`);
     return response;
 };
 
-// API: Tạo vai trò mới
+// API: tao  role
 export const createRole = async (data) => {
     const response = await axiosClient.post('/api/Startup/Create-role', data);
     return response;
 };
 
-// API: Cập nhật vai trò
+// API: Update a role
 export const updateRole = async (data) => {
     const response = await axiosClient.put('/api/Startup/Update-role', data);
     return response;
 };
 
-// API: Xóa vai trò
+// API: Delete role
 export const deleteRole = async (roleId) => {
-    const response = await axiosClient.delete(`/api/Startup/Update-role/${roleId}`);
+    const response = await axiosClient.delete(`/api/Startup/Delete-role/${roleId}`);
+    return response;
+};
+
+// API: Cập nhật ten thành viên trong startup
+export const updateMemberTitle = async (data) => {
+    const response = await axiosClient.put('/api/Startup/update-member-title', data);
+    return response;
+};
+
+// API: Tạo lời mời tham gia startup
+export const createInvite = async (data) => {
+    const response = await axiosClient.post('/api/Startup/create-invite', data);
+    return response;
+};
+
+// API: Lấy startupId theo accountId
+export const getStartupIdByAccountId = async (accountId) => {
+    const response = await axiosClient.get(`/api/Startup/startupid/${accountId}`);
     return response;
 };
