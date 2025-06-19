@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUserPlus, faUserEdit, faUserMinus,
     faSearch, faTimes, faCheck, faSpinner, faEllipsisV,
-    faPlus, faTags
+    faPlus, faTags, faFilter
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import Dropdownstartup from '@/components/Dropdown/Dropdownstartup';
@@ -27,6 +27,8 @@ const Member = () => {
     const [openMenuIndex, setOpenMenuIndex] = useState(null);
     const [editingRoleId, setEditingRoleId] = useState(null);
     const [editingRoleName, setEditingRoleName] = useState("");
+    const [memberSearchTerm, setMemberSearchTerm] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
 
     useEffect(() => {
         const fetchStartupId = async () => {
@@ -36,11 +38,11 @@ const Member = () => {
                 if (response) {
                     setStartupId(response);
                 } else {
-                    toast.warning('Bạn chưa thuộc về startup nào');
+                    toast.warning('You do not belong to any startup yet');
                 }
             } catch (error) {
                 console.error('Error fetching startup ID:', error);
-                toast.error('Không thể xác định startup của bạn');
+                toast.error('Cannot determine your startup');
             }
         };
 
@@ -124,6 +126,16 @@ const Member = () => {
         setSelectedUser(user);
     };
 
+    // Lọc thành viên theo từ khóa tìm kiếm và vai trò
+    const filteredMembers = members.filter(member => {
+        const matchesSearch = member.fullName?.toLowerCase().includes(memberSearchTerm.toLowerCase()) ||
+            member.email?.toLowerCase().includes(memberSearchTerm.toLowerCase());
+
+        const matchesRole = roleFilter ? member.roleName === roleFilter : true;
+
+        return matchesSearch && matchesRole;
+    });
+
     // Render kết quả tìm kiếm
     const renderSearchResults = () => {
         if (isSearching) {
@@ -138,7 +150,7 @@ const Member = () => {
             return (
                 <div className="p-2 text-center">
                     <p className="text-gray-500 text-sm">
-                        Không tìm thấy người dùng
+                        No user found
                     </p>
                 </div>
             );
@@ -157,7 +169,7 @@ const Member = () => {
                 />
                 <div>
                     <p className="font-medium text-sm">
-                        {user.displayName || 'Người dùng'}
+                        {user.name || 'User'}
                     </p>
                     <p className="text-gray-500 text-xs">
                         {user.email}
@@ -192,13 +204,13 @@ const Member = () => {
         return (
             <div className="text-center mt-5">
                 <h6 className="text-red-500 text-lg font-medium">
-                    Đã xảy ra lỗi khi tải dữ liệu
+                    An error occurred while loading data
                 </h6>
                 <button
                     className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
                     onClick={fetchMembers}
                 >
-                    Thử lại
+                    Retry
                 </button>
             </div>
         );
@@ -208,7 +220,7 @@ const Member = () => {
         <div className="container mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">
-                    Quản lý thành viên
+                    Member Management
                 </h1>
                 <div className="flex space-x-3">
                     <button
@@ -216,15 +228,57 @@ const Member = () => {
                         onClick={() => setShowAddRoleModal(true)}
                     >
                         <FontAwesomeIcon icon={faTags} className="mr-2" />
-                        Thêm vai trò mới
+                        Add New Role
                     </button>
                     <button
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition"
                         onClick={() => setShowAddMemberModal(true)}
                     >
                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                        Mời thành viên
+                        Invite Member
                     </button>
+                </div>
+            </div>
+
+            {/* Thanh tìm kiếm và lọc */}
+            <div className="bg-white p-4 rounded-lg shadow mb-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
+                        </span>
+                        <input
+                            type="text"
+                            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Search by name or email"
+                            value={memberSearchTerm}
+                            onChange={(e) => setMemberSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="md:w-64">
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
+                            </span>
+                            <select
+                                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                            >
+                                <option value="">All roles</option>
+                                {roles.map(role => (
+                                    <option key={role.roleId} value={role.roleName}>
+                                        {role.roleName}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -236,16 +290,16 @@ const Member = () => {
                                 #
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Thành viên
+                                Member
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Email
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Vai trò
+                                Role
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ngày tham gia
+                                Join Date
                             </th>
                             {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                                 Thao tác
@@ -253,8 +307,8 @@ const Member = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {members.length > 0 ? (
-                            members.map((member, index) => {
+                        {filteredMembers.length > 0 ? (
+                            filteredMembers.map((member, index) => {
                                 const ellipsisRef = React.createRef();
                                 return (
                                     <tr key={member.memberId || index} className="hover:bg-gray-50">
@@ -269,7 +323,7 @@ const Member = () => {
                                                 />
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900">
-                                                        {member.fullName || 'Chưa có tên'}
+                                                        {member.fullName || 'No name'}
                                                     </div>
                                                 </div>
                                             </div>
@@ -332,7 +386,7 @@ const Member = () => {
                         ) : (
                             <tr>
                                 <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                                    Chưa có thành viên nào trong startup
+                                    {memberSearchTerm || roleFilter ? 'No matching member found' : 'No members in the startup yet'}
                                 </td>
                             </tr>
                         )}
@@ -352,7 +406,7 @@ const Member = () => {
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="flex justify-between items-center pb-3 border-b">
                                     <h3 className="text-lg font-medium text-gray-900" id="modal-title">
-                                        Mời thành viên mới
+                                        Invite new member
                                     </h3>
                                     <button
                                         className="text-gray-400 hover:text-gray-500"
@@ -372,7 +426,7 @@ const Member = () => {
                                                 <input
                                                     type="text"
                                                     className="pl-10 pr-10 py-2 w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Tìm kiếm theo email"
+                                                    placeholder="Search by email"
                                                     value={searchEmail}
                                                     onChange={handleEmailInputChange}
                                                 />
@@ -397,7 +451,7 @@ const Member = () => {
                                     {selectedUser && (
                                         <div className="mb-4">
                                             <p className="text-sm font-medium mb-1">
-                                                Người dùng được chọn:
+                                                Selected user:
                                             </p>
                                             <div className="flex items-center p-3 border border-gray-300 rounded-lg">
                                                 <img
@@ -407,7 +461,7 @@ const Member = () => {
                                                 />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium">
-                                                        {selectedUser.displayName || 'Người dùng'}
+                                                        {selectedUser.displayName || 'User'}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
                                                         {selectedUser.email}
@@ -426,18 +480,34 @@ const Member = () => {
                                     {/* Chọn vai trò */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Vai trò
+                                            Role
                                         </label>
                                         <select
                                             className="w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             value={newMemberRole}
                                             onChange={(e) => setNewMemberRole(e.target.value)}
                                         >
-                                            {roleOptions.map(option => (
-                                                <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </option>
-                                            ))}
+                                            {roles.length > 0 ? (
+                                                roles.map(role => (
+                                                    <option
+                                                        key={role.roleId}
+                                                        value={role.roleName}
+                                                        disabled={role.roleName === 'Founder'}
+                                                    >
+                                                        {role.roleName}
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                roleOptions.map(option => (
+                                                    <option
+                                                        key={option.value}
+                                                        value={option.value}
+                                                        disabled={option.value === 'Founder'}
+                                                    >
+                                                        {option.label}
+                                                    </option>
+                                                ))
+                                            )}
                                         </select>
                                     </div>
                                 </div>
@@ -455,14 +525,14 @@ const Member = () => {
                                     ) : (
                                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
                                     )}
-                                    Mời thành viên
+                                    Invite member
                                 </button>
                                 <button
                                     type="button"
                                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                                     onClick={() => setShowAddMemberModal(false)}
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                             </div>
                         </div>
@@ -482,7 +552,7 @@ const Member = () => {
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="flex justify-between items-center pb-3 border-b">
                                     <h3 className="text-lg font-medium text-gray-900" id="modal-title">
-                                        Thay đổi vai trò thành viên
+                                        Change member role
                                     </h3>
                                     <button
                                         className="text-gray-400 hover:text-gray-500"
@@ -501,7 +571,7 @@ const Member = () => {
                                         />
                                         <div>
                                             <p className="text-sm font-medium">
-                                                {selectedMember.displayName || 'Người dùng'}
+                                                {selectedMember.displayName || 'User'}
                                             </p>
                                             <p className="text-xs text-gray-500">
                                                 {selectedMember.email}
@@ -511,7 +581,7 @@ const Member = () => {
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Vai trò
+                                            Role
                                         </label>
                                         <select
                                             className={`w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${selectedMember.roleName === 'Founder' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
@@ -519,21 +589,33 @@ const Member = () => {
                                             onChange={(e) => setNewMemberRole(e.target.value)}
                                             disabled={selectedMember.roleName === 'Founder'}
                                         >
-                                            {roleOptions.map(option => (
-                                                <option
-                                                    key={option.value}
-                                                    value={option.value}
-                                                    disabled={option.value === 'Founder' && selectedMember.roleName !== 'Founder'}
-                                                >
-                                                    {option.label}
-                                                </option>
-                                            ))}
+                                            {roles.length > 0 ? (
+                                                roles.map(role => (
+                                                    <option
+                                                        key={role.roleId}
+                                                        value={role.roleName}
+                                                        disabled={role.roleName === 'Founder' && selectedMember.roleName !== 'Founder'}
+                                                    >
+                                                        {role.roleName}
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                roleOptions.map(option => (
+                                                    <option
+                                                        key={option.value}
+                                                        value={option.value}
+                                                        disabled={option.value === 'Founder' && selectedMember.roleName !== 'Founder'}
+                                                    >
+                                                        {option.label}
+                                                    </option>
+                                                ))
+                                            )}
                                         </select>
                                     </div>
 
                                     {selectedMember.roleName === 'Founder' && (
                                         <p className="mt-2 text-xs text-red-500">
-                                            Không thể thay đổi vai trò của chủ startup
+                                            Cannot change the role of the startup owner
                                         </p>
                                     )}
                                 </div>
@@ -551,14 +633,14 @@ const Member = () => {
                                     ) : (
                                         <FontAwesomeIcon icon={faCheck} className="mr-2" />
                                     )}
-                                    Lưu thay đổi
+                                    Save changes
                                 </button>
                                 <button
                                     type="button"
                                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                                     onClick={() => setShowEditMemberModal(false)}
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                             </div>
                         </div>
@@ -578,7 +660,7 @@ const Member = () => {
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="flex justify-between items-center pb-3 border-b">
                                     <h3 className="text-lg font-medium text-gray-900" id="modal-title">
-                                        Quản lý vai trò
+                                        Role management
                                     </h3>
                                     <button
                                         className="text-gray-400 hover:text-gray-500"
@@ -591,7 +673,7 @@ const Member = () => {
                                 <div className="mt-4">
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Tên vai trò mới *
+                                            New role name *
                                         </label>
                                         <div className="flex">
                                             <input
@@ -599,7 +681,7 @@ const Member = () => {
                                                 className="flex-1 border border-gray-300 rounded-l-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                 value={newRole.roleName}
                                                 onChange={(e) => setNewRole({ ...newRole, roleName: e.target.value })}
-                                                placeholder="Nhập tên vai trò"
+                                                placeholder="Enter role name"
                                             />
                                             <button
                                                 type="button"
@@ -617,14 +699,14 @@ const Member = () => {
                                     </div>
 
                                     <div className="mt-6">
-                                        <h4 className="text-md font-medium mb-3">Vai trò hiện có</h4>
+                                        <h4 className="text-md font-medium mb-3">Existing roles</h4>
                                         {roles.length > 0 ? (
                                             <div className="border rounded-lg overflow-hidden">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="">
                                                         <tr>
                                                             <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Tên vai trò
+                                                                Role name
                                                             </th>
                                                             {/* <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                                                                 Hành động
@@ -688,7 +770,7 @@ const Member = () => {
                                             </div>
                                         ) : (
                                             <div className="text-center py-4 border rounded-lg bg-gray-50">
-                                                <p className="text-sm text-gray-500">Chưa có vai trò nào được tạo</p>
+                                                <p className="text-sm text-gray-500">No roles have been created yet</p>
                                             </div>
                                         )}
                                     </div>
@@ -701,7 +783,7 @@ const Member = () => {
                                     className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
                                     onClick={() => setShowAddRoleModal(false)}
                                 >
-                                    Đóng
+                                    Close
                                 </button>
                             </div>
                         </div>

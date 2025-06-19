@@ -152,9 +152,22 @@ export default function useChat(currentUserId) {
     const handleCreateGroup = async (e) => {
         e.preventDefault();
         try {
+            // Lấy startupId từ API
+            const res = await startupService.getStartupIdByAccountId(currentUserId);
+            let startupId = null;
+            if (res && res.data) {
+                startupId = res.data;
+            } else if (res && res.startupId) {
+                startupId = res.startupId;
+            } else if (typeof res === 'number') {
+                startupId = res;
+            } else {
+                throw new Error('Không lấy được startupId');
+            }
+
             await createChatRoom({
                 roomName: newGroupName,
-                startupId: 1,
+                startupId: startupId,
                 creatorAccountId: currentUserId,
                 memberTitle: creatorName
             });

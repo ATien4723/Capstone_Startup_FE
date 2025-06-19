@@ -418,24 +418,35 @@ const PublicProfile = () => {
                                     />
                                     {newPost.files.length > 0 && (
                                         <div className="mt-4 flex flex-wrap gap-2">
-                                            {newPost.files.map((file, index) => (
-                                                <div key={index} className="relative">
-                                                    <img
-                                                        src={URL.createObjectURL(file)}
-                                                        alt={`Upload ${index + 1}`}
-                                                        className="w-20 h-20 object-cover rounded"
-                                                    />
-                                                    <button
-                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                                                        onClick={() => setNewPost(prev => ({
-                                                            ...prev,
-                                                            files: prev.files.filter((_, i) => i !== index)
-                                                        }))}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            ))}
+                                            {newPost.files.map((file, index) => {
+                                                const isVideo = file.type && file.type.startsWith('video/');
+                                                return (
+                                                    <div key={index} className="relative">
+                                                        {isVideo ? (
+                                                            <video
+                                                                src={URL.createObjectURL(file)}
+                                                                controls
+                                                                className="w-20 h-20 object-cover rounded"
+                                                            />
+                                                        ) : (
+                                                            <img
+                                                                src={URL.createObjectURL(file)}
+                                                                alt={`Upload ${index + 1}`}
+                                                                className="w-20 h-20 object-cover rounded"
+                                                            />
+                                                        )}
+                                                        <button
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                                                            onClick={() => setNewPost(prev => ({
+                                                                ...prev,
+                                                                files: prev.files.filter((_, i) => i !== index)
+                                                            }))}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                     <div className="flex items-center gap-3 mt-4">
@@ -443,6 +454,7 @@ const PublicProfile = () => {
                                             <input
                                                 type="file"
                                                 multiple
+                                                accept="image/*,video/*"
                                                 className="hidden"
                                                 onChange={handleFileUpload}
                                             />

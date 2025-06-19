@@ -251,51 +251,128 @@ export default function Chat() {
                                 </svg>
                             </button>
                         </div>
-                        <ul className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
-                            {(chatRoomMembers || []).map(member => (
-                                <li key={member.memberId} className="group">
-                                    <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
-                                        <div className="flex items-center space-x-2">
-                                            <img
-                                                src={member.avatarUrl || 'https://via.placeholder.com/32'}
-                                                alt="avatar"
-                                                className="w-8 h-8 rounded-full object-cover"
-                                            />
-                                            <div>
-                                                <div className="font-medium text-sm">
-                                                    {member.memberTitle || 'No name'}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {member.accountId == currentUserId ? 'You' : 'Member'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="hidden group-hover:flex space-x-1">
-                                            <button
-                                                className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
-                                                onClick={() => handleEditMember(member)}
-                                                title="Edit"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </button>
-                                            {member.accountId !== currentUserId && (
-                                                <button
-                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
-                                                    onClick={() => handleRemoveMember(member.memberId)}
-                                                    title="Remove from group"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                        {/* Tách nhóm leader và member */}
+                        {(() => {
+                            const leaders = (chatRoomMembers || []).filter(m => m.canAdministerChannel);
+                            const members = (chatRoomMembers || []).filter(m => !m.canAdministerChannel);
+                            return (
+                                <>
+                                    {leaders.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-xs text-gray-400 mb-1 px-2 mt-2">FEARLESS LEADER — {leaders.length}</div>
+                                            {leaders.map(member => (
+                                                <li key={member.memberId} className="group list-none">
+                                                    <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
+                                                        <div className="flex items-center space-x-2">
+                                                            <img
+                                                                src={member.avatarUrl || 'https://via.placeholder.com/32'}
+                                                                alt="avatar"
+                                                                className="w-8 h-8 rounded-full object-cover"
+                                                            />
+                                                            <div>
+                                                                <div className="font-medium text-sm flex items-center gap-1">
+                                                                    {member.memberTitle || 'No name'}
+                                                                    <span title="Leader" className="ml-1">👑</span>
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    {member.accountId == currentUserId ? 'You' : 'Leader'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="hidden group-hover:flex space-x-1">
+                                                            {(() => {
+                                                                const currentUser = chatRoomMembers.find(m => m.accountId == currentUserId);
+                                                                if (currentUser && currentUser.canAdministerChannel) {
+                                                                    return (
+                                                                        <button
+                                                                            className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
+                                                                            onClick={() => handleEditMember(member)}
+                                                                            title="Edit"
+                                                                        >
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
+                                                            {member.accountId != currentUserId && (
+                                                                <button
+                                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
+                                                                    onClick={() => handleRemoveMember(member.memberId)}
+                                                                    title="Remove from group"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </>
+                                    )}
+                                    {members.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-xs text-gray-400 mb-1 px-2 mt-2">MEMBERS — {members.length}</div>
+                                            {members.map(member => (
+                                                <li key={member.memberId} className="group list-none">
+                                                    <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
+                                                        <div className="flex items-center space-x-2">
+                                                            <img
+                                                                src={member.avatarUrl || 'https://via.placeholder.com/32'}
+                                                                alt="avatar"
+                                                                className="w-8 h-8 rounded-full object-cover"
+                                                            />
+                                                            <div>
+                                                                <div className="font-medium text-sm">
+                                                                    {member.memberTitle || 'No name'}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    {member.accountId == currentUserId ? 'You' : 'Member'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="hidden group-hover:flex space-x-1">
+                                                            {(() => {
+                                                                const currentUser = chatRoomMembers.find(m => m.accountId == currentUserId);
+                                                                if (currentUser && currentUser.canAdministerChannel && member.accountId != currentUserId) {
+                                                                    return (
+                                                                        <button
+                                                                            className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
+                                                                            onClick={() => handleEditMember(member)}
+                                                                            title="Edit"
+                                                                        >
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
+                                                            {member.accountId != currentUserId && (
+                                                                <button
+                                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
+                                                                    onClick={() => handleRemoveMember(member.memberId)}
+                                                                    title="Remove from group"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
             </div>
@@ -488,7 +565,7 @@ export default function Chat() {
                                 />
                                 <div>
                                     <div className="font-medium">{selectedMember.fullName || 'No name'}</div>
-                                    <div className="text-sm text-gray-600">{selectedMember.accountId === currentUserId ? 'You' : 'Member'}</div>
+                                    <div className="text-sm text-gray-600">{selectedMember.accountId == currentUserId ? 'You' : 'Member'}</div>
                                 </div>
                             </div>
                         )}
