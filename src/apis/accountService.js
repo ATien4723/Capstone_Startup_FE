@@ -1,8 +1,15 @@
 import axiosClient from '@/config/axiosClient';
 
-export const getAccountInfo = async (accountId) => {
+// Simple in-memory cache for account info
+const accountInfoCache = {};
+
+export const getAccountInfo = async (accountId, forceRefresh = false) => {
+    if (!forceRefresh && accountInfoCache[accountId]) {
+        return accountInfoCache[accountId];
+    }
     try {
         const response = await axiosClient.get(`api/Account/get-account-info/${accountId}`);
+        accountInfoCache[accountId] = response;
         return response;
     } catch (error) {
         throw error;

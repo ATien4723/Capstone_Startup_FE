@@ -379,17 +379,37 @@ const Setting = () => {
                                                 Dob: profile.dob ? profile.dob.split('T')[0] : '',
                                                 Address: profile.address || '',
                                                 PhoneNumber: profile.phoneNumber || '',
-                                                AvatarUrl: avatarPreview || profile.avatarUrl || '',
-                                                CCCDNumber: profile.cccd || '012345678910',
+                                                AvatarUrl: avatarPreview || profile.avatarUrl || ''
                                             }}
                                             validationSchema={profileSchema}
                                             enableReinitialize
                                             onSubmit={async (values, { setSubmitting }) => {
                                                 setProfileMsg('');
                                                 try {
-                                                    await updateProfile(accountId, values);
+                                                    // Create FormData object for file upload compatibility
+                                                    const formData = new FormData();
+
+                                                    // Add all form fields to FormData
+                                                    Object.keys(values).forEach(key => {
+                                                        formData.append(key, values[key]);
+                                                    });
+
+                                                    // If we have an avatar preview, it needs special handling
+                                                    if (avatarPreview && avatarPreview.startsWith('data:')) {
+                                                        // The avatar is already handled separately when changing the image
+                                                        // So we can skip it here to avoid sending the base64 string
+                                                        formData.delete('AvatarUrl');
+                                                    }
+
+                                                    const response = await updateProfile(accountId, formData);
+                                                    console.log('Update response:', response);
                                                     setProfileMsg('Update successful!');
+
+                                                    // Refresh the profile data
+                                                    const updatedProfile = await getAccountInfo(accountId, true);
+                                                    setProfile(updatedProfile);
                                                 } catch (err) {
+                                                    console.error('Update error:', err);
                                                     setProfileMsg('Update failed!');
                                                 }
                                                 setSubmitting(false);
@@ -399,7 +419,7 @@ const Setting = () => {
                                                 <Form className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="flex flex-col">
                                                         <label className="font-medium mb-1">First Name <span className="text-red-500">*</span></label>
-                                                        <Field name="FirstName" disabled className="bg-white border rounded px-3 py-2 disabled:bg-gray-100 disabled:text-black disabled:opacity-50" />
+                                                        <Field name="FirstName" className="bg-white border rounded px-3 py-2 disabled:bg-gray-100 disabled:text-black disabled:opacity-50" />
                                                         <ErrorMessage name="FirstName" component="div" className="text-red-500 text-sm" />
                                                     </div>
                                                     <div className="flex flex-col">
@@ -431,14 +451,6 @@ const Setting = () => {
                                                         <label className="font-medium mb-1">Phone Number <span className="text-red-500">*</span></label>
                                                         <Field name="PhoneNumber" className="bg-white border rounded px-3 py-2" />
                                                         <ErrorMessage name="PhoneNumber" component="div" className="text-red-500 text-sm" />
-                                                    </div>
-                                                    <div className="flex flex-col md:col-span-2">
-                                                        <label className="font-medium mb-1">ID Card Number</label>
-                                                        <Field
-                                                            name="CCCDNumber"
-                                                            className="bg-gray-100 border rounded px-3 py-2 text-black opacity-70"
-                                                            disabled
-                                                        />
                                                     </div>
                                                     {/* <div className="flex flex-col md:col-span-2">
                                                         {/* <label className="font-medium mb-1">Avatar URL</label>

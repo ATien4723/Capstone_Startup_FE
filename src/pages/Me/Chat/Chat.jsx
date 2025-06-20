@@ -272,7 +272,7 @@ export default function Chat() {
                                                             <div>
                                                                 <div className="font-medium text-sm flex items-center gap-1">
                                                                     {member.memberTitle || 'No name'}
-                                                                    <span title="Leader" className="ml-1">👑</span>
+                                                                    <span title="Leader" className="ml-1">😘😍😍</span>
                                                                 </div>
                                                                 <div className="text-xs text-gray-500">
                                                                     {member.accountId == currentUserId ? 'You' : 'Leader'}

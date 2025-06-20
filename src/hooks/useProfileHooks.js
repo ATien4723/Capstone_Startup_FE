@@ -47,11 +47,21 @@ export const useProfileData = (profileId) => {
         const fetchProfileData = async () => {
             try {
                 setIsLoading(true);
-                const [accountInfo, followingData, followersData, currentUserInfo] = await Promise.all([
-                    getAccountInfo(profileId),
+                let accountInfo, currentUserInfo;
+                if (profileId === currentUserId) {
+                    // Nếu là trang cá nhân của chính mình, chỉ gọi 1 lần
+                    accountInfo = await getAccountInfo(profileId);
+                    currentUserInfo = accountInfo;
+                } else {
+                    // Nếu là trang người khác, gọi riêng biệt
+                    [accountInfo, currentUserInfo] = await Promise.all([
+                        getAccountInfo(profileId),
+                        getAccountInfo(currentUserId)
+                    ]);
+                }
+                const [followingData, followersData] = await Promise.all([
                     getFollowing(profileId),
-                    getFollowers(profileId),
-                    getAccountInfo(currentUserId)
+                    getFollowers(profileId)
                 ]);
 
                 if (!accountInfo || !currentUserInfo) {
@@ -180,6 +190,21 @@ export const useProfileData = (profileId) => {
         }
     };
 
+    // Hàm cập nhật avatar (avatarUrl)
+    const handleUpdateAvatar = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('avatarUrl', file);
+            const updatedProfile = await updateProfile(profileId, formData);
+            setProfileData(updatedProfile);
+            toast.success('Cập nhật avatar thành công');
+            return true;
+        } catch (error) {
+            toast.error('Cập nhật avatar thất bại');
+            return false;
+        }
+    };
+
     return {
         profileData,
         following,
@@ -193,7 +218,8 @@ export const useProfileData = (profileId) => {
         setFormData,
         handleFollowToggle,
         handleUpdateBio,
-        handleUpdateCover
+        handleUpdateCover,
+        handleUpdateAvatar
     };
 };
 
@@ -201,6 +227,7 @@ export const useProfileData = (profileId) => {
 export const usePostsData = (accountId, currentUserId) => {
     const [posts, setPosts] = useState([]);
     const [postLikes, setPostLikes] = useState({});
+    const [userLikedPosts, setUserLikedPosts] = useState({});
     const [postCommentCounts, setPostCommentCounts] = useState({});
     const [openCommentPosts, setOpenCommentPosts] = useState([]);
     const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
@@ -266,6 +293,17 @@ export const usePostsData = (accountId, currentUserId) => {
                             [post.postId]: likeCount
                         }));
 
+                        // Kiểm tra xem người dùng hiện tại đã thích bài viết này chưa
+                        const likeData = {
+                            postId: post.postId,
+                            accountId: currentUserId
+                        };
+                        const isLiked = await isPostLiked(likeData);
+                        setUserLikedPosts(prev => ({
+                            ...prev,
+                            [post.postId]: !!isLiked
+                        }));
+
                         const commentCount = await getPostCommentCount(post.postId);
                         setPostCommentCounts(prev => ({
                             ...prev,
@@ -279,7 +317,7 @@ export const usePostsData = (accountId, currentUserId) => {
         };
 
         fetchPostDetails();
-    }, [posts]);
+    }, [posts, currentUserId]);
 
     // Hàm load more posts
     const loadMorePosts = useCallback(() => {
@@ -302,9 +340,11 @@ export const usePostsData = (accountId, currentUserId) => {
             if (isLiked) {
                 // Nếu đã like, thực hiện unlike
                 await unlikePost(likeData);
+                setUserLikedPosts(prev => ({ ...prev, [postId]: false }));
             } else {
                 // Nếu chưa like, thực hiện like
                 await likePost(likeData);
+                setUserLikedPosts(prev => ({ ...prev, [postId]: true }));
             }
 
             // Sau khi like/unlike, cập nhật lại số lượng like từ backend
@@ -347,6 +387,7 @@ export const usePostsData = (accountId, currentUserId) => {
         posts,
         setPosts,
         postLikes,
+        userLikedPosts,
         postCommentCounts,
         openCommentPosts,
         refreshCommentTrigger,

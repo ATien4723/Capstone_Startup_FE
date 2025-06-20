@@ -14,6 +14,8 @@ import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
+import { getPostLikesByPostId } from '@/apis/postService';
+import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -37,11 +39,21 @@ const Home = () => {
     } = useProfileData(currentUserId);
 
     const {
-        posts, postLikes, postCommentCounts, openCommentPosts, refreshCommentTrigger,
+        posts, postLikes, userLikedPosts, postCommentCounts, openCommentPosts, refreshCommentTrigger,
         isLoading: isLoadingPosts, isLoadingMore,
         loadMorePosts, handleLikePost, toggleCommentSection, handleCommentCountChange,
         hasMore, fetchPosts
     } = useNewsFeedData(currentUserId);
+
+    // State cho modal hiển thị danh sách người đã thích
+    const [showLikesModal, setShowLikesModal] = useState(false);
+    const [currentPostId, setCurrentPostId] = useState(null);
+
+    // Hàm để lấy và hiển thị danh sách người đã thích bài viết
+    const handleShowLikes = (postId) => {
+        setCurrentPostId(postId);
+        setShowLikesModal(true);
+    };
 
     const postActions = usePostActions(currentUserId, fetchPosts);
     const {
@@ -80,7 +92,7 @@ const Home = () => {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <div className="ml-4 text-lg">Đang tải thông tin cá nhân...</div>
+                <div className="ml-4 text-lg">Loading personal information...</div>
             </div>
         );
     }
@@ -112,12 +124,16 @@ const Home = () => {
                                         <div className="text-gray-600">Posts</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="font-bold text-lg">{following?.length || 0}</div>
-                                        <div className="text-gray-600">Following</div>
+                                        <Link to="/network/following" className="block">
+                                            <div className="font-bold text-lg hover:text-blue-600">{following?.length || 0}</div>
+                                            <div className="text-gray-600 hover:text-blue-600">Following</div>
+                                        </Link>
                                     </div>
                                     <div className="text-center">
-                                        <div className="font-bold text-lg">{followers?.length || 0}</div>
-                                        <div className="text-gray-600">Followers</div>
+                                        <Link to="/network/followers" className="block">
+                                            <div className="font-bold text-lg hover:text-blue-600">{followers?.length || 0}</div>
+                                            <div className="text-gray-600 hover:text-blue-600">Followers</div>
+                                        </Link>
                                     </div>
                                 </div>
                                 <Link
@@ -245,12 +261,19 @@ const Home = () => {
                                             className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium"
                                             onClick={() => postToDelete && handleDeletePost(postToDelete)}
                                         >
-                                            Delete posts
+                                            Delete post
                                         </button>
                                     </div>
                                 </div>
                             </Modal>
                         )}
+
+                        {/* Modal hiển thị danh sách người đã thích */}
+                        <LikesModal
+                            postId={currentPostId}
+                            isOpen={showLikesModal}
+                            onClose={() => setShowLikesModal(false)}
+                        />
 
                         {/* Post Modal */}
                         {showPostModal && (
@@ -324,7 +347,7 @@ const Home = () => {
                                         onClick={handleCreatePost}
                                         disabled={isCreatingPost}
                                     >
-                                        {isCreatingPost ? 'Đang đăng...' : 'Post'}
+                                        {isCreatingPost ? 'Posting...' : 'Post'}
                                     </button>
                                 </div>
                             </Modal>
@@ -344,7 +367,7 @@ const Home = () => {
                                     />
                                     <div>
                                         <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
-                                        <div className="text-xs text-gray-500">Chỉnh sửa bài viết</div>
+                                        <div className="text-xs text-gray-500">Edit post</div>
                                     </div>
                                 </div>
 
@@ -352,13 +375,13 @@ const Home = () => {
                                     <textarea
                                         className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
                                         rows={4}
-                                        placeholder="Nội dung bài viết..."
+                                        placeholder="Post content..."
                                         value={editedPostContent === undefined ? editingPost.content : editedPostContent}
                                         onChange={(e) => setEditedPostContent(e.target.value)}
                                     />
                                     {editingPost.postMedia && editingPost.postMedia.length > 0 && (
                                         <div className="mt-4">
-                                            <h3 className="text-sm font-medium text-gray-600 mb-2">Ảnh/Video đã đính kèm:</h3>
+                                            <h3 className="text-sm font-medium text-gray-600 mb-2">Attached images/videos:</h3>
                                             <div className="flex flex-wrap gap-2">
                                                 {editingPost.postMedia.map((media, index) => (
                                                     <div key={index} className="relative">
@@ -382,7 +405,7 @@ const Home = () => {
                                             setEditedPostContent('');
                                         }}
                                     >
-                                        Hủy
+                                        Cancel
                                     </button>
                                     <button
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
@@ -391,7 +414,7 @@ const Home = () => {
                                             setEditingPost(null);
                                         }}
                                     >
-                                        Lưu thay đổi
+                                        Save changes
                                     </button>
                                 </div>
                             </Modal>
@@ -402,7 +425,7 @@ const Home = () => {
                             {isLoadingPosts ? (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
+                                    <p className="text-gray-500 text-lg">Loading posts...</p>
                                 </div>
                             ) : posts && posts.length > 0 ? (
                                 posts.map((post, index) => (
@@ -451,6 +474,28 @@ const Home = () => {
                                                     <PostMediaGrid media={post.postMedia} />
                                                 )}
                                             </div>
+
+                                            {/* Hiển thị số lượng like và comment ở trên */}
+                                            {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
+                                                <div className="flex justify-between items-center mt-3 mb-2 px-3">
+                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                        <LikeCounter
+                                                            postId={post.postId}
+                                                            count={postLikes[post.postId]}
+                                                            onClick={handleShowLikes}
+                                                        />
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {postCommentCounts[post.postId] > 0 && (
+                                                            <span>{postCommentCounts[post.postId]} comments</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Đường kẻ phân cách */}
+                                            <hr className="my-2" />
+
                                             <div className="flex justify-between items-center mt-3">
                                                 <div className="flex gap-2">
                                                     <button
@@ -458,17 +503,17 @@ const Home = () => {
                                                         onClick={() => handleLikePost(post.postId)}
                                                     >
                                                         <FontAwesomeIcon
-                                                            icon={postLikes[post.postId] ? faHeart : farHeart}
-                                                            className={`mr-1 ${postLikes[post.postId] ? 'text-red-500' : ''}`}
+                                                            icon={userLikedPosts[post.postId] ? faHeart : farHeart}
+                                                            className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
                                                         />
-                                                        {postLikes[post.postId] || 0} Like
+                                                        Like
                                                     </button>
                                                     <button
                                                         className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
                                                         onClick={() => toggleCommentSection(post.postId)}
                                                     >
                                                         <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
-                                                        {postCommentCounts[post.postId] || 0} Comment
+                                                        Comment
                                                     </button>
                                                     <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
                                                         <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
@@ -496,21 +541,21 @@ const Home = () => {
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <img
                                         src="/images/no-posts.svg"
-                                        alt="Không có bài viết"
+                                        alt="No posts"
                                         className="w-32 h-32 mx-auto mb-4 opacity-60"
                                         onError={(e) => {
                                             e.target.onerror = null;
                                             e.target.style.display = 'none';
                                         }}
                                     />
-                                    <p className="text-gray-600 text-lg font-medium mb-2">Không có bài viết nào</p>
-                                    <p className="text-gray-500 mb-4">Hãy chia sẻ trải nghiệm của bạn ngay bây giờ</p>
+                                    <p className="text-gray-600 text-lg font-medium mb-2">No posts yet</p>
+                                    <p className="text-gray-500 mb-4">Share your experience now</p>
                                     <button
                                         onClick={() => setShowPostModal(true)}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
                                     >
                                         <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                                        Tạo bài viết mới
+                                        Create new post
                                     </button>
                                 </div>
                             )}

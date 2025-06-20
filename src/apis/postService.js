@@ -41,11 +41,13 @@ export const getPostCommentsByPostId = async (postId, pageNumber = 1, pageSize =
 };
 
 // Get post likes by post ID
-export const getPostLikesByPostId = async (postId) => {
+export const getPostLikesByPostId = async (postId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostLikeByPostId?postId=${postId}`);
+        const response = await axiosClient.get(`GetPostLikeByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        // console.log('Kết quả API danh sách người thích bài viết:', response);
         return response;
     } catch (error) {
+        console.error('Lỗi khi lấy danh sách người thích bài viết:', error);
         throw error;
     }
 };
@@ -118,7 +120,10 @@ export const isPostLiked = async (likeData) => {
 export const updatePostComment = async (commentData) => {
     try {
         const response = await axiosClient.put(
-            `UpdatePostComment?CommentId=${commentData.commentId}&Content=${encodeURIComponent(commentData.content)}`
+            `update-post-comment`, {
+            postcommentId: commentData.postcommentId,
+            content: commentData.content
+        }
         );
         return response;
     } catch (error) {

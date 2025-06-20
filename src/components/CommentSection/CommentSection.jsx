@@ -41,7 +41,8 @@ const CommentSection = ({
     const [childReplyCounts, setChildReplyCounts] = useState({});
     const [showChildReplies, setShowChildReplies] = useState({});
     const [childReplies, setChildReplies] = useState({});
-
+    // Thêm state để theo dõi bình luận đang được chỉnh sửa và phân biệt loại bình luận
+    const [editingParentId, setEditingParentId] = useState(null);
 
     // Lấy danh sách bình luận khi component được mở hoặc refreshTrigger thay đổi
     useEffect(() => {
@@ -265,18 +266,28 @@ const CommentSection = ({
     };
 
     // Cập nhật bình luận
-    const handleUpdateComment = async (commentId) => {
+    const handleUpdateComment = async (postcommentId) => {
         if (!editContent.trim()) {
             toast.error('Nội dung bình luận không được để trống');
             return;
         }
 
         try {
-            await updatePostComment({ commentId: commentId, content: editContent });
+            await updatePostComment({ postcommentId: postcommentId, content: editContent });
             toast.success('Đã cập nhật bình luận thành công');
 
-            // Làm mới danh sách bình luận
-            await fetchComments();
+            // Kiểm tra nếu là bình luận con
+            if (editingParentId) {
+                // Cập nhật lại danh sách bình luận con
+                await fetchChildComments(editingParentId);
+                setEditingParentId(null);
+            } else if (childReplies[postcommentId]) {
+                // Nếu là phản hồi của bình luận con
+                await fetchChildReplies(postcommentId);
+            } else {
+                // Nếu là bình luận chính
+                await fetchComments();
+            }
 
             // Đóng form chỉnh sửa
             setEditingComment(null);
@@ -509,12 +520,44 @@ const CommentSection = ({
         );
     };
 
+    // Hàm hiển thị form chỉnh sửa bình luận
+    const renderEditForm = (commentId, content, parentId = null) => {
+        return (
+            <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                <input
+                    type="text"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                    <button
+                        onClick={() => handleUpdateComment(commentId)}
+                        className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm"
+                    >
+                        Lưu
+                    </button>
+                    <button
+                        onClick={() => {
+                            setEditingComment(null);
+                            setEditingParentId(null);
+                            setEditContent('');
+                        }}
+                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm"
+                    >
+                        Hủy
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className={isOpen ? "block" : "hidden"}>
             {/* Debug info */}
-            <div className="text-xs text-gray-400 mb-2">
+            {/* <div className="text-xs text-gray-400 mb-2">
                 Bài viết ID: {postId}, isOpen: {isOpen ? "true" : "false"}, comments: {comments.length}
-            </div>
+            </div> */}
 
             {/* Comment Input */}
             <div className="flex items-start gap-3 mb-4">
@@ -554,28 +597,7 @@ const CommentSection = ({
                             />
                             <div className="flex-1">
                                 {editingComment === comment.postcommentId ? (
-                                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                                        <input
-                                            type="text"
-                                            value={editContent}
-                                            onChange={(e) => setEditContent(e.target.value)}
-                                            className="w-full p-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                                        />
-                                        <div className="flex justify-end gap-2 mt-2">
-                                            <button
-                                                onClick={() => handleUpdateComment(comment.postcommentId)}
-                                                className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm"
-                                            >
-                                                Lưu
-                                            </button>
-                                            <button
-                                                onClick={() => setEditingComment(null)}
-                                                className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm"
-                                            >
-                                                Hủy
-                                            </button>
-                                        </div>
-                                    </div>
+                                    renderEditForm(comment.postcommentId, comment.content)
                                 ) : (
                                     <div className="bg-gray-100 rounded-2xl px-4 py-3">
                                         <div className="flex items-center gap-2 mb-1">
@@ -625,17 +647,18 @@ const CommentSection = ({
                                                     className="text-gray-500 hover:text-blue-500 mr-2"
                                                     onClick={() => {
                                                         setEditingComment(comment.postcommentId);
+                                                        setEditingParentId(null);
                                                         setEditContent(comment.content);
                                                     }}
                                                 >
                                                     <FontAwesomeIcon icon={faPencilAlt} />
                                                 </button>
-                                                <button
+                                                {/* <button
                                                     className="text-gray-500 hover:text-red-500"
                                                     onClick={() => handleDeleteComment(comment.postcommentId)}
                                                 >
                                                     <FontAwesomeIcon icon={faTrash} />
-                                                </button>
+                                                </button> */}
                                             </div>
                                         </div>
                                     </div>
@@ -687,60 +710,65 @@ const CommentSection = ({
                                                     className="w-8 h-8 rounded-full mt-1"
                                                 />
                                                 <div className="flex-1">
-                                                    <div className="bg-gray-100 rounded-2xl px-3 py-2">
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="font-semibold text-gray-900 text-sm">
-                                                                {childComment?.accountInfor?.fullName}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-gray-800 text-sm">{childComment.content}</div>
-                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                            <span>{getRelativeTime(childComment.commentAt)}</span>
-                                                            <button
-                                                                className="hover:underline"
-                                                                onClick={() => handleLikeComment(childComment.postcommentId)}
-                                                            >
-                                                                <FontAwesomeIcon
-                                                                    icon={commentLikes[childComment.postcommentId] ? faHeart : farHeart}
-                                                                    className={`mr-1 ${commentLikes[childComment.postcommentId] ? 'text-red-500' : ''}`}
-                                                                />
-                                                                {commentLikes[childComment.postcommentId] || 0}
-                                                            </button>
-                                                            {/* Thêm nút trả lời bình luận con */}
-                                                            <button
-                                                                className="hover:underline"
-                                                                onClick={() => {
-                                                                    setReplyingToChildComment(replyingToChildComment === childComment.postcommentId ? null : childComment.postcommentId);
-                                                                    setChildCommentContents(prev => ({
-                                                                        ...prev,
-                                                                        [`${postId}-${childComment.postcommentId}`]: prev[`${postId}-${childComment.postcommentId}`] || ''
-                                                                    }));
-                                                                }}
-                                                            >
-                                                                Trả lời
-                                                            </button>
-                                                            {/* Hiển thị số lượng phản hồi của bình luận con */}
-                                                            <GetChildReplyCount childCommentId={childComment.postcommentId} />
-                                                            {/* Nút chỉnh sửa và xóa */}
-                                                            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {editingComment === childComment.postcommentId ? (
+                                                        renderEditForm(childComment.postcommentId, childComment.content, comment.postcommentId)
+                                                    ) : (
+                                                        <div className="bg-gray-100 rounded-2xl px-3 py-2">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="font-semibold text-gray-900 text-sm">
+                                                                    {childComment?.accountInfor?.fullName}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-gray-800 text-sm">{childComment.content}</div>
+                                                            <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                                <span>{getRelativeTime(childComment.commentAt)}</span>
                                                                 <button
-                                                                    className="text-gray-500 hover:text-blue-500 mr-2"
+                                                                    className="hover:underline"
+                                                                    onClick={() => handleLikeComment(childComment.postcommentId)}
+                                                                >
+                                                                    <FontAwesomeIcon
+                                                                        icon={commentLikes[childComment.postcommentId] ? faHeart : farHeart}
+                                                                        className={`mr-1 ${commentLikes[childComment.postcommentId] ? 'text-red-500' : ''}`}
+                                                                    />
+                                                                    {commentLikes[childComment.postcommentId] || 0}
+                                                                </button>
+                                                                {/* Thêm nút trả lời bình luận con */}
+                                                                <button
+                                                                    className="hover:underline"
                                                                     onClick={() => {
-                                                                        setEditingComment(childComment.postcommentId);
-                                                                        setEditContent(childComment.content);
+                                                                        setReplyingToChildComment(replyingToChildComment === childComment.postcommentId ? null : childComment.postcommentId);
+                                                                        setChildCommentContents(prev => ({
+                                                                            ...prev,
+                                                                            [`${postId}-${childComment.postcommentId}`]: prev[`${postId}-${childComment.postcommentId}`] || ''
+                                                                        }));
                                                                     }}
                                                                 >
-                                                                    <FontAwesomeIcon icon={faPencilAlt} />
+                                                                    Trả lời
                                                                 </button>
-                                                                <button
-                                                                    className="text-gray-500 hover:text-red-500"
-                                                                    onClick={() => handleDeleteComment(childComment.postcommentId)}
-                                                                >
-                                                                    <FontAwesomeIcon icon={faTrash} />
-                                                                </button>
+                                                                {/* Hiển thị số lượng phản hồi của bình luận con */}
+                                                                <GetChildReplyCount childCommentId={childComment.postcommentId} />
+                                                                {/* Nút chỉnh sửa và xóa */}
+                                                                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        className="text-gray-500 hover:text-blue-500 mr-2"
+                                                                        onClick={() => {
+                                                                            setEditingComment(childComment.postcommentId);
+                                                                            setEditingParentId(comment.postcommentId);
+                                                                            setEditContent(childComment.content);
+                                                                        }}
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faPencilAlt} />
+                                                                    </button>
+                                                                    {/* <button
+                                                                        className="text-gray-500 hover:text-red-500"
+                                                                        onClick={() => handleDeleteComment(childComment.postcommentId)}
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} />
+                                                                    </button> */}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
                                                     {/* Form trả lời bình luận con - Đặt trong vòng lặp map để có thể truy cập childComment */}
                                                     {replyingToChildComment === childComment.postcommentId && (
@@ -777,7 +805,7 @@ const CommentSection = ({
                                                         </div>
                                                     )}
 
-                                                    {/* Hiển thị phản hồi của bình luận con - Đặt trong vòng lặp map để có thể truy cập childComment */}
+                                                    {/* Hiển thị phản hồi của bình luận con */}
                                                     {showChildReplies[childComment.postcommentId] && (
                                                         <div className="mt-2 pl-3 border-l border-gray-200">
                                                             {childReplies[childComment.postcommentId] && childReplies[childComment.postcommentId].length > 0 ? (
@@ -789,27 +817,50 @@ const CommentSection = ({
                                                                             className="w-6 h-6 rounded-full mt-1"
                                                                         />
                                                                         <div className="flex-1">
-                                                                            <div className="bg-gray-100 rounded-2xl px-3 py-2">
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <span className="font-semibold text-gray-900 text-xs">
-                                                                                        {reply?.accountInfor?.fullName}
-                                                                                    </span>
+                                                                            {editingComment === reply.postcommentId ? (
+                                                                                renderEditForm(reply.postcommentId, reply.content, childComment.postcommentId)
+                                                                            ) : (
+                                                                                <div className="bg-gray-100 rounded-2xl px-3 py-2">
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <span className="font-semibold text-gray-900 text-xs">
+                                                                                            {reply?.accountInfor?.fullName}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="text-gray-800 text-xs">{reply.content}</div>
+                                                                                    <div className="flex gap-2 text-xs text-gray-500 mt-1">
+                                                                                        <span>{getRelativeTime(reply.commentAt)}</span>
+                                                                                        <button
+                                                                                            className="hover:underline"
+                                                                                            onClick={() => handleLikeComment(reply.postcommentId)}
+                                                                                        >
+                                                                                            <FontAwesomeIcon
+                                                                                                icon={commentLikes[reply.postcommentId] ? faHeart : farHeart}
+                                                                                                className={`mr-1 ${commentLikes[reply.postcommentId] ? 'text-red-500' : ''}`}
+                                                                                            />
+                                                                                            {commentLikes[reply.postcommentId] || 0}
+                                                                                        </button>
+                                                                                        {/* Thêm nút chỉnh sửa và xóa cho phản hồi của bình luận con */}
+                                                                                        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                            <button
+                                                                                                className="text-gray-500 hover:text-blue-500 mr-2"
+                                                                                                onClick={() => {
+                                                                                                    setEditingComment(reply.postcommentId);
+                                                                                                    setEditingParentId(childComment.postcommentId);
+                                                                                                    setEditContent(reply.content);
+                                                                                                }}
+                                                                                            >
+                                                                                                <FontAwesomeIcon icon={faPencilAlt} />
+                                                                                            </button>
+                                                                                            {/* <button
+                                                                                                className="text-gray-500 hover:text-red-500"
+                                                                                                onClick={() => handleDeleteComment(reply.postcommentId)}
+                                                                                            >
+                                                                                                <FontAwesomeIcon icon={faTrash} />
+                                                                                            </button> */}
+                                                                                        </div>
+                                                                                    </div>
                                                                                 </div>
-                                                                                <div className="text-gray-800 text-xs">{reply.content}</div>
-                                                                                <div className="flex gap-2 text-xs text-gray-500 mt-1">
-                                                                                    <span>{getRelativeTime(reply.commentAt)}</span>
-                                                                                    <button
-                                                                                        className="hover:underline"
-                                                                                        onClick={() => handleLikeComment(reply.postcommentId)}
-                                                                                    >
-                                                                                        <FontAwesomeIcon
-                                                                                            icon={commentLikes[reply.postcommentId] ? faHeart : farHeart}
-                                                                                            className={`mr-1 ${commentLikes[reply.postcommentId] ? 'text-red-500' : ''}`}
-                                                                                        />
-                                                                                        {commentLikes[reply.postcommentId] || 0}
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 ))

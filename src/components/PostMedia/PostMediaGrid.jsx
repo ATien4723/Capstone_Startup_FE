@@ -43,7 +43,7 @@ const PostMediaGrid = ({ media }) => {
 
   return (
     <div className={`mt-3 ${getGridClasses()}`}>
-      {displayMedia.map((item, index) => (
+      {/* {displayMedia.map((item, index) => (
         <div
           key={`media-${item.postMediaId || index}`}
           className={getItemClasses(index, sortedMedia.length)}
@@ -67,7 +67,52 @@ const PostMediaGrid = ({ media }) => {
             </div>
           )}
         </div>
-      ))}
+      ))} */}
+
+
+      {displayMedia.map((item, index) => {
+        // Kiểm tra loại media: video hay ảnh
+        const isVideo = (item.mediaType && item.mediaType.startsWith('video')) ||
+          (typeof item.mediaUrl === 'string' && /\.(mp4|mov|webm|avi|mkv)$/i.test(item.mediaUrl));
+        return (
+          <div
+            key={`media-${item.postMediaId || index}`}
+            className={getItemClasses(index, sortedMedia.length)}
+          >
+            {isVideo ? (
+              <video
+                src={item.mediaUrl}
+                controls
+                className="w-full h-full object-contain bg-black"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.poster =
+                    "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg";
+                }}
+              />
+            ) : (
+              <img
+                src={
+                  item.mediaUrl ||
+                  "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg"
+                }
+                alt={`Media ${index + 1}`}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src =
+                    "https://png.pngtree.com/png-clipart/20191120/original/pngtree-error-file-icon-vectors-png-image_5053766.jpg";
+                }}
+              />
+            )}
+            {index === 3 && hiddenCount > 0 && (
+              <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center text-white text-2xl font-bold">
+                +{hiddenCount}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

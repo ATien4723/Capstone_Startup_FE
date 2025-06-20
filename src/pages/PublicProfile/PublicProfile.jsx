@@ -15,6 +15,7 @@ import CommentSection from '@/components/CommentSection/CommentSection';
 import { formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
+import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -37,7 +38,7 @@ const PublicProfile = () => {
     const {
         profileData, following, followers, isLoading, followLoading,
         currentUserData, currentUserId, formData, setFormData,
-        handleFollowToggle, handleUpdateBio, handleUpdateCover
+        handleFollowToggle, handleUpdateBio, handleUpdateCover, handleUpdateAvatar
     } = useProfileData(id);
 
     // Sử dụng hook kiểm tra trạng thái follow
@@ -52,10 +53,20 @@ const PublicProfile = () => {
 
     // Hook quản lý posts
     const {
-        posts, setPosts, postLikes, postCommentCounts, openCommentPosts, refreshCommentTrigger,
+        posts, setPosts, postLikes, userLikedPosts, postCommentCounts, openCommentPosts, refreshCommentTrigger,
         pageNumber, hasMore, isLoading: isLoadingPosts, isLoadingMore, observer,
         loadMorePosts, handleLikePost, toggleCommentSection, handleCommentCountChange, fetchPosts
     } = usePostsData(id, currentUserId);
+
+    // State cho modal hiển thị danh sách người đã thích
+    const [showLikesModal, setShowLikesModal] = useState(false);
+    const [currentPostId, setCurrentPostId] = useState(null);
+
+    // Hàm để lấy và hiển thị danh sách người đã thích bài viết
+    const handleShowLikes = (postId) => {
+        setCurrentPostId(postId);
+        setShowLikesModal(true);
+    };
 
     // Hook quản lý các action với post
     const postActions = usePostActions(id, fetchPosts);
@@ -73,6 +84,7 @@ const PublicProfile = () => {
     const { lastElementRef } = useInfiniteScroll(loadMorePosts, hasMore, isLoadingMore);
 
     const fileInputRef = useRef(null);
+    const avatarInputRef = useRef(null);
 
     // Hàm mới để xử lý toggle và cập nhật trạng thái follow
     const handleFollowToggleWithRefresh = async () => {
@@ -170,11 +182,23 @@ const PublicProfile = () => {
                                             <img
                                                 src={profileData.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                 alt="Avatar"
-                                                className="w-40 h-40 rounded-full border-4 border-white bg-gray-200 object-cover shadow"
+                                                className="w-40 h-40 rounded-full border-4 border-white bg-gray-200 object-cover shadow cursor-pointer"
+                                                onClick={() => {
+                                                    if (currentUserId === id && avatarInputRef.current) avatarInputRef.current.click();
+                                                }}
                                             />
-                                            {/* <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full text-gray-700 shadow hover:bg-gray-100">
-                                                <FontAwesomeIcon icon={faCamera} />
-                                            </button> */}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                ref={avatarInputRef}
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        await handleUpdateAvatar(file);
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -363,6 +387,13 @@ const PublicProfile = () => {
                             </Modal>
                         )}
 
+                        {/* Modal hiển thị danh sách người đã thích */}
+                        <LikesModal
+                            postId={currentPostId}
+                            isOpen={showLikesModal}
+                            onClose={() => setShowLikesModal(false)}
+                        />
+
                         {showPostModal && (
                             <Modal onClose={() => {
                                 setShowPostModal(false);
@@ -377,7 +408,7 @@ const PublicProfile = () => {
                                     />
                                     <div>
                                         <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
-                                        <div className="text-xs text-gray-500">Đăng bài ở chế độ Bất cứ ai</div>
+                                        <div className="text-xs text-gray-500">Posting publicly</div>
                                     </div>
                                 </div>
 
@@ -392,7 +423,7 @@ const PublicProfile = () => {
                                             </div>
                                             <div className="ml-3">
                                                 <h3 className="text-sm font-medium text-red-800">
-                                                    Không thể đăng bài
+                                                    Cannot post
                                                 </h3>
                                                 <div className="mt-2 text-sm text-red-700">
                                                     {postError}
@@ -406,7 +437,7 @@ const PublicProfile = () => {
                                     <textarea
                                         className="w-full border-none outline-none resize-none text-lg"
                                         rows={4}
-                                        placeholder="Bạn muốn nói về chủ đề gì?"
+                                        placeholder="What would you like to talk about?"
                                         value={newPost.content}
                                         onChange={(e) => {
                                             setNewPost(prev => ({ ...prev, content: e.target.value }));
@@ -475,7 +506,7 @@ const PublicProfile = () => {
                                         {isCreatingPost && (
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                         )}
-                                        {isCreatingPost ? 'Đang đăng...' : 'Post'}
+                                        {isCreatingPost ? 'Posting...' : 'Post'}
                                     </button>
                                 </div>
                             </Modal>
@@ -522,6 +553,28 @@ const PublicProfile = () => {
                                                     <PostMediaGrid media={post.postMedia} />
                                                 )}
                                             </div>
+
+                                            {/* Hiển thị số lượng like và comment ở trên */}
+                                            {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
+                                                <div className="flex justify-between items-center mt-3 mb-2 px-3">
+                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                        <LikeCounter
+                                                            postId={post.postId}
+                                                            count={postLikes[post.postId]}
+                                                            onClick={handleShowLikes}
+                                                        />
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {postCommentCounts[post.postId] > 0 && (
+                                                            <span>{postCommentCounts[post.postId]} comments</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Đường kẻ phân cách */}
+                                            <hr className="my-2" />
+
                                             <div className="flex justify-between items-center mt-3">
                                                 <div className="flex gap-2">
                                                     <button
@@ -529,17 +582,17 @@ const PublicProfile = () => {
                                                         onClick={() => handleLikePost(post.postId)}
                                                     >
                                                         <FontAwesomeIcon
-                                                            icon={postLikes[post.postId] ? faHeart : farHeart}
-                                                            className={`mr-1 ${postLikes[post.postId] ? 'text-red-500' : ''}`}
+                                                            icon={userLikedPosts[post.postId] ? faHeart : farHeart}
+                                                            className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
                                                         />
-                                                        {postLikes[post.postId] || 0} Like
+                                                        Like
                                                     </button>
                                                     <button
                                                         className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
                                                         onClick={() => toggleCommentSection(post.postId)}
                                                     >
                                                         <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
-                                                        {postCommentCounts[post.postId] || 0} Comment
+                                                        Comment
                                                     </button>
                                                     <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
                                                         <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
@@ -566,24 +619,24 @@ const PublicProfile = () => {
                             ) : isLoadingPosts ? (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-500 text-lg">Đang tải bài viết...</p>
+                                    <p className="text-gray-500 text-lg">Loading posts...</p>
                                 </div>
                             ) : (
                                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                                     <img
                                         src="/images/no-posts.svg"
-                                        alt="Không có bài viết"
+                                        alt="No posts"
                                         className="w-32 h-32 mx-auto mb-4 opacity-60"
                                         onError={(e) => {
                                             e.target.onerror = null;
                                             e.target.style.display = 'none';
                                         }}
                                     />
-                                    <p className="text-gray-600 text-lg font-medium mb-2">Chưa có bài viết nào</p>
+                                    <p className="text-gray-600 text-lg font-medium mb-2">No posts yet</p>
                                     <p className="text-gray-500 mb-4">
                                         {id === currentUserId ?
-                                            "Hãy chia sẻ trải nghiệm của bạn ngay bây giờ" :
-                                            `${profileData?.firstName || 'Người dùng này'} chưa đăng bài viết nào`}
+                                            "Share your experience now" :
+                                            `${profileData?.firstName || 'This user'} hasn't posted anything yet`}
                                     </p>
                                     {id === currentUserId && (
                                         <button
@@ -591,7 +644,7 @@ const PublicProfile = () => {
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
                                         >
                                             <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                                            Tạo bài viết mới
+                                            Create new post
                                         </button>
                                     )}
                                 </div>
@@ -628,21 +681,20 @@ const PublicProfile = () => {
                         />
                         <div>
                             <div className="font-semibold">{profileData?.firstName} {profileData?.lastName}</div>
-                            <div className="text-xs text-gray-500">Chỉnh sửa bài viết</div>
+                            <div className="text-xs text-gray-500">Edit post</div>
                         </div>
                     </div>
-
                     <div className="p-6">
                         <textarea
                             className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
                             rows={4}
-                            placeholder="Nội dung bài viết..."
+                            placeholder="Post content..."
                             value={editedPostContent || editingPost.content}
                             onChange={(e) => setEditedPostContent(e.target.value)}
                         />
                         {editingPost.postMedia && editingPost.postMedia.length > 0 && (
                             <div className="mt-4">
-                                <h3 className="text-sm font-medium text-gray-600 mb-2">Ảnh/Video đã đính kèm:</h3>
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">Attached media:</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {editingPost.postMedia.map((media, index) => (
                                         <div key={index} className="relative">
@@ -665,7 +717,7 @@ const PublicProfile = () => {
                                 setEditedPostContent('');
                             }}
                         >
-                            Hủy
+                            Cancel
                         </button>
                         <button
                             className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
@@ -675,12 +727,12 @@ const PublicProfile = () => {
                                 setEditedPostContent('');
                             }}
                         >
-                            Cập nhật
+                            Update
                         </button>
                     </div>
                 </Modal>
             )}
-        </div >
+        </div>
     );
 };
 

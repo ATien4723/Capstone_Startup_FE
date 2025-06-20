@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 export const useNewsFeedData = (currentUserId) => {
     const [posts, setPosts] = useState([]);
     const [postLikes, setPostLikes] = useState({});
+    const [userLikedPosts, setUserLikedPosts] = useState({});
     const [postCommentCounts, setPostCommentCounts] = useState({});
     const [openCommentPosts, setOpenCommentPosts] = useState([]);
     const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(0);
@@ -67,6 +68,16 @@ export const useNewsFeedData = (currentUserId) => {
                             [post.postId]: likeCount
                         }));
 
+                        const likeData = {
+                            postId: post.postId,
+                            accountId: currentUserId
+                        };
+                        const isLiked = await isPostLiked(likeData);
+                        setUserLikedPosts(prev => ({
+                            ...prev,
+                            [post.postId]: !!isLiked
+                        }));
+
                         const commentCount = await getPostCommentCount(post.postId);
                         setPostCommentCounts(prev => ({
                             ...prev,
@@ -79,7 +90,7 @@ export const useNewsFeedData = (currentUserId) => {
             }
         };
         fetchPostDetails();
-    }, [posts]);
+    }, [posts, currentUserId]);
 
     const loadMorePosts = useCallback(() => {
         if (isLoadingMore || !hasMore) return;
@@ -96,8 +107,10 @@ export const useNewsFeedData = (currentUserId) => {
             const isLiked = await isPostLiked(likeData);
             if (isLiked) {
                 await unlikePost(likeData);
+                setUserLikedPosts(prev => ({ ...prev, [postId]: false }));
             } else {
                 await likePost(likeData);
+                setUserLikedPosts(prev => ({ ...prev, [postId]: true }));
             }
             const likeCount = await getPostLikeCount(postId);
             setPostLikes(prev => ({
@@ -134,6 +147,7 @@ export const useNewsFeedData = (currentUserId) => {
         posts,
         setPosts,
         postLikes,
+        userLikedPosts,
         postCommentCounts,
         openCommentPosts,
         refreshCommentTrigger,
