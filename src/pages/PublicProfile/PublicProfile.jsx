@@ -5,7 +5,7 @@ import {
     faEdit, faCamera, faMapMarkerAlt,
     faImage, faPaperclip, faEllipsisH, faFileAlt, faGlobe, faBriefcase,
     faHeart, faComment, faShareSquare, faSmile, faTrash,
-    faUserPlus, faUserCheck, faEyeSlash
+    faUserPlus, faUserCheck, faEyeSlash, faSearch, faBan, faUnlock, faEllipsisV
 } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
@@ -16,6 +16,8 @@ import { formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
+import { blockAccount, unblockAccount, getBlockedAccounts } from '@/apis/accountService';
+import { toast } from 'react-toastify';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -32,6 +34,72 @@ const Modal = ({ children, onClose }) => (
     </div>
 );
 
+// Profile Actions Dropdown Component
+const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleBlock }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const toggleDropdown = () => {
+        setIsOpen(!isOpen);
+    };
+
+    const handleClickOutside = (e) => {
+        if (!e.target.closest('.profile-dropdown')) {
+            setIsOpen(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    if (currentUserId === profileId) return null;
+
+    return (
+        <div className="profile-dropdown relative">
+            <button
+                className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                onClick={toggleDropdown}
+            >
+                <FontAwesomeIcon icon={faEllipsisV} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                    <div className="py-1">
+                        <button
+                            className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                                // Handle search posts
+                                toast.info('Search functionality coming soon');
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FontAwesomeIcon icon={faSearch} className="mr-2" />
+                            Search posts
+                        </button>
+
+                        <button
+                            className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                                onToggleBlock();
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FontAwesomeIcon icon={isBlocked ? faUnlock : faBan} className="mr-2" />
+                            {isBlocked ? 'Unblock user' : 'Block user'}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PublicProfile = () => {
     const { id } = useParams();
     // Hook quản lý profile
@@ -40,6 +108,51 @@ const PublicProfile = () => {
         currentUserData, currentUserId, formData, setFormData,
         handleFollowToggle, handleUpdateBio, handleUpdateCover, handleUpdateAvatar
     } = useProfileData(id);
+
+    // State for block functionality
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [isBlockLoading, setIsBlockLoading] = useState(false);
+
+    // Check if user is blocked
+    useEffect(() => {
+        const checkBlockStatus = async () => {
+            if (currentUserId && id && currentUserId !== id) {
+                try {
+                    const blockedList = await getBlockedAccounts(currentUserId);
+                    // Cấu trúc mới: [{blockedAccountId, blockedFullName, blockedAvatar}]
+                    const isUserBlocked = blockedList?.some(blocked => blocked.blockedAccountId === parseInt(id));
+                    setIsBlocked(!!isUserBlocked);
+                } catch (error) {
+                    console.error('Error checking block status:', error);
+                }
+            }
+        };
+
+        checkBlockStatus();
+    }, [currentUserId, id]);
+
+    // Handle block/unblock
+    const handleToggleBlock = async () => {
+        if (isBlockLoading) return;
+
+        setIsBlockLoading(true);
+        try {
+            if (isBlocked) {
+                await unblockAccount(currentUserId, id);
+                setIsBlocked(false);
+                toast.success(`Unblocked ${profileData?.firstName || 'user'} successfully`);
+            } else {
+                await blockAccount(currentUserId, id);
+                setIsBlocked(true);
+                toast.success(`Blocked ${profileData?.firstName || 'user'} successfully`);
+            }
+        } catch (error) {
+            console.error('Error toggling block status:', error);
+            toast.error('Failed to update block status');
+        } finally {
+            setIsBlockLoading(false);
+        }
+    };
 
     // Sử dụng hook kiểm tra trạng thái follow
     const [followStatusChanged, setFollowStatusChanged] = useState(0);
@@ -127,6 +240,16 @@ const PublicProfile = () => {
 
                 {/* Buttons container */}
                 <div className="absolute bottom-4 right-8 flex gap-3 z-10">
+                    {/* Profile Actions Dropdown - only show when viewing other's profile */}
+                    {currentUserId != id && (
+                        <ProfileActionsDropdown
+                            currentUserId={currentUserId}
+                            profileId={id}
+                            isBlocked={isBlocked}
+                            onToggleBlock={handleToggleBlock}
+                        />
+                    )}
+
                     {/* Follow Button - Hiển thị khi xem profile người khác */}
                     {currentUserId != id && (
                         <button

@@ -76,12 +76,6 @@ export const getMessagesInRoom = async (chatRoomId, pageNumber = 1, pageSize = 1
     return response;
 };
 
-// API: Thêm thành viên vào startup
-export const inviteUserToStartup = async (data) => {
-    const response = await axiosClient.post('/api/Startup/invite-member', data);
-    return response;
-};
-
 // API: Cập nhật vai trò của thành viên trong startup
 export const updateMemberRole = async (data) => {
     const response = await axiosClient.put('/api/Startup/update-member-role', data);
@@ -89,8 +83,8 @@ export const updateMemberRole = async (data) => {
 };
 
 // API: Xóa thành viên khỏi startup
-export const removeMemberFromStartup = async (startupId, memberId) => {
-    const response = await axiosClient.delete(`/api/Startup/${startupId}/remove-member/${memberId}`);
+export const removeMemberFromStartup = async (startupId, accountId) => {
+    const response = await axiosClient.delete(`/api/Startup/kick-member?startupId=${startupId}&accountId=${accountId}`);
     return response;
 };
 
@@ -138,7 +132,7 @@ export const updateMemberTitle = async (data) => {
     return response;
 };
 
-// API: Tạo lời mời tham gia startup
+// API: them thanh vien startup
 export const createInvite = async (data) => {
     const response = await axiosClient.post('/api/Startup/create-invite', data);
     return response;

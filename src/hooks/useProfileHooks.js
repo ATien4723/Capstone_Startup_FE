@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAccountInfo, getFollowing, getFollowers, checkIsFollowing, followUser, unfollowUser, updateBio, updateProfile, recommendAccounts } from '@/apis/accountService';
+import { getAccountInfo, getFollowing, getFollowers, checkIsFollowing, followUser, unfollowUser, updateBio, updateProfile, recommendAccounts, blockAccount, unblockAccount, getBlockedAccounts } from '@/apis/accountService';
 import { getUserId } from "@/apis/authService";
 import {
     getPostsByAccountId,
@@ -693,4 +693,83 @@ export const useRecommendAccounts = (currentUserId, pageNumber = 1, pageSize = 1
     }, [currentUserId, pageNumber, pageSize]);
 
     return { data, isLoading, error, refetch: fetchData };
-}; 
+};
+
+// Hook quản lý chức năng chặn người dùng
+export const useBlockUser = (currentUserId, targetUserId) => {
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [isBlockLoading, setIsBlockLoading] = useState(false);
+    const [blockedUsers, setBlockedUsers] = useState([]);
+    // Kiểm tra trạng thái chặn khi component mount
+    useEffect(() => {
+        const checkBlockStatus = async () => {
+            if (!currentUserId || !targetUserId || currentUserId === targetUserId) {
+                setIsBlocked(false);
+                return;
+            }
+
+            try {
+                setIsBlockLoading(true);
+                const blockedList = await getBlockedAccounts(currentUserId);
+                setBlockedUsers(blockedList || []);
+
+                // Kiểm tra xem người dùng hiện tại đã chặn người dùng mục tiêu chưa
+                // Cấu trúc mới: [{blockedAccountId, blockedFullName, blockedAvatar}]
+                const isUserBlocked = blockedList?.some(blocked =>
+                    blocked.blockedAccountId === parseInt(targetUserId) ||
+                    blocked.blockedAccountId === targetUserId
+                );
+                setIsBlocked(!!isUserBlocked);
+            } catch (error) {
+                console.error('Lỗi khi kiểm tra trạng thái chặn:', error);
+                toast.error('Không thể kiểm tra trạng thái chặn');
+            } finally {
+                setIsBlockLoading(false);
+            }
+        };
+
+        checkBlockStatus();
+    }, [currentUserId, targetUserId]);
+
+    // Hàm xử lý chặn/bỏ chặn người dùng
+    const handleToggleBlock = async () => {
+        if (isBlockLoading || !currentUserId || !targetUserId || currentUserId === targetUserId) {
+            return;
+        }
+
+        setIsBlockLoading(true);
+        try {
+            if (isBlocked) {
+                // Bỏ chặn người dùng
+                await unblockAccount(currentUserId, targetUserId);
+                setIsBlocked(false);
+                toast.success('Đã bỏ chặn người dùng thành công');
+
+                // Cập nhật danh sách người dùng bị chặn
+                const updatedBlockedList = await getBlockedAccounts(currentUserId);
+                setBlockedUsers(updatedBlockedList || []);
+            } else {
+                // Chặn người dùng
+                await blockAccount(currentUserId, targetUserId);
+                setIsBlocked(true);
+                toast.success('Đã chặn người dùng thành công');
+
+                // Cập nhật danh sách người dùng bị chặn
+                const updatedBlockedList = await getBlockedAccounts(currentUserId);
+                setBlockedUsers(updatedBlockedList || []);
+            }
+        } catch (error) {
+            console.error('Lỗi khi thay đổi trạng thái chặn:', error);
+            toast.error('Không thể thay đổi trạng thái chặn. Vui lòng thử lại sau.');
+        } finally {
+            setIsBlockLoading(false);
+        }
+    };
+
+    return {
+        isBlocked,
+        isBlockLoading,
+        blockedUsers,
+        handleToggleBlock
+    };
+};

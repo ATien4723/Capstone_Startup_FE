@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useParams } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { changePassword, getAccountInfo, updateProfile, verifyCCCD, setStatusVerified } from "@/apis/accountService";
+import { changePassword, getAccountInfo, updateProfile, verifyCCCD, setStatusVerified, getBlockedAccounts, unblockAccount } from "@/apis/accountService";
 import { getUserId } from "@/apis/authService";
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -89,6 +89,11 @@ const Setting = () => {
     const [cameraStream, setCameraStream] = useState(null);
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
+
+    // Thêm state cho danh sách tài khoản bị chặn
+    const [showBlockedAccounts, setShowBlockedAccounts] = useState(false);
+    const [blockedAccounts, setBlockedAccounts] = useState([]);
+    const [blockedLoading, setBlockedLoading] = useState(false);
 
     // Hàm mở webcam
     const openCamera = () => {
@@ -241,6 +246,27 @@ const Setting = () => {
             setMessage(error?.response?.data || "Đổi mật khẩu thất bại!");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchBlockedAccounts = async () => {
+        setBlockedLoading(true);
+        try {
+            const res = await getBlockedAccounts(accountId);
+            setBlockedAccounts(res || []);
+        } catch (err) {
+            toast.error("Không thể tải danh sách block");
+        }
+        setBlockedLoading(false);
+    };
+
+    const handleUnblock = async (blockedId) => {
+        try {
+            await unblockAccount(accountId, blockedId);
+            toast.success("Đã bỏ chặn tài khoản!");
+            setBlockedAccounts(prev => prev.filter(acc => acc.blockedAccountId !== blockedId));
+        } catch (err) {
+            toast.error("Bỏ chặn thất bại!");
         }
     };
 
@@ -477,23 +503,31 @@ const Setting = () => {
                             </div>
                         )}
                         {/* Login & Security */}
-                        {activeTab === 1 && !showChangePassword && !showCCCDVerify && (
+                        {activeTab === 1 && !showChangePassword && !showCCCDVerify && !showBlockedAccounts && (
                             <>
                                 <h2 className="text-xl sm:text-2xl font-semibold mb-6 text-center md:text-left">Account Access</h2>
                                 <ul className="divide-y divide-gray-200">
                                     <li className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-2">
-                                        <span>Email Address</span>
+                                        <span>Email</span>
                                         <span className="text-gray-500 break-all">{profile?.email}</span>
                                     </li>
                                     <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => setShowChangePassword(true)}>
                                         <span>Password</span>
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </li>
+                                    <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50"
+                                        onClick={() => {
+                                            setShowBlockedAccounts(true);
+                                            fetchBlockedAccounts();
+                                        }}>
+                                        <span>Blocked Accounts</span>
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                    </li>
                                     <li className="flex justify-between items-center py-4 cursor-pointer hover:bg-gray-50" onClick={() => {
                                         if (profile?.status !== 'verified') {
                                             setShowCCCDVerify(true);
                                         } else {
-                                            toast.info('Tài khoản của bạn đã được xác thực');
+                                            toast.info('Your account has been verified');
                                         }
                                     }}>
                                         <span>Identity Verification</span>
@@ -830,6 +864,49 @@ const Setting = () => {
                                     {message && <div className="text-sm mt-2 text-red-500">{message}</div>}
                                 </form>
                             </>
+                        )}
+                        {/* Hiển thị danh sách tài khoản bị chặn */}
+                        {activeTab === 1 && showBlockedAccounts && (
+                            <div className="flex flex-col items-center py-8 min-h-[60vh]">
+                                <button
+                                    type="button"
+                                    className="flex items-center text-gray-600 hover:text-green-600 mb-6 self-start"
+                                    onClick={() => setShowBlockedAccounts(false)}
+                                >
+                                    <FontAwesomeIcon icon={faArrowLeft} className="mr-1" />
+                                    <span className="text-base font-medium">Back</span>
+                                </button>
+                                <h2 className="text-2xl font-bold mb-4 text-center">Blocked Accounts</h2>
+                                <p className="text-gray-500 mb-8 text-center max-w-lg">Here you can see all users you have blocked. You can unblock them anytime.</p>
+                                {blockedLoading ? (
+                                    <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                        <svg className="animate-spin h-8 w-8 text-blue-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                        <span className="text-gray-500">Loading...</span>
+                                    </div>
+                                ) : blockedAccounts.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                        <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.5A6.5 6.5 0 006.5 13V11A6.5 6.5 0 0115 4.5m0 0V3m0 1.5V6" /></svg>
+                                        <span className="text-gray-400 text-lg">You haven't blocked any accounts yet.</span>
+                                    </div>
+                                ) : (
+                                    <ul className="w-full max-w-2xl space-y-6">
+                                        {blockedAccounts.map(acc => (
+                                            <li key={acc.blockedAccountId} className="flex items-center justify-between bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-lg transition-shadow">
+                                                <div className="flex items-center gap-4">
+                                                    <img src={acc.blockedAvatar} alt={acc.blockedFullName} className="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
+                                                    <span className="font-semibold text-lg">{acc.blockedFullName}</span>
+                                                </div>
+                                                <button
+                                                    className="px-5 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-semibold shadow hover:from-red-600 hover:to-pink-600 transition-colors"
+                                                    onClick={() => handleUnblock(acc.blockedAccountId)}
+                                                >
+                                                    Unblock
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>

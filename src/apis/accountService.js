@@ -138,3 +138,43 @@ export const recommendAccounts = async (currentAccountId, pageNumber = 1, pageSi
         throw error;
     }
 };
+
+// API chặn người dùng
+export const blockAccount = async (accountId, blockedId) => {
+    try {
+        const response = await axiosClient.post('api/Account/block', null, {
+            params: {
+                accountId,
+                blockedId
+            }
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// API bỏ chặn người dùng
+export const unblockAccount = async (accountId, blockedId) => {
+    try {
+        const response = await axiosClient.post('api/Account/unblock', null, {
+            params: {
+                accountId,
+                blockedId
+            }
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// API lấy danh sách tài khoản đã chặn
+export const getBlockedAccounts = async (accountId) => {
+    try {
+        const response = await axiosClient.get(`api/Account/blocked-list/${accountId}`);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};

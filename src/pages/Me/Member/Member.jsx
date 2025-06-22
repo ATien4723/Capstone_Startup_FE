@@ -14,6 +14,7 @@ import { getStartupIdByAccountId } from '@/apis/startupService';
 // Import SVG icons
 import updateSvg from '/update-icon-svgrepo-com.svg';
 import deleteSvg from '/delete-svgrepo-com.svg';
+import roleSvg from '/user-role-svgrepo-com.svg';
 
 const roleOptions = [
     { value: 'Founder', label: 'Chủ startup' },
@@ -23,7 +24,6 @@ const roleOptions = [
 
 const Member = () => {
     const [startupId, setStartupId] = useState(null);
-    const [selectedUser, setSelectedUser] = useState(null);
     const [openMenuIndex, setOpenMenuIndex] = useState(null);
     const [editingRoleId, setEditingRoleId] = useState(null);
     const [editingRoleName, setEditingRoleName] = useState("");
@@ -76,12 +76,15 @@ const Member = () => {
         fetchMembers,
         fetchRoles,
         handleEmailInputChange,
+        handleSelectUser,
         inviteMember,
         updateMemberRole,
         removeMember,
         createRole,
         updateRole,
-        deleteRole
+        deleteRole,
+        selectedUser,
+        setSelectedUser
     } = useMemberManagement(startupId);
 
     // Bắt đầu chỉnh sửa vai trò
@@ -94,7 +97,7 @@ const Member = () => {
     const handleSaveRoleEdit = () => {
         if (editingRoleId && editingRoleName.trim()) {
             updateRole({
-                roleId: editingRoleId,
+                role_ID: editingRoleId,
                 roleName: editingRoleName
             });
             setEditingRoleId(null);
@@ -119,11 +122,6 @@ const Member = () => {
     const handleSaveRoleChange = () => {
         if (!selectedMember) return;
         updateMemberRole(selectedMember.memberId, newMemberRole);
-    };
-
-    // Xử lý chọn người dùng từ kết quả tìm kiếm
-    const handleSelectUser = (user) => {
-        setSelectedUser(user);
     };
 
     // Lọc thành viên theo từ khóa tìm kiếm và vai trò
@@ -227,7 +225,7 @@ const Member = () => {
                         className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition"
                         onClick={() => setShowAddRoleModal(true)}
                     >
-                        <FontAwesomeIcon icon={faTags} className="mr-2" />
+                        <img src={roleSvg} alt="Edit role" className="w-5 h-5 mr-2 text-white" />
                         Add New Role
                     </button>
                     <button
@@ -368,7 +366,7 @@ const Member = () => {
                                                         <button
                                                             className={`w-full flex items-center px-2 py-2 text-sm text-red-600 hover:bg-gray-100 ${member.roleName === 'Founder' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             onClick={() => {
-                                                                removeMember(member.memberId);
+                                                                removeMember(member.accountId);
                                                                 setOpenMenuIndex(null);
                                                             }}
                                                             disabled={member.roleName === 'Founder'}

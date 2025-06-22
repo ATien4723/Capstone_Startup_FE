@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as startupService from '@/apis/startupService';
 import { toast } from 'react-toastify';
+import { getUserId } from '@/apis/authService';
 
 export default function useMemberManagement(startupId) {
     const [members, setMembers] = useState([]);
@@ -166,12 +167,23 @@ export default function useMemberManagement(startupId) {
             return;
         }
 
+        // Tìm roleId từ roleName
+        const roleToAssign = roles.find(role => role.roleName === newMemberRole);
+        if (!roleToAssign) {
+            toast.error("Không tìm thấy vai trò này");
+            return;
+        }
+
+        // Lấy accountId của mình (người mời)
+        const inviteBy = Number(getUserId());
+
         setLoading(true);
         try {
-            await startupService.inviteUserToStartup({
-                startupId,
-                accountId: selectedUser.accountId,
-                role: newMemberRole
+            await startupService.createInvite({
+                account_ID: selectedUser.accountId,
+                startup_ID: startupId,
+                role_ID: roleToAssign.roleId,
+                inviteBy: inviteBy
             });
 
             toast.success("Đã mời thành viên thành công");
@@ -188,13 +200,29 @@ export default function useMemberManagement(startupId) {
     };
 
     // Cập nhật vai trò của thành viên
-    const updateMemberRole = async (memberId, newRole) => {
+    const updateMemberRole = async (memberId, newRoleName) => {
         setLoading(true);
         try {
+            // Tìm roleId từ roleName
+            const roleToAssign = roles.find(role => role.roleName === newRoleName);
+            if (!roleToAssign) {
+                toast.error("Không tìm thấy vai trò này");
+                setLoading(false);
+                return;
+            }
+
+            // Lấy accountId từ thành viên được chọn
+            const accountId = selectedMember.accountId;
+            if (!accountId) {
+                toast.error("Không tìm thấy ID người dùng");
+                setLoading(false);
+                return;
+            }
+
             await startupService.updateMemberRole({
                 startupId,
-                memberId,
-                role: newRole
+                accountId,
+                newRoleId: roleToAssign.roleId
             });
 
             toast.success("Đã cập nhật vai trò thành công");
@@ -210,14 +238,19 @@ export default function useMemberManagement(startupId) {
     };
 
     // Xóa thành viên khỏi startup
-    const removeMember = async (memberId) => {
+    const removeMember = async (accountId) => {
+        if (!accountId) {
+            toast.error("Không tìm thấy ID người dùng");
+            return;
+        }
+
         if (!window.confirm("Bạn có chắc chắn muốn xóa thành viên này?")) {
             return;
         }
 
         setLoading(true);
         try {
-            await startupService.removeMemberFromStartup(startupId, memberId);
+            await startupService.removeMemberFromStartup(startupId, accountId);
 
             toast.success("Đã xóa thành viên thành công");
             fetchMembers(); // Refresh danh sách thành viên
@@ -239,7 +272,7 @@ export default function useMemberManagement(startupId) {
         setLoading(true);
         try {
             await startupService.updateRole({
-                role_ID: roleData.roleId,
+                role_ID: roleData.role_ID,
                 roleName: roleData.roleName
             });
 
