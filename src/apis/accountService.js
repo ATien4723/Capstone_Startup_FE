@@ -178,3 +178,21 @@ export const getBlockedAccounts = async (accountId) => {
         throw error;
     }
 };
+
+// API tìm kiếm tài khoản
+export const searchAccounts = async (searchText, currentAccountId, pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get('api/Account/search-account', {
+            params: {
+                searchText,
+                currentAccountId,
+                pageNumber,
+                pageSize
+            }
+        });
+        return response;
+    } catch (error) {
+        console.error('Search API error:', error);
+        throw error;
+    }
+};
