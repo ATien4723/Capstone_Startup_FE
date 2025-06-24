@@ -47,18 +47,20 @@ const PostDropdownMenu = ({
         };
     }, [isOpen, onToggle]);
 
+    const isOwnPost = post.accountId == currentUserIdHome || post.accountID == currentUserIdHome;
+
     return (
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => onToggle(!isOpen)}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-full"
             >
                 <FontAwesomeIcon icon={faEllipsisH} />
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg overflow-hidden z-50">
-                    {post.accountId == currentUserId && post.accountID == currentUserIdHome && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden z-50">
+                    {isOwnPost && (
                         <div className="py-1">
                             <button
                                 onClick={() => {
@@ -68,7 +70,7 @@ const PostDropdownMenu = ({
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                Edit
+                                Chỉnh sửa bài viết
                             </button>
                             <button
                                 onClick={() => {
@@ -78,20 +80,24 @@ const PostDropdownMenu = ({
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                Delete
-                            </button>
-                            <button
-                                onClick={() => {
-                                    onHide(post.postId);
-                                    onToggle(false);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                            >
-                                <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                                Hide post
+                                Xóa bài viết
                             </button>
                         </div>
                     )}
+
+                    {!isOwnPost && (
+                        <button
+                            onClick={() => {
+                                onHide(post.postId, post.accountId);
+                                onToggle(false);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        >
+                            <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
+                            Ẩn bài viết này
+                        </button>
+                    )}
+
                     <div className="py-1">
                         <button
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -101,7 +107,7 @@ const PostDropdownMenu = ({
                             }}
                         >
                             <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                            Share
+                            Chia sẻ bài viết
                         </button>
                     </div>
                 </div>

@@ -109,7 +109,7 @@ export const getPostCommentCount = async (postId) => {
 // Check if post is liked
 export const isPostLiked = async (likeData) => {
     try {
-        const response = await axiosClient.get(`${likeData.postId}/liked?postId=${likeData.postId}&accountId=${likeData.accountId}`);
+        const response = await axiosClient.get(`liked?postId=${likeData.postId}&accountId=${likeData.accountId}`);
         return response;
     } catch (error) {
         throw error;
@@ -259,9 +259,31 @@ export const hidePost = async (accountId, postId) => {
             accountId: accountId,
             postId: postId
         });
-        return response.data;
+        return response;
     } catch (error) {
         console.error('Error hiding post:', error);
+        throw error;
+    }
+};
+
+// Chia sẻ bài viết
+export const sharePost = async (shareData) => {
+    try {
+        const response = await axiosClient.post('share', shareData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi chia sẻ bài viết:', error);
+        throw error;
+    }
+};
+
+// Lấy bài viết theo ID
+export const getPostById = async (postId) => {
+    try {
+        const response = await axiosClient.get(`post/${postId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy bài viết theo ID:', error);
         throw error;
     }
 };

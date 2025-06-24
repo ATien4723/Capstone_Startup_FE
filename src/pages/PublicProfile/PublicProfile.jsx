@@ -18,6 +18,8 @@ import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteS
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import { blockAccount, unblockAccount, getBlockedAccounts } from '@/apis/accountService';
 import { toast } from 'react-toastify';
+import SharePostModal from '@/components/Common/SharePostModal';
+import SharedPost from '@/components/PostMedia/SharedPost';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -174,11 +176,19 @@ const PublicProfile = () => {
     // State cho modal hiển thị danh sách người đã thích
     const [showLikesModal, setShowLikesModal] = useState(false);
     const [currentPostId, setCurrentPostId] = useState(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [postToShare, setPostToShare] = useState(null);
 
     // Hàm để lấy và hiển thị danh sách người đã thích bài viết
     const handleShowLikes = (postId) => {
         setCurrentPostId(postId);
         setShowLikesModal(true);
+    };
+
+    // Hàm để mở modal chia sẻ bài viết
+    const handleSharePost = (post) => {
+        setPostToShare(post);
+        setShowShareModal(true);
     };
 
     // Hook quản lý các action với post
@@ -517,6 +527,15 @@ const PublicProfile = () => {
                             onClose={() => setShowLikesModal(false)}
                         />
 
+                        {/* Modal chia sẻ bài viết */}
+                        <SharePostModal
+                            isOpen={showShareModal}
+                            onClose={() => setShowShareModal(false)}
+                            post={postToShare}
+                            profileData={currentUserData}
+                            onShareSuccess={fetchPosts}
+                        />
+
                         {showPostModal && (
                             <Modal onClose={() => {
                                 setShowPostModal(false);
@@ -667,11 +686,17 @@ const PublicProfile = () => {
                                                     onEdit={setEditingPost}
                                                     onDelete={confirmDeletePost}
                                                     onHide={handleHidePost}
-                                                    onShare={(post) => console.log('Share post:', post)}
+                                                    onShare={handleSharePost}
                                                 />
                                             </div>
                                             <div>
                                                 <p className="text-gray-800 ml-5">{post.content}</p>
+
+                                                {/* Hiển thị bài viết được chia sẻ nếu có */}
+                                                {post.postShareId && (
+                                                    <SharedPost postShareId={post.postShareId} />
+                                                )}
+
                                                 {post.postMedia && post.postMedia.length > 0 && (
                                                     <PostMediaGrid media={post.postMedia} />
                                                 )}
@@ -717,7 +742,10 @@ const PublicProfile = () => {
                                                         <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
                                                         Comment
                                                     </button>
-                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                    <button
+                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        onClick={() => handleSharePost(post)}
+                                                    >
                                                         <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
                                                         Share
                                                     </button>
