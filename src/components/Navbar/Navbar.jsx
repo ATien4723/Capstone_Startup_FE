@@ -167,6 +167,7 @@ export default function Navbar() {
                             {/* Dropdown thông báo cho mobile */}
                             {notificationDropdownOpen && (
                                 <div
+                                    ref={notificationDropdownRef}
                                     className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50"
                                     style={{ top: 'calc(100% + 8px)' }}
                                 >

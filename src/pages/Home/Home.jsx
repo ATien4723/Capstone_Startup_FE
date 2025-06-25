@@ -136,7 +136,7 @@ const Home = () => {
                                     <div className="text-center">
                                         <Link to="/network/following" className="block">
                                             <div className="font-bold text-lg hover:text-blue-600">{following?.length || 0}</div>
-                                            <div className="text-gray-600 hover:text-blue-600">Following</div>
+                                            <div className="text-gray-600 hover:text-blue-600">Follow</div>
                                         </Link>
                                     </div>
                                     <div className="text-center">
@@ -288,10 +288,14 @@ const Home = () => {
                         {/* Modal chia sẻ bài viết */}
                         <SharePostModal
                             isOpen={showShareModal}
-                            onClose={() => setShowShareModal(false)}
+                            onClose={() => {
+                                setShowShareModal(false);
+                                setPostToShare(null);
+                            }}
                             post={postToShare}
                             profileData={profileData}
-                            onShareSuccess={fetchPosts}
+                            // onShareSuccess={fetchPosts}
+                            onShareSuccess={() => fetchPosts(1)}
                         />
 
                         {/* Post Modal */}

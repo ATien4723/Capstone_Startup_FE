@@ -24,7 +24,7 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
 
             const shareData = {
                 accountId: currentUserId,
-                postId: post.postId,
+                originalPostId: post.postId,
                 content: shareContent
             };
 
