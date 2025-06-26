@@ -12,7 +12,7 @@ export const createStartup = async (formData) => {
 // API: Lấy tất cả startup
 export const getAllStartups = async () => {
     const response = await axiosClient.get('/api/Startup/all');
-    return response.data;
+    return response;
 };
 
 
@@ -141,5 +141,57 @@ export const createInvite = async (data) => {
 // API: Lấy startupId theo accountId
 export const getStartupIdByAccountId = async (accountId) => {
     const response = await axiosClient.get(`/api/Startup/startupid/${accountId}`);
+    return response;
+};
+
+// // API: Tìm kiếm và lọc thành viên
+// export const searchAndFilterMembers = async (startupId, roleId = null, search = null) => {
+//     const response = await axiosClient.get('/api/Startup/search-members', {
+//         params: { startupId, roleId, search }
+//     });
+//     return response;
+// };
+
+// API: Rời khỏi startup
+export const outStartup = async (accountId) => {
+    const response = await axiosClient.post('/api/Startup/out-startup', null, {
+        params: { accountId }
+    });
+    return response;
+};
+
+// API: Xóa thành viên khỏi chatroom
+export const kickChatRoomMembers = async (data) => {
+    const response = await axiosClient.delete('/api/Startup/kick-chatroom-members', {
+        data
+    });
+    return response;
+};
+
+// API: Tìm kiếm tin nhắn trong chatroom
+export const searchMessagesInRoom = async (chatRoomId, searchKey, pageNumber = 1, pageSize = 10) => {
+    const response = await axiosClient.get('/api/Startup/room-messages-search', {
+        params: { chatRoomId, searchKey, pageNumber, pageSize }
+    });
+    return response;
+};
+
+// API: Lấy danh sách lời mời của startup
+export const getInvitesByStartup = async (startupId, pageNumber = 1, pageSize = 10) => {
+    const response = await axiosClient.get(`/api/Startup/startup/${startupId}/invites`, {
+        params: { pageNumber, pageSize }
+    });
+    return response;
+};
+
+// API: Lấy chi tiết lời mời theo ID
+export const getInviteById = async (inviteId) => {
+    const response = await axiosClient.get(`/api/Startup/invite/${inviteId}`);
+    return response;
+};
+
+// API: Phản hồi lời mời
+export const respondToInvite = async (data) => {
+    const response = await axiosClient.post('/api/Startup/invite/respond', data);
     return response;
 };

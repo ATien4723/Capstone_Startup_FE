@@ -23,7 +23,6 @@ class SignalRService {
 
         // Nếu đã có kết nối, không khởi tạo lại
         if (this.connection && this.isConnected) return;
-
         // Tạo kết nối SignalR
         this.connection = new signalR.HubConnectionBuilder()
             .withUrl(`${URL_API}hubs/notification`)
@@ -33,16 +32,13 @@ class SignalRService {
         // Đăng ký event handler nhận thông báo mới
         this.connection.on('ReceiveNotification', async notification => {
             console.log('Nhận thông báo mới:', notification);
-
             // Lấy thông tin người dùng từ accountId hoặc senderId
             const userId = notification.accountId || notification.senderId;
 
             // Luôn lấy thông tin người dùng mới nhất từ API
             if (userId) {
                 try {
-                    console.log(`Đang lấy thông tin người dùng với ID: ${userId}`);
                     const userInfo = await getAccountInfo(userId);
-                    console.log('Thông tin người dùng nhận được:', userInfo);
 
                     if (userInfo) {
                         // Gọi callback để cập nhật UI

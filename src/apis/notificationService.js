@@ -25,7 +25,7 @@ export const getUnreadNotificationCount = async (accountId) => {
 // Đánh dấu thông báo đã đọc
 export const markNotificationAsRead = async (notificationId, accountId) => {
     try {
-        const response = await axiosClient.put(`api/Notification/mark-as-read/${notificationId}?accountId=${accountId}`);
+        const response = await axiosClient.put(`api/Notification/mark-as-read${notificationId}?accountId=${accountId}`);
         return response;
     } catch (error) {
         console.error('Error marking notification as read:', error);

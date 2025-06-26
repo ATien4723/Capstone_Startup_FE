@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useChat from '@/hooks/useChat';
 import { getRelativeTime } from '@/utils/dateUtils';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -9,6 +9,7 @@ import { getUserId } from '@/apis/authService';
 
 export default function Chat() {
     const currentUserId = getUserId(); // ID của người dùng hiện tại
+    const [hasSearched, setHasSearched] = useState(false); // State để theo dõi đã tìm kiếm hay chưa
 
     const {
         // State
@@ -32,6 +33,8 @@ export default function Chat() {
         selectedMember,
         editMemberTitle,
         showMembersSidebar,
+        searchMessageKey,
+        isSearchingMessages,
 
         // Actions
         setSelectedChannel,
@@ -48,9 +51,10 @@ export default function Chat() {
         setSelectedMember,
         setEditMemberTitle,
         setShowMembersSidebar,
-        fetchChatRooms,
+        setSearchMessageKey,
 
         // Methods
+        fetchChatRooms,
         handleCreateGroup,
         handleSendMessage,
         handleEmailInputChange,
@@ -60,6 +64,9 @@ export default function Chat() {
         handleUpdateMemberTitle,
         handleRemoveMember,
         handleEditMember,
+        handleSearchMessages,
+        resetMessageSearch,
+        handleKickChatRoomMembers,
     } = useChat(currentUserId);
 
     // Lấy danh sách chatroom khi vào trang
@@ -78,6 +85,19 @@ export default function Chat() {
             document.removeEventListener('click', handleClickOutside);
         };
     }, [setShowDropdown]);
+
+    // Hàm xử lý tìm kiếm tin nhắn
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        await handleSearchMessages(e);
+        setHasSearched(true); // Đánh dấu đã tìm kiếm
+    };
+
+    // Hàm xử lý reset tìm kiếm
+    const handleReset = () => {
+        resetMessageSearch();
+        setHasSearched(false); // Reset trạng thái tìm kiếm
+    };
 
     return (
         <>
@@ -114,7 +134,7 @@ export default function Chat() {
                     </div>
                     <ul className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
                         {(channels || []).map(channel => (
-                            <li key={channel.chatRoomId}>
+                            <li key={channel.chatRoomId + '-' + channel.roomName}>
                                 <button
                                     onClick={() => setSelectedChannel(channel.chatRoomId)}
                                     className={`w-full flex items-center px-4 py-2 rounded text-left transition-all duration-200 ${selectedChannel === channel.chatRoomId ? 'bg-blue-100 text-blue-800 font-bold' : 'text-gray-700 hover:bg-gray-200'}`}
@@ -182,7 +202,7 @@ export default function Chat() {
                             // console.log("isMe:", isMe, "msg.accountId:", msg.accountId);
                             return (
                                 <div
-                                    key={msg.messageId || msg.id}
+                                    key={(msg.messageId || msg.id) + '-' + (msg.sentAt || '')}
                                     className={`flex items-start space-x-3 ${isMe ? 'justify-end' : ''}`}
                                 >
                                     {!isMe && (
@@ -251,6 +271,46 @@ export default function Chat() {
                                 </svg>
                             </button>
                         </div>
+
+                        {/* Thanh tìm kiếm tin nhắn */}
+                        {selectedChannel && (
+                            <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+                                <form onSubmit={handleSearch} className="flex flex-col space-y-2">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="text"
+                                            className=" border border-gray-300 rounded-l px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Search messages..."
+                                            value={searchMessageKey}
+                                            onChange={(e) => setSearchMessageKey(e.target.value)}
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="bg-blue-600 text-white px-2 py-1 text-sm rounded-r hover:bg-blue-700 transition-all"
+                                            disabled={isSearchingMessages || !searchMessageKey.trim()}
+                                        >
+                                            {isSearchingMessages ? (
+                                                <CircularProgress size={14} color="inherit" />
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                    {hasSearched && (
+                                        <button
+                                            type="button"
+                                            onClick={handleReset}
+                                            className="w-full px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                        >
+                                            Reset Search
+                                        </button>
+                                    )}
+                                </form>
+                            </div>
+                        )}
+
                         {/* Tách nhóm leader và member */}
                         {(() => {
                             const leaders = (chatRoomMembers || []).filter(m => m.canAdministerChannel);
@@ -261,7 +321,7 @@ export default function Chat() {
                                         <>
                                             <div className="font-bold text-xs text-gray-400 mb-1 px-2 mt-2">FEARLESS LEADER — {leaders.length}</div>
                                             {leaders.map(member => (
-                                                <li key={member.memberId} className="group list-none">
+                                                <li key={member.memberId + '-' + member.accountId} className="group list-none">
                                                     <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
                                                         <div className="flex items-center space-x-2">
                                                             <img
@@ -282,12 +342,12 @@ export default function Chat() {
                                                         <div className="hidden group-hover:flex space-x-1">
                                                             {(() => {
                                                                 const currentUser = chatRoomMembers.find(m => m.accountId == currentUserId);
-                                                                if (currentUser && currentUser.canAdministerChannel) {
+                                                                if (currentUser && currentUser.canAdministerChannel && member.accountId == currentUserId) {
                                                                     return (
                                                                         <button
                                                                             className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
                                                                             onClick={() => handleEditMember(member)}
-                                                                            title="Edit"
+                                                                            title="Chỉnh sửa"
                                                                         >
                                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -295,19 +355,32 @@ export default function Chat() {
                                                                         </button>
                                                                     );
                                                                 }
+                                                                else if (currentUser && currentUser.canAdministerChannel && member.accountId != currentUserId) {
+                                                                    return (
+                                                                        <>
+                                                                            <button
+                                                                                className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
+                                                                                onClick={() => handleEditMember(member)}
+                                                                                title="Chỉnh sửa"
+                                                                            >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button
+                                                                                className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
+                                                                                onClick={() => handleKickChatRoomMembers(member.accountId)}
+                                                                                title="Xóa khỏi nhóm"
+                                                                            >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </>
+                                                                    );
+                                                                }
                                                                 return null;
                                                             })()}
-                                                            {member.accountId != currentUserId && (
-                                                                <button
-                                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
-                                                                    onClick={() => handleRemoveMember(member.memberId)}
-                                                                    title="Remove from group"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                    </svg>
-                                                                </button>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </li>
@@ -318,7 +391,7 @@ export default function Chat() {
                                         <>
                                             <div className="font-bold text-xs text-gray-400 mb-1 px-2 mt-2">MEMBERS — {members.length}</div>
                                             {members.map(member => (
-                                                <li key={member.memberId} className="group list-none">
+                                                <li key={member.memberId + '-' + member.accountId} className="group list-none">
                                                     <div className="flex items-center justify-between p-2 rounded hover:bg-gray-100">
                                                         <div className="flex items-center space-x-2">
                                                             <img
@@ -338,12 +411,12 @@ export default function Chat() {
                                                         <div className="hidden group-hover:flex space-x-1">
                                                             {(() => {
                                                                 const currentUser = chatRoomMembers.find(m => m.accountId == currentUserId);
-                                                                if (currentUser && currentUser.canAdministerChannel && member.accountId != currentUserId) {
+                                                                if (currentUser && currentUser.canAdministerChannel && member.accountId == currentUserId) {
                                                                     return (
                                                                         <button
                                                                             className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
                                                                             onClick={() => handleEditMember(member)}
-                                                                            title="Edit"
+                                                                            title="Chỉnh sửa"
                                                                         >
                                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -351,19 +424,32 @@ export default function Chat() {
                                                                         </button>
                                                                     );
                                                                 }
+                                                                else if (currentUser && currentUser.canAdministerChannel && member.accountId != currentUserId) {
+                                                                    return (
+                                                                        <>
+                                                                            <button
+                                                                                className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200"
+                                                                                onClick={() => handleEditMember(member)}
+                                                                                title="Chỉnh sửa"
+                                                                            >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button
+                                                                                className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
+                                                                                onClick={() => handleKickChatRoomMembers(member.accountId)}
+                                                                                title="Xóa khỏi nhóm"
+                                                                            >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </>
+                                                                    );
+                                                                }
                                                                 return null;
                                                             })()}
-                                                            {member.accountId != currentUserId && (
-                                                                <button
-                                                                    className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200"
-                                                                    onClick={() => handleRemoveMember(member.memberId)}
-                                                                    title="Remove from group"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                    </svg>
-                                                                </button>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </li>
@@ -473,7 +559,7 @@ export default function Chat() {
                                     />
                                 )}
                                 renderOption={(props, option) => (
-                                    <li {...props} key={option.accountId}>
+                                    <li {...props} key={option.accountId + '-' + (option.email || '')}>
                                         <Avatar src={option.avatarUrl} sx={{ width: 24, height: 24, mr: 1 }} />
                                         <span className="ml-2">{option.fullName} ({option.roleName})</span>
                                     </li>

@@ -202,7 +202,7 @@ export default function MeNavbar() {
                                                         >
                                                             <div className="relative mr-3">
                                                                 <img
-                                                                    src={senderInfo?.avartarURL || "/api/placeholder/40/40"}
+                                                                    src={senderInfo?.avatarUrl || "/api/placeholder/40/40"}
                                                                     alt={senderInfo?.firstName || "User"}
                                                                     className="w-12 h-12 rounded-full"
                                                                 />
@@ -397,7 +397,7 @@ export default function MeNavbar() {
                                                             >
                                                                 <div className="relative mr-3">
                                                                     <img
-                                                                        src={senderInfo?.avartarURL || "/api/placeholder/40/40"}
+                                                                        src={senderInfo?.avatarUrl || "/api/placeholder/40/40"}
                                                                         alt={senderInfo?.firstName || "User"}
                                                                         className="w-12 h-12 rounded-full"
                                                                     />

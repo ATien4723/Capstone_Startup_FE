@@ -226,6 +226,9 @@ export default function useChat(currentUserId) {
             setSelectedUser(null);
             setSearchResults([]);
 
+            // Cập nhật lại danh sách thành viên ngay
+            fetchChatRoomMembers();
+
             toast.success("Member added to chat group");
         } catch (err) {
             console.error("Error adding member:", err);
@@ -331,30 +334,19 @@ export default function useChat(currentUserId) {
     };
 
     // Xử lý xóa thành viên khỏi phòng chat
-    const handleRemoveMember = async (memberId) => {
-        if (!selectedChannel || !memberId) return;
-
-        if (window.confirm("Are you sure you want to remove this member from the chat group?")) {
-            try {
-                // Chuẩn bị dữ liệu xóa thành viên
-                const removeData = {
-                    chatRoomId: selectedChannel,
-                    memberId: memberId
-                };
-
-                // Gọi API xóa thành viên (cần thêm API này vào startupService)
-                // await startupService.removeChatRoomMember(removeData);
-
-                // Cập nhật local state để hiển thị ngay lập tức
-                setChatRoomMembers(prev =>
-                    prev.filter(member => member.memberId !== memberId)
-                );
-
-                toast.success("Member removed from chat group");
-            } catch (err) {
-                console.error("Error removing member:", err);
-                toast.error("Failed to remove member");
-            }
+    const handleKickChatRoomMembers = async (accountId) => {
+        if (!selectedChannel || !accountId) return;
+        try {
+            await startupService.kickChatRoomMembers({
+                chatRoomId: selectedChannel,
+                requesterAccountId: currentUserId,
+                targetAccountIds: [accountId]
+            });
+            toast.success("Đã xóa thành viên khỏi nhóm chat");
+            fetchChatRoomMembers();
+        } catch (err) {
+            console.error("Lỗi khi xóa thành viên:", err);
+            toast.error("Xóa thành viên thất bại");
         }
     };
 
@@ -364,6 +356,24 @@ export default function useChat(currentUserId) {
         setEditMemberTitle(member.memberTitle || '');
         setShowEditMember(true);
     };
+
+    // // Kiểm tra quyền hiển thị nút chỉnh sửa và xóa thành viên
+    // const checkMemberActionPermission = useCallback((member) => {
+    //     const currentUser = chatRoomMembers.find(m => m.accountId == currentUserId);
+
+    //     // Nếu không phải admin hoặc không có thành viên, không hiển thị gì cả
+    //     if (!currentUser || !currentUser.canAdministerChannel) {
+    //         return { canEdit: false, canRemove: false };
+    //     }
+
+    //     // Nếu là admin và đang xem chính mình, chỉ hiển thị nút chỉnh sửa
+    //     if (member.accountId == currentUserId) {
+    //         return { canEdit: true, canRemove: false };
+    //     }
+
+    //     // Nếu là admin và đang xem người khác, hiển thị cả hai nút
+    //     return { canEdit: true, canRemove: true };
+    // }, [chatRoomMembers, currentUserId]);
 
     //tu 251 - 345
 
@@ -584,6 +594,57 @@ export default function useChat(currentUserId) {
         };
     }, []);
 
+    // Tìm kiếm tin nhắn trong chatroom
+    const searchMessagesInRoom = async (chatRoomId, searchKey, pageNumber = 1, pageSize = 10) => {
+        setLoading(true); setError(null);
+        try {
+            const res = await startupService.searchMessagesInRoom(chatRoomId, searchKey, pageNumber, pageSize);
+            return res;
+        } catch (err) {
+            setError(err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Xử lý tìm kiếm tin nhắn
+    const [searchMessageKey, setSearchMessageKey] = useState('');
+    const [isSearchingMessages, setIsSearchingMessages] = useState(false);
+
+    const handleSearchMessages = async (e) => {
+        e.preventDefault();
+        if (!searchMessageKey.trim() || !selectedChannel) return;
+
+        setIsSearchingMessages(true);
+        try {
+            const res = await searchMessagesInRoom(selectedChannel, searchMessageKey);
+            if (res && Array.isArray(res.items) && res.items.length > 0) {
+                setMessages(res.items);
+                toast.success(`Found ${res.items.length} messages`);
+            } else {
+                toast.info("No messages found");
+            }
+        } catch (err) {
+            console.error("Error searching messages:", err);
+            toast.error("Failed to search messages");
+        } finally {
+            setIsSearchingMessages(false);
+        }
+    };
+
+    // Reset search và lấy lại tin nhắn ban đầu
+    const resetMessageSearch = async () => {
+        if (!selectedChannel) return;
+        setSearchMessageKey('');
+        try {
+            const res = await getMessagesInRoom(selectedChannel);
+            setMessages(Array.isArray(res.items) ? res.items : []);
+        } catch (err) {
+            console.error("Error resetting messages:", err);
+        }
+    };
+
     return {
         // State
         channels,
@@ -607,6 +668,8 @@ export default function useChat(currentUserId) {
         selectedMember,
         editMemberTitle,
         showMembersSidebar,
+        searchMessageKey,
+        isSearchingMessages,
 
         // Actions
         setSelectedChannel,
@@ -623,6 +686,7 @@ export default function useChat(currentUserId) {
         setSelectedMember,
         setEditMemberTitle,
         setShowMembersSidebar,
+        setSearchMessageKey,
 
         // Methods
         fetchChatRooms,
@@ -643,8 +707,12 @@ export default function useChat(currentUserId) {
         handleSelectUser,
         handleDeleteChatRoom,
         handleUpdateMemberTitle,
-        handleRemoveMember,
+        handleKickChatRoomMembers,
         handleEditMember,
+        searchMessagesInRoom,
+        handleSearchMessages,
+        resetMessageSearch,
+        // checkMemberActionPermission,
 
         // SignalR methods
         connectToSignalR,

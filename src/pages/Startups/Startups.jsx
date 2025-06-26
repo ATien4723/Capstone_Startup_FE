@@ -1,17 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faFilter, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
+import { getAllStartups } from '@/apis/startupService';
 
 const Startups = () => {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('All');
     const [activeFundingStage, setActiveFundingStage] = useState('');
+    const [startups, setStartups] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchStartups = async () => {
+            try {
+                setLoading(true);
+                const response = await getAllStartups();
+                // API trả về cấu trúc { items: [...], totalCount, pageNumber, ... }
+                const data = response?.items;
+                console.log("Startups data:", data);
+                setStartups(data);
+                setLoading(false);
+            } catch (err) {
+                console.error('Error loading startups data:', err);
+                setError('Unable to load startups data. Please try again later.');
+                setLoading(false);
+                setStartups([]);
+            }
+        };
+
+        fetchStartups();
+    }, []);
 
     const toggleFilters = () => setIsFiltersOpen(!isFiltersOpen);
 
-    const categories = ['All', 'Technology', 'Healthcare', 'E-commerce', 'FinTech', 'Education', 'Sustainability', 'AI/ML'];
+    // Danh sách danh mục và giai đoạn
+    const categories = ['All', 'Technology', 'Healthcare', 'E-commerce', 'FinTech', 'Education', 'Sustainability', 'AI'];
     const fundingStages = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C+'];
 
     const categoryColors = {
@@ -21,68 +47,55 @@ const Startups = () => {
         Education: 'bg-green-500',
         'E-commerce': 'bg-red-500',
         Sustainability: 'bg-green-600',
-        'AI/ML': 'bg-purple-500',
+        AI: 'bg-purple-500',
     };
 
-    const featuredStartups = [
-        {
-            id: 1,
-            name: 'EcoTech Solutions',
-            description: 'Revolutionizing renewable energy storage with AI-powered solutions',
-            category: 'Technology',
-            image: 'https://ecotechsolutions.org/wp-content/uploads/2024/08/Ecotech-Logo.jpg',
-            fundingProgress: 75,
-            raised: '$2.5M',
-            teamSize: 15,
-            stage: 'Series A',
-            founder: { name: 'Sarah Johnson', role: 'Founder & CEO', image: '/api/placeholder/30/30' },
-        },
-        {
-            id: 2,
-            name: 'FinFlow',
-            description: 'Next-generation payment processing platform for small businesses',
-            category: 'FinTech',
-            image: 'https://finflow.in/images/logo.svg',
-            fundingProgress: 60,
-            raised: '$1.8M',
-            teamSize: 12,
-            stage: 'Seed',
-            founder: { name: 'Michael Chen', role: 'Co-founder', image: '/api/placeholder/30/30' },
-        },
-    ];
+    // Đảm bảo startups là một mảng trước khi lọc
+    const filteredStartups = Array.isArray(startups) ? startups.filter(startup => {
+        if (!startup) return false;
+        const categoryMatch = activeCategory === 'All' ||
+            (startup.categories && Array.isArray(startup.categories) && startup.categories.includes(activeCategory));
+        const stageMatch = activeFundingStage === '' || startup.stage === activeFundingStage;
+        return categoryMatch && stageMatch;
+    }) : [];
 
-    const allStartups = [
-        {
-            id: 3,
-            name: 'MedTech AI',
-            description: 'AI-powered diagnostic tools for healthcare professionals',
-            category: 'Healthcare',
-            image: 'https://media.licdn.com/dms/image/v2/D4D12AQGJVlk-Ufg7ZA/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1690444617341?e=2147483647&v=beta&t=Rx1bWyzjB5cd7lZcaOsn9UhM6fEvyUUUOABVLM-809g',
-            raised: '$3.2M',
-            teamSize: 20,
-            stage: 'Series A',
-        },
-        {
-            id: 4,
-            name: 'EduLearn',
-            description: 'Personalized learning platform for K-12 students',
-            category: 'Education',
-            image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRccNVC-fX7quSyWv7Jw7IF0aCmhe_LpVcnXA&s',
-            raised: '$800K',
-            teamSize: 8,
-            stage: 'Seed',
-        },
-        {
-            id: 5,
-            name: 'ShopSmart',
-            description: 'AI-powered personalized shopping experience',
-            category: 'E-commerce',
-            image: 'https://static.betterretailing.com/wp-content/uploads/2021/12/30101029/Shopsmart.jpg',
-            raised: '$1.5M',
-            teamSize: 12,
-            stage: 'Series A',
-        },
-    ];
+    // Chia startups thành featured và all (sử dụng status verified làm tiêu chí)
+    const featuredStartups = filteredStartups.filter(startup => startup && startup.status === "verified");
+    const allStartups = filteredStartups.filter(startup => startup && startup.status == "verified");
+
+    // Hiển thị loading hoặc error message
+    if (loading) {
+        return (
+            <div className="bg-gray-100 min-h-screen">
+                <Navbar />
+                <div className="container mx-auto pt-20 px-4 flex justify-center items-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Loading data...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-gray-100 min-h-screen">
+                <Navbar />
+                <div className="container mx-auto pt-20 px-4 flex justify-center items-center">
+                    <div className="text-center">
+                        <div className="text-red-500 text-xl mb-4">⚠️ {error}</div>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-100 min-h-screen">
@@ -91,7 +104,7 @@ const Startups = () => {
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Discover Startups</h2>
-                    <Link to="#" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center">
+                    <Link to="/create-startup" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center">
                         <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Your Startup
                     </Link>
                 </div>
@@ -112,7 +125,7 @@ const Startups = () => {
                         <div className="flex gap-3">
                             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                 <option>Sort By</option>
-                                <option>Newest First</option>
+                                <option>Newest</option>
                                 <option>Most Funded</option>
                                 <option>Most Popular</option>
                             </select>
@@ -165,155 +178,161 @@ const Startups = () => {
                 </div>
 
                 {/* Featured Startups Section */}
-                <h4 className="text-xl font-bold mb-4">Featured Startups</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    {featuredStartups.map((startup) => (
-                        <div
-                            key={startup.id}
-                            className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                        >
-                            <div className="relative h-48">
-                                <span
-                                    className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.category] || 'bg-gray-500'
-                                        }`}
+                {featuredStartups.length > 0 && (
+                    <>
+                        <h4 className="text-xl font-bold mb-4">Featured Startups</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            {featuredStartups.map((startup) => (
+                                <div
+                                    key={startup.startup_ID}
+                                    className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                                 >
-                                    {startup.category}
-                                </span>
-                                <img
-                                    src={startup.image}
-                                    // alt={`${startup.name} Image`}
-                                    className="w-full h-full object-cover rounded-t-xl"
-                                />
-                                <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
-                                    <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
-                                </div>
-                                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent text-white">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span>Funding Progress</span>
-                                        <span>{startup.fundingProgress}%</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-gray-200 rounded-full">
-                                        <div
-                                            className="h-1.5 bg-green-500 rounded-full"
-                                            style={{ width: `${startup.fundingProgress}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-4">
-                                <h5 className="text-lg font-bold">{startup.name}</h5>
-                                <p className="text-gray-600 mb-2">{startup.description}</p>
-                                <div className="flex justify-between py-3 border-t border-gray-200 mt-3">
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.raised}</div>
-                                        <div className="text-gray-600 text-sm">Raised</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.teamSize}</div>
-                                        <div className="text-gray-600 text-sm">Team Size</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.stage}</div>
-                                        <div className="text-gray-600 text-sm">Stage</div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between items-center mt-3">
-                                    <div className="flex items-center">
+                                    <div className="relative h-48">
+                                        {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
+                                            <span
+                                                className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
+                                            >
+                                                {startup.categories[0]}
+                                            </span>
+                                        )}
                                         <img
-                                            src={startup.founder.image}
-                                            alt={startup.founder.name}
-                                            className="w-8 h-8 rounded-full mr-2"
+                                            src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
+                                            alt={`${startup.startup_Name}`}
+                                            className="w-full h-full object-cover rounded-t-xl"
                                         />
-                                        <div>
-                                            <small className="block font-medium">{startup.founder.name}</small>
-                                            <small className="text-gray-600">{startup.founder.role}</small>
+                                        {startup.status === "verified" && (
+                                            <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-4">
+                                        <h5 className="text-lg font-bold">{startup.startup_Name}</h5>
+                                        <p className="text-gray-600 mb-2">{startup.description}</p>
+                                        <div className="flex justify-between py-3 border-t border-gray-200 mt-3">
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.followerCount}</div>
+                                                <div className="text-gray-600 text-sm">Followers</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.abbreviationName || 'N/A'}</div>
+                                                <div className="text-gray-600 text-sm">hehehe</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.stage || 'N/A'}</div>
+                                                <div className="text-gray-600 text-sm">Stage</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-3">
+                                            <div className="flex items-center">
+                                                <img
+                                                    src={startup.logo || 'https://via.placeholder.com/30x30?text=Logo'}
+                                                    alt={startup.startup_Name}
+                                                    className="w-8 h-8 rounded-full mr-2"
+                                                />
+                                                <div>
+                                                    <small className="block font-medium">{startup.startup_Name}</small>
+                                                    <small className="text-gray-600">{startup.email}</small>
+                                                </div>
+                                            </div>
+                                            <Link
+                                                to={`/startup-detail/${startup.startup_ID}`}
+                                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+                                            >
+                                                View Details
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                {/* All Startups Section */}
+                <h4 className="text-xl font-bold mb-4">All Startups</h4>
+                {allStartups.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-md p-8 text-center">
+                        <p className="text-gray-600">No startups match your filter criteria.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {allStartups.map((startup) => (
+                            <div
+                                key={startup.startup_ID}
+                                className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                            >
+                                <div className="relative h-48">
+                                    {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
+                                        <span
+                                            className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
+                                        >
+                                            {startup.categories[0]}
+                                        </span>
+                                    )}
+                                    <img
+                                        src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
+                                        alt={`${startup.startup_Name}`}
+                                        className="w-full h-full object-cover rounded-t-xl"
+                                    />
+                                    {startup.status === "verified" && (
+                                        <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
+                                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4">
+                                    <h5 className="text-lg font-bold">{startup.startup_Name}</h5>
+                                    <p className="text-gray-600 mb-2 line-clamp-1">{startup.description}</p>
+                                    <div className="flex justify-between py-3 border-t border-gray-200 mt-3">
+                                        <div className="text-center">
+                                            <div className="font-bold text-blue-600">{startup.followerCount}</div>
+                                            <div className="text-gray-600 text-sm">Followers</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-blue-600">{startup.abbreviationName || 'N/A'}</div>
+                                            <div className="text-gray-600 text-sm">Short Name</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-blue-600">{startup.stage || 'N/A'}</div>
+                                            <div className="text-gray-600 text-sm">Stage</div>
                                         </div>
                                     </div>
                                     <Link
-                                        to={`/startup-detail/${startup.id}`}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+                                        to={`/startup-detail/${startup.startup_ID}`}
+                                        className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all mt-3"
                                     >
                                         View Details
                                     </Link>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* All Startups Section */}
-                <h4 className="text-xl font-bold mb-4">All Startups</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {allStartups.map((startup) => (
-                        <div
-                            key={startup.id}
-                            className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                        >
-                            <div className="relative h-48">
-                                <span
-                                    className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.category] || 'bg-gray-500'
-                                        }`}
-                                >
-                                    {startup.category}
-                                </span>
-                                <img
-                                    src={startup.image}
-                                    // alt={`${startup.name} Image`}
-                                    className="w-full h-full object-cover rounded-t-xl"
-                                />
-                                <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
-                                    <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
-                                </div>
-                            </div>
-                            <div className="p-4">
-                                <h5 className="text-lg font-bold">{startup.name}</h5>
-                                <p className="text-gray-600 mb-2 line-clamp-1">{startup.description}</p>
-                                <div className="flex justify-between py-3 border-t border-gray- 200 mt-3">
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.raised}</div>
-                                        <div className="text-gray-600 text-sm">Raised</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.teamSize}</div>
-                                        <div className="text-gray-600 text-sm">Team Size</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="font-bold text-blue-600">{startup.stage}</div>
-                                        <div className="text-gray-600 text-sm">Stage</div>
-                                    </div>
-                                </div>
-                                <Link
-                                    to={`/startup-detail/${startup.id}`}
-                                    className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all mt-3"
-                                >
-                                    View Details
-                                </Link>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Pagination */}
-                <nav className="mt-8">
-                    <div className="flex justify-center space-x-2">
-                        <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed">
-                            Previous
-                        </button>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">1</button>
-                        <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                            2
-                        </button>
-                        <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                            3
-                        </button>
-                        <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                            Next
-                        </button>
-                    </div>
-                </nav>
+                {allStartups.length > 0 && (
+                    <nav className="mt-8">
+                        <div className="flex justify-center space-x-2">
+                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed">
+                                Previous
+                            </button>
+                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">1</button>
+                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
+                                2
+                            </button>
+                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
+                                3
+                            </button>
+                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
+                                Next
+                            </button>
+                        </div>
+                    </nav>
+                )}
             </div>
         </div>
     );
 };
 
-export default Startups;
+export default Startups;   

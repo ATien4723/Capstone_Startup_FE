@@ -105,16 +105,31 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
                             <p className="text-sm text-gray-700 line-clamp-2">{post.content}</p>
 
                             {post.postMedia && post.postMedia.length > 0 && (
-                                <div className="mt-1 h-20 bg-gray-200 rounded overflow-hidden">
-                                    <img
-                                        src={post.postMedia[0].url}
-                                        alt="Post media"
-                                        className="h-full w-full object-cover"
-                                        onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.style.display = 'none';
-                                        }}
-                                    />
+                                // <div className="mt-1 h-30 bg-gray-200 rounded overflow-hidden">
+                                <div className="mt-1 flex gap-2 overflow-x-auto">
+                                    {post.postMedia.map((media, idx) => {
+                                        const url = media.mediaUrl;
+                                        const isVideo = url.match(/\.(mp4|mov|webm)$/i);
+                                        return isVideo ? (
+                                            <video
+                                                key={idx}
+                                                src={url}
+                                                className="h-full w-full object-cover"
+                                                controls
+                                            />
+                                        ) : (
+                                            <img
+                                                key={idx}
+                                                src={url}
+                                                alt={`Post media ${idx + 1}`}
+                                                className="h-full w-full object-cover rounded flex-shrink-0"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.style.display = 'none';
+                                                }}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -97,17 +97,20 @@ export default function Navbar() {
         setNotificationDropdownOpen(!notificationDropdownOpen);
     };
 
-    // Lấy icon cho từng loại thông báo
+    // Hàm trả về icon phù hợp với từng loại thông báo dựa vào trường 'type' từ API
     const getNotificationIcon = (type) => {
-        switch (type) {
-            case 'COMMENT':
+        switch (type?.toLowerCase()) {
+            case 'comment':
                 return <FontAwesomeIcon icon={faCommentAlt} className="text-blue-500" />;
-            case 'SYSTEM':
+            case 'system':
                 return <FontAwesomeIcon icon={faCheck} className="text-green-500" />;
-            case 'MENTION':
+            case 'mention':
                 return <FontAwesomeIcon icon={faUser} className="text-purple-500" />;
-            case 'SHARE':
+            case 'share':
                 return <FontAwesomeIcon icon={faShare} className="text-orange-500" />;
+            case 'like':
+                // Icon cho thông báo like (có thể thay đổi icon nếu muốn)
+                return <FontAwesomeIcon icon={faBell} className="text-pink-500" />;
             default:
                 return <FontAwesomeIcon icon={faBell} className="text-gray-500" />;
         }
@@ -208,45 +211,60 @@ export default function Navbar() {
                                             </div>
                                         ) : notifications.length > 0 ? (
                                             notifications
+                                                // Nếu đang ở chế độ chỉ xem chưa đọc thì lọc ra các thông báo chưa đọc
                                                 .filter(notification => !showingUnreadOnly || !notification.isRead)
                                                 .map((notification, index) => {
-                                                    const userId = notification.accountId || notification.senderId;
+                                                    // Lấy userId từ accountId hoặc senderID (tùy API trả về)
+                                                    const userId = notification.accountId || notification.senderID;
+                                                    // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
                                                     const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
-                                                    const uniqueKey = notification.id ? `notification-${notification.id}` : `notification-index-${index}`;
+                                                    // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
+                                                    const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
                                                     return (
                                                         <div
                                                             key={uniqueKey}
                                                             className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                                                            // Khi click vào thông báo:
+                                                            // 1. Nếu chưa đọc thì đánh dấu đã đọc
+                                                            // 2. Nếu có targetURL thì chuyển hướng đến link đó
                                                             onClick={() => {
                                                                 if (!notification.isRead) {
-                                                                    const idToUse = notification.notificationId || notification.id;
-                                                                    handleMarkAsRead(idToUse);
+                                                                    handleMarkAsRead(notification.notificationId);
+                                                                }
+                                                                if (notification.targetURL) {
+                                                                    navigate(notification.targetURL);
                                                                 }
                                                             }}
                                                         >
                                                             <div className="relative mr-3">
+                                                                {/* Hiển thị avatar người gửi, ưu tiên avartarURL từ notification, nếu không có thì lấy từ senderInfo, nếu vẫn không có thì dùng placeholder */}
                                                                 <img
-                                                                    src={senderInfo?.avartarURL || "/api/placeholder/40/40"}
+                                                                    src={notification.avartarURL || senderInfo?.avartarURL || "/api/placeholder/40/40"}
                                                                     alt={senderInfo?.firstName || "User"}
                                                                     className="w-12 h-12 rounded-full"
                                                                 />
+                                                                {/* Hiển thị icon loại thông báo */}
                                                                 <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
                                                                     {getNotificationIcon(notification.type)}
                                                                 </div>
                                                             </div>
                                                             <div className="flex-1">
+                                                                {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
                                                                 <p className="text-gray-800 text-sm">
                                                                     <span className="font-semibold">
-                                                                        {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Người dùng')}
+                                                                        {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
                                                                     </span>{' '}
+                                                                    {/* Nội dung thông báo */}
                                                                     {notification.content || notification.message}
                                                                 </p>
                                                                 <div className="flex items-center mt-1">
+                                                                    {/* Thời gian gửi thông báo (dạng tương đối) */}
                                                                     <span className="text-xs text-gray-500">
-                                                                        {getRelativeTime(notification.sendAt || notification.createdAt)}
+                                                                        {getRelativeTime(notification.createdAt)}
                                                                     </span>
                                                                 </div>
                                                             </div>
+                                                            {/* Nếu thông báo chưa đọc thì hiển thị chấm tròn màu xanh */}
                                                             {!notification.isRead && (
                                                                 <div className="flex items-center">
                                                                     <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
@@ -378,7 +396,6 @@ export default function Navbar() {
                             {/* Notification */}
                             <div
                                 className="relative"
-                                ref={notificationDropdownRef}
                             >
                                 <button
                                     className="relative notification-btn"
@@ -392,7 +409,9 @@ export default function Navbar() {
 
                                 {/* Notification dropdown */}
                                 {notificationDropdownOpen && (
+
                                     <div
+                                        ref={notificationDropdownRef}
                                         className="absolute right-0 w-80 bg-white rounded-lg shadow-xl z-50"
                                         style={{ top: 'calc(100% + 8px)' }}
                                     >
@@ -435,50 +454,60 @@ export default function Navbar() {
                                                 </div>
                                             ) : notifications.length > 0 ? (
                                                 notifications
-                                                    .filter(notification => !showingUnreadOnly || !notification.isRead) // Lọc theo chưa đọc
+                                                    // Nếu đang ở chế độ chỉ xem chưa đọc thì lọc ra các thông báo chưa đọc
+                                                    .filter(notification => !showingUnreadOnly || !notification.isRead)
                                                     .map((notification, index) => {
-                                                        const userId = notification.accountId || notification.senderId;
-                                                        // Ưu tiên sử dụng thông tin người dùng đính kèm trong thông báo
+                                                        // Lấy userId từ accountId hoặc senderID (tùy API trả về)
+                                                        const userId = notification.accountId || notification.senderID;
+                                                        // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
                                                         const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
-                                                        // Sử dụng index kết hợp với ID để đảm bảo key luôn duy nhất
-                                                        const uniqueKey = notification.id ? `notification-${notification.id}` : `notification-index-${index}`;
+                                                        // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
+                                                        const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
                                                         return (
                                                             <div
                                                                 key={uniqueKey}
                                                                 className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                                                                // Khi click vào thông báo:
+                                                                // 1. Nếu chưa đọc thì đánh dấu đã đọc
+                                                                // 2. Nếu có targetURL thì chuyển hướng đến link đó
                                                                 onClick={() => {
-                                                                    console.log("Clicked notification:", notification);
-
                                                                     if (!notification.isRead) {
-                                                                        // Ưu tiên sử dụng ID đúng nếu có
-                                                                        const idToUse = notification.notificationId || notification.id;
-                                                                        handleMarkAsRead(idToUse);
+                                                                        handleMarkAsRead(notification.notificationId);
+                                                                    }
+                                                                    if (notification.targetURL) {
+                                                                        navigate(notification.targetURL);
                                                                     }
                                                                 }}
                                                             >
                                                                 <div className="relative mr-3">
+                                                                    {/* Hiển thị avatar người gửi, ưu tiên avartarURL từ notification, nếu không có thì lấy từ senderInfo, nếu vẫn không có thì dùng placeholder */}
                                                                     <img
-                                                                        src={senderInfo?.avartarURL || "/api/placeholder/40/40"}
+                                                                        src={notification.avartarURL || senderInfo?.avartarURL || "/api/placeholder/40/40"}
                                                                         alt={senderInfo?.firstName || "User"}
                                                                         className="w-12 h-12 rounded-full"
                                                                     />
+                                                                    {/* Hiển thị icon loại thông báo */}
                                                                     <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
                                                                         {getNotificationIcon(notification.type)}
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex-1">
+                                                                    {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
                                                                     <p className="text-gray-800 text-sm">
                                                                         <span className="font-semibold">
-                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Người dùng')}
+                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
                                                                         </span>{' '}
+                                                                        {/* Nội dung thông báo */}
                                                                         {notification.content || notification.message}
                                                                     </p>
                                                                     <div className="flex items-center mt-1">
+                                                                        {/* Thời gian gửi thông báo (dạng tương đối) */}
                                                                         <span className="text-xs text-gray-500">
-                                                                            {getRelativeTime(notification.sendAt || notification.createdAt)}
+                                                                            {getRelativeTime(notification.createdAt)}
                                                                         </span>
                                                                     </div>
                                                                 </div>
+                                                                {/* Nếu thông báo chưa đọc thì hiển thị chấm tròn màu xanh */}
                                                                 {!notification.isRead && (
                                                                     <div className="flex items-center">
                                                                         <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
