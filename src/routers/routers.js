@@ -18,6 +18,7 @@ const Me = lazy(() => import('@/pages/Me/Me'));
 const MeDashboard = lazy(() => import('@/pages/Me/Dashboard/Dashboard'));
 const MeChat = lazy(() => import('@/pages/Me/Chat/Chat'));
 const MePost = lazy(() => import('@/pages/Me/Post/Post'));
+const MeInternshipPost = lazy(() => import('@/pages/Me/Post/InternshipPost'));
 const MeMember = lazy(() => import('@/pages/Me/Member/Member'));
 
 const routers = [
@@ -92,6 +93,11 @@ const routers = [
     {
         path: '/me/post',
         component: MePost,
+        parent: '/me'
+    },
+    {
+        path: '/me/post/internship',
+        component: MeInternshipPost,
         parent: '/me'
     },
     {

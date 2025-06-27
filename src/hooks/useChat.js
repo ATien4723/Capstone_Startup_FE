@@ -22,6 +22,7 @@ export default function useChat(currentUserId) {
     const [searchResults, setSearchResults] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     // Thêm state cho danh sách thành viên và chỉnh sửa thành viên
     const [chatRoomMembers, setChatRoomMembers] = useState([]);
@@ -408,31 +409,37 @@ export default function useChat(currentUserId) {
     // Xử lý gửi tin nhắn
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!input.trim()) return;
-
-        // Lưu nội dung tin nhắn trước khi xóa input
-        const messageContent = input;
+        if (!input.trim() && !selectedFile) return;
 
         try {
-            // Xóa input ngay lập tức để tránh gửi lại
+            const messageContent = input;
             setInput('');
 
-            // Không cần tạo tin nhắn tạm thời nữa vì SignalR sẽ trả về tin nhắn rất nhanh
-            // Nếu tin nhắn không xuất hiện ngay, có thể thêm lại phần này
+            // Xác định loại tin nhắn dựa vào file được chọn
+            let typeMessage = "Text";
+            if (selectedFile) {
+                const fileType = selectedFile.type.split('/')[0];
+                if (fileType === 'image') {
+                    typeMessage = "Image";
+                } else if (fileType === 'video') {
+                    typeMessage = "Video";
+                } else {
+                    typeMessage = "File";
+                }
+            }
 
-            // Gửi tin nhắn lên server
-            const response = await sendMessage({
-                messageContent: messageContent,
+            await sendMessage({
+                messageContent,
                 chatRoomId: selectedChannel,
-                accountId: currentUserId
+                accountId: currentUserId,
+                typeMessage,
+                file: selectedFile
             });
 
-            console.log("Message sent successfully:", response);
-
-            // Tin nhắn sẽ được nhận lại qua SignalR trong handleReceiveMessage
+            setSelectedFile(null);
         } catch (err) {
             console.error("Error sending message:", err);
-            toast.error('Failed to send message!');
+            toast.error('Gửi tin nhắn thất bại!');
         }
     };
 
@@ -670,6 +677,7 @@ export default function useChat(currentUserId) {
         showMembersSidebar,
         searchMessageKey,
         isSearchingMessages,
+        selectedFile,
 
         // Actions
         setSelectedChannel,
@@ -687,6 +695,7 @@ export default function useChat(currentUserId) {
         setEditMemberTitle,
         setShowMembersSidebar,
         setSearchMessageKey,
+        setSelectedFile,
 
         // Methods
         fetchChatRooms,

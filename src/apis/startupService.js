@@ -64,7 +64,9 @@ export const getChatRoomsForAccount = async (accountId, pageNumber = 1, pageSize
 
 // API: Gửi message
 export const sendMessage = async (data) => {
-    const response = await axiosClient.post('/api/Startup/message', data);
+    const response = await axiosClient.post('/api/Startup/message', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response;
 };
 

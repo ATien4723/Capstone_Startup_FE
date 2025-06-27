@@ -35,6 +35,7 @@ export default function Chat() {
         showMembersSidebar,
         searchMessageKey,
         isSearchingMessages,
+        selectedFile,
 
         // Actions
         setSelectedChannel,
@@ -52,6 +53,7 @@ export default function Chat() {
         setEditMemberTitle,
         setShowMembersSidebar,
         setSearchMessageKey,
+        setSelectedFile,
 
         // Methods
         fetchChatRooms,
@@ -212,24 +214,81 @@ export default function Chat() {
                                             className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                                         />
                                     )}
-                                    <div
-                                        className={`max-w-xs px-4 py-2 rounded-lg shadow
-                                            ${isMe
-                                                ? 'bg-blue-500 text-white ml-auto'
-                                                : 'bg-gray-100 text-gray-800'
-                                            }`}
-                                        style={{ wordBreak: 'break-word' }}
-                                    >
-                                        {!isMe && (
-                                            <div className="font-semibold">
-                                                {msg.memberTitle || msg.accountId}
+
+                                    {/* Nội dung tin nhắn */}
+                                    {msg.messageType === 'Image' ? (
+                                        <div className="flex flex-col">
+                                            {!isMe && (
+                                                <div className="font-semibold mb-1 ml-1">
+                                                    {msg.memberTitle || msg.accountId}
+                                                </div>
+                                            )}
+                                            <img
+                                                src={msg.messageContent}
+                                                alt="Hình ảnh"
+                                                className="max-w-xs rounded cursor-pointer"
+                                                onClick={() => window.open(msg.messageContent, '_blank')}
+                                            />
+                                            <div className="text-xs text-gray-500 mt-1 ml-1">
+                                                {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
                                             </div>
-                                        )}
-                                        <div>{msg.messageContent}</div>
-                                        <div className="text-xs text-black-200/80">
-                                            {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
                                         </div>
-                                    </div>
+                                    ) : msg.messageType === 'Video' ? (
+                                        <div className="flex flex-col">
+                                            {!isMe && (
+                                                <div className="font-semibold mb-1 ml-1">
+                                                    {msg.memberTitle || msg.accountId}
+                                                </div>
+                                            )}
+                                            <video
+                                                src={msg.messageContent}
+                                                controls
+                                                className="max-w-xs rounded"
+                                            >
+                                                Video không được hỗ trợ
+                                            </video>
+                                            <div className="text-xs text-gray-500 mt-1 ml-1">
+                                                {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            className={`max-w-xs px-4 py-2 rounded-lg shadow
+                                                ${isMe
+                                                    ? 'bg-blue-500 text-white ml-auto'
+                                                    : 'bg-gray-100 text-gray-800'
+                                                }`}
+                                            style={{ wordBreak: 'break-word' }}
+                                        >
+                                            {!isMe && (
+                                                <div className="font-semibold">
+                                                    {msg.memberTitle || msg.accountId}
+                                                </div>
+                                            )}
+                                            <div>
+                                                {msg.messageType === "File" ? (
+                                                    <div className="flex items-center">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                        </svg>
+                                                        <a
+                                                            href={msg.messageContent}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="underline"
+                                                        >
+                                                            Tệp đính kèm
+                                                        </a>
+                                                    </div>
+                                                ) : (
+                                                    msg.messageContent
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-black-200/80">
+                                                {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -237,21 +296,52 @@ export default function Chat() {
 
                     {/* Input gửi tin nhắn */}
                     <form className="p-4 border-t border-gray-200" onSubmit={handleSendMessage}>
-                        <div className="flex">
-                            <input
-                                type="text"
-                                className="flex-1 border border-gray-300 rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="Type a message..."
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                            />
-                            <button
-                                type="submit"
-                                className="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition-all"
-                                disabled={loading}
-                            >
-                                Send
-                            </button>
+                        <div className="flex flex-col space-y-2">
+                            {selectedFile && (
+                                <div className="flex items-center bg-blue-50 p-2 rounded">
+                                    <span className="text-sm text-gray-700 flex-1 truncate">{selectedFile.name}</span>
+                                    <button
+                                        type="button"
+                                        className="text-red-500 hover:text-red-700"
+                                        onClick={() => setSelectedFile(null)}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex">
+                                <input
+                                    type="text"
+                                    className="flex-1 border border-gray-300 rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Nhập tin nhắn..."
+                                    value={input}
+                                    onChange={e => setInput(e.target.value)}
+                                />
+                                <label className="bg-gray-200 text-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-300 transition-all flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        onChange={e => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                setSelectedFile(file);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                                <button
+                                    type="submit"
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition-all"
+                                    disabled={loading}
+                                >
+                                    Gửi
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
