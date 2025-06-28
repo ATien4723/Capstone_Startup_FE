@@ -222,18 +222,30 @@ const Member = () => {
                 </h1>
                 <div className="flex space-x-3">
                     <button
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                         onClick={() => setShowAddRoleModal(true)}
                     >
                         <img src={roleSvg} alt="Edit role" className="w-5 h-5 mr-2 text-white" />
-                        Add New Role
+                        <span className="font-medium">Add New Role</span>
                     </button>
                     <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                         onClick={() => setShowAddMemberModal(true)}
                     >
                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                        Invite Member
+                        <span className="font-medium">Invite Member</span>
+                    </button>
+                    <button
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        onClick={() => {
+                            if (window.confirm('Bạn có chắc chắn muốn rời khỏi startup này?')) {
+                                // Xử lý logic rời startup ở đây
+                                toast.info('Chức năng rời startup đang được phát triển');
+                            }
+                        }}
+                    >
+                        <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
+                        <span className="font-medium">Rời Startup</span>
                     </button>
                 </div>
             </div>

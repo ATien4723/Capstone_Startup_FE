@@ -43,7 +43,7 @@ export default function MeSidebar() {
     };
 
     return (
-        <aside className="w-64 min-h-screen bg-gradient-to-b from-blue-800 to-blue-600 text-white flex flex-col fixed">
+        <aside className="w-64 min-h-screen bg-gradient-to-b from-blue-800 to-blue-600 text-white flex flex-col">
             {/* <div className="flex items-center justify-center py-6">
                 <span className="text-xl font-bold">Trang cá nhân</span>
             </div> */}
@@ -81,14 +81,17 @@ export default function MeSidebar() {
 
                                             {/* Submenu */}
                                             {isSubmenuOpen && (
-                                                <ul className="pl-10 mt-1 space-y-1">
+                                                <ul className="pl-10 mt-1 space-y-1 bg-blue-900/20 rounded-md p-2">
                                                     {item.submenu.map(subItem => {
                                                         const isSubActive = location.pathname === subItem.to;
                                                         return (
                                                             <li key={subItem.label}>
                                                                 <Link
                                                                     to={subItem.to}
-                                                                    className={`block py-2 px-4 rounded-md ${isSubActive ? "bg-blue-700 text-white" : "text-blue-100 hover:bg-blue-700 hover:text-white"}`}
+                                                                    className={`block py-2 px-4 rounded-lg transition duration-200 ${isSubActive
+                                                                        ? "bg-blue-700 text-white shadow-md"
+                                                                        : "bg-blue-900/20 text-blue-100 hover:bg-blue-600 hover:text-white"
+                                                                        }`}
                                                                 >
                                                                     {subItem.label}
                                                                 </Link>

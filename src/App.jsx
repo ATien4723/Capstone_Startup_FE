@@ -3,6 +3,8 @@ import { Suspense, useEffect } from 'react';
 import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
 import authService from '@/apis/authService';
+import { LikeProvider } from '@/contexts/LikeContext.jsx';
+
 
 function App() {
   useEffect(() => {
@@ -50,14 +52,16 @@ function App() {
   };
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Routes>
-          {renderRoutes()}
-        </Routes>
-      </Suspense>
-      <CustomToastContainer />
-    </BrowserRouter>
+    <LikeProvider>
+      <BrowserRouter>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            {renderRoutes()}
+          </Routes>
+        </Suspense>
+        <CustomToastContainer />
+      </BrowserRouter>
+    </LikeProvider>
   )
 }
 

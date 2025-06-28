@@ -86,7 +86,7 @@ export const updateMemberRole = async (data) => {
 
 // API: Xóa thành viên khỏi startup
 export const removeMemberFromStartup = async (startupId, accountId) => {
-    const response = await axiosClient.delete(`/api/Startup/kick-member?startupId=${startupId}&accountId=${accountId}`);
+    const response = await axiosClient.post(`/api/Startup/kick-member?startupId=${startupId}&accountId=${accountId}`);
     return response;
 };
 

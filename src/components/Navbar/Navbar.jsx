@@ -4,14 +4,36 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faBell, faCaretDown, faBars, faTimes, faUser,
     faCog, faEnvelope, faQuestionCircle, faHeadset, faSignOutAlt,
-    faCheck, faCommentAlt, faShare, faBuildingUser
+    faCheck, faCommentAlt, faShare, faBuildingUser, faXmark, faCheckCircle, faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
 import Cookies from "js-cookie";
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
-import { checkMembership } from '@/apis/startupService';
+import { checkMembership, getInviteById, respondToInvite } from '@/apis/startupService';
+import PostModal from '@/components/PostMedia/PostModal';
+import { toast } from 'react-hot-toast';
+
+// Hàm trả về icon phù hợp với từng loại thông báo dựa vào trường 'type' từ API
+const getNotificationIcon = (type) => {
+    switch (type?.toLowerCase()) {
+        case 'comment':
+            return <FontAwesomeIcon icon={faCommentAlt} className="text-blue-500" />;
+        case 'system':
+            return <FontAwesomeIcon icon={faCheck} className="text-green-500" />;
+        case 'mention':
+            return <FontAwesomeIcon icon={faUser} className="text-purple-500" />;
+        case 'share':
+            return <FontAwesomeIcon icon={faShare} className="text-orange-500" />;
+        case 'like':
+            return <FontAwesomeIcon icon={faBell} className="text-pink-500" />;
+        case 'invite':
+            return <FontAwesomeIcon icon={faBuildingUser} className="text-indigo-500" />;
+        default:
+            return <FontAwesomeIcon icon={faBell} className="text-gray-500" />;
+    }
+};
 
 export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -26,6 +48,13 @@ export default function Navbar() {
     const userInfo = getUserInfoFromToken();
     const { profileData } = useProfileData(currentUserId);
     const navigate = useNavigate();
+    const [openPostModal, setOpenPostModal] = useState(false);
+    const [modalPostId, setModalPostId] = useState(null);
+
+    // Thêm state cho modal lời mời startup
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteData, setInviteData] = useState(null);
+    const [processingResponse, setProcessingResponse] = useState(false);
 
     // Sử dụng custom hook cho notification
     const {
@@ -43,6 +72,11 @@ export default function Navbar() {
         toggleUnreadOnly,
         setPageNumber,
         setNotifications,
+        inviteDetails,
+        loadingInvite,
+        handleInviteNotification,
+        closeInviteModal,
+        setInviteDetails
     } = useNotifications(currentUserId, isAuthenticated);
 
     // Thêm state mobileDropdownOpen để quản lý trạng thái mở/đóng dropdown.
@@ -97,25 +131,6 @@ export default function Navbar() {
         setNotificationDropdownOpen(!notificationDropdownOpen);
     };
 
-    // Hàm trả về icon phù hợp với từng loại thông báo dựa vào trường 'type' từ API
-    const getNotificationIcon = (type) => {
-        switch (type?.toLowerCase()) {
-            case 'comment':
-                return <FontAwesomeIcon icon={faCommentAlt} className="text-blue-500" />;
-            case 'system':
-                return <FontAwesomeIcon icon={faCheck} className="text-green-500" />;
-            case 'mention':
-                return <FontAwesomeIcon icon={faUser} className="text-purple-500" />;
-            case 'share':
-                return <FontAwesomeIcon icon={faShare} className="text-orange-500" />;
-            case 'like':
-                // Icon cho thông báo like (có thể thay đổi icon nếu muốn)
-                return <FontAwesomeIcon icon={faBell} className="text-pink-500" />;
-            default:
-                return <FontAwesomeIcon icon={faBell} className="text-gray-500" />;
-        }
-    };
-
     const navItems = [
         { label: 'Home', to: '/home' },
         { label: 'My Network', to: '/mynetwork' },
@@ -147,6 +162,156 @@ export default function Navbar() {
         { label: 'Contact Support', to: '/support', icon: faHeadset },
     ];
 
+    // Hàm xử lý khi nhấp vào thông báo
+    const handleNotificationClick = async (notification) => {
+        if (!notification.isRead) {
+            handleMarkAsRead(notification.notificationId);
+        }
+
+        // Kiểm tra nếu là thông báo lời mời tham gia startup
+        if (notification.type?.toLowerCase() === 'invite') {
+            await handleInviteNotification(notification);
+            setShowInviteModal(true);
+            setNotificationDropdownOpen(false);
+        } else if (notification.targetURL && notification.targetURL.startsWith('/post/')) {
+            const postId = notification.targetURL.split('/post/')[1];
+            setModalPostId(postId);
+            setOpenPostModal(true);
+            setNotificationDropdownOpen(false);
+        } else if (notification.targetURL) {
+            navigate(notification.targetURL);
+        }
+    };
+
+    // Xử lý phản hồi lời mời
+    const handleInviteResponse = async (accept) => {
+        if (!inviteDetails || processingResponse) return;
+
+        try {
+            setProcessingResponse(true);
+
+            const responseData = {
+                inviteId: inviteDetails.inviteId,
+                response: accept ? "Approved" : "Rejected"
+            };
+
+            await respondToInvite(responseData);
+
+            // Hiển thị thông báo thành công
+            if (accept) {
+                toast.success('Bạn đã chấp nhận lời mời tham gia startup');
+                // Chuyển hướng đến trang dashboard của startup
+                navigate('/me/dashboard');
+            } else {
+                toast.info('Bạn đã từ chối lời mời tham gia startup');
+            }
+
+            // Đóng modal
+            closeInviteModal();
+
+        } catch (error) {
+            console.error('Lỗi khi phản hồi lời mời:', error);
+            toast.error('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại sau.');
+        } finally {
+            setProcessingResponse(false);
+        }
+    };
+
+    // Thay đổi phần render thông báo để sử dụng hàm handleNotificationClick
+    const renderNotification = (notification, index) => {
+        // Lấy userId từ accountId hoặc senderID (tùy API trả về)
+        const userId = notification.accountId || notification.senderID;
+        // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
+        const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
+        // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
+        const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
+
+        return (
+            <div
+                key={uniqueKey}
+                className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                onMouseDown={() => handleNotificationClick(notification)}
+            >
+                <div className="relative mr-3">
+                    {/* Hiển thị avatar người gửi, ưu tiên avartarURL từ notification, nếu không có thì lấy từ senderInfo, nếu vẫn không có thì dùng placeholder */}
+                    <img
+                        src={notification.avartarURL || senderInfo?.avartarURL || "/api/placeholder/40/40"}
+                        alt={senderInfo?.firstName || "User"}
+                        className="w-12 h-12 rounded-full"
+                    />
+                    {/* Hiển thị icon loại thông báo */}
+                    <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
+                        {getNotificationIcon(notification.type)}
+                    </div>
+                </div>
+                <div className="flex-1">
+                    {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
+                    <p className="text-gray-800 text-sm">
+                        <span className="font-semibold">
+                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
+                        </span>{' '}
+                        {/* Nội dung thông báo */}
+                        {notification.content || notification.message}
+                    </p>
+                    <div className="flex items-center mt-1">
+                        {/* Thời gian gửi thông báo (dạng tương đối) */}
+                        <span className="text-xs text-gray-500">
+                            {getRelativeTime(notification.createdAt)}
+                        </span>
+                    </div>
+                </div>
+                {/* Nếu thông báo chưa đọc thì hiển thị chấm tròn màu xanh */}
+                {!notification.isRead && (
+                    <div className="flex items-center">
+                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Cập nhật phần render thông báo trong dropdown desktop
+    const renderNotificationsDesktop = () => {
+        if (loading && pageNumber === 1) {
+            return (
+                <div className="flex justify-center items-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+            );
+        } else if (notifications.length > 0) {
+            return notifications
+                .filter(notification => !showingUnreadOnly || !notification.isRead)
+                .map((notification, index) => renderNotification(notification, index));
+        } else {
+            return (
+                <div className="text-center py-6 text-gray-500">
+                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
+                </div>
+            );
+        }
+    };
+
+    // Cập nhật phần render thông báo trong dropdown mobile
+    const renderNotificationsMobile = () => {
+        if (loading && pageNumber === 1) {
+            return (
+                <div className="flex justify-center items-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+            );
+        } else if (notifications.length > 0) {
+            return notifications
+                .filter(notification => !showingUnreadOnly || !notification.isRead)
+                .map((notification, index) => renderNotification(notification, index));
+        } else {
+            return (
+                <div className="text-center py-6 text-gray-500">
+                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
+                </div>
+            );
+        }
+    };
+
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-blue-900 to-blue-700 text-white shadow-md">
             <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -160,6 +325,7 @@ export default function Navbar() {
                         <div className="relative">
                             <button
                                 className="relative notification-btn"
+
                                 onClick={toggleNotificationDropdown}
                             >
                                 <FontAwesomeIcon icon={faBell} className="text-lg hover:text-white/80" />
@@ -205,79 +371,7 @@ export default function Navbar() {
                                         Trước đó
                                     </div>
                                     <div className="max-h-96 overflow-y-auto">
-                                        {loading && pageNumber === 1 ? (
-                                            <div className="flex justify-center items-center py-4">
-                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                                            </div>
-                                        ) : notifications.length > 0 ? (
-                                            notifications
-                                                // Nếu đang ở chế độ chỉ xem chưa đọc thì lọc ra các thông báo chưa đọc
-                                                .filter(notification => !showingUnreadOnly || !notification.isRead)
-                                                .map((notification, index) => {
-                                                    // Lấy userId từ accountId hoặc senderID (tùy API trả về)
-                                                    const userId = notification.accountId || notification.senderID;
-                                                    // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
-                                                    const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
-                                                    // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
-                                                    const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
-                                                    return (
-                                                        <div
-                                                            key={uniqueKey}
-                                                            className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
-                                                            // Khi click vào thông báo:
-                                                            // 1. Nếu chưa đọc thì đánh dấu đã đọc
-                                                            // 2. Nếu có targetURL thì chuyển hướng đến link đó
-                                                            onClick={() => {
-                                                                if (!notification.isRead) {
-                                                                    handleMarkAsRead(notification.notificationId);
-                                                                }
-                                                                if (notification.targetURL) {
-                                                                    navigate(notification.targetURL);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <div className="relative mr-3">
-                                                                {/* Hiển thị avatar người gửi, ưu tiên avartarURL từ notification, nếu không có thì lấy từ senderInfo, nếu vẫn không có thì dùng placeholder */}
-                                                                <img
-                                                                    src={notification.avartarURL || senderInfo?.avartarURL || "/api/placeholder/40/40"}
-                                                                    alt={senderInfo?.firstName || "User"}
-                                                                    className="w-12 h-12 rounded-full"
-                                                                />
-                                                                {/* Hiển thị icon loại thông báo */}
-                                                                <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
-                                                                    {getNotificationIcon(notification.type)}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
-                                                                <p className="text-gray-800 text-sm">
-                                                                    <span className="font-semibold">
-                                                                        {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
-                                                                    </span>{' '}
-                                                                    {/* Nội dung thông báo */}
-                                                                    {notification.content || notification.message}
-                                                                </p>
-                                                                <div className="flex items-center mt-1">
-                                                                    {/* Thời gian gửi thông báo (dạng tương đối) */}
-                                                                    <span className="text-xs text-gray-500">
-                                                                        {getRelativeTime(notification.createdAt)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            {/* Nếu thông báo chưa đọc thì hiển thị chấm tròn màu xanh */}
-                                                            {!notification.isRead && (
-                                                                <div className="flex items-center">
-                                                                    <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })
-                                        ) : (
-                                            <div className="text-center py-6 text-gray-500">
-                                                {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
-                                            </div>
-                                        )}
+                                        {renderNotificationsMobile()}
                                         {loading && pageNumber > 1 && (
                                             <div className="flex justify-center items-center py-4">
                                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -409,7 +503,6 @@ export default function Navbar() {
 
                                 {/* Notification dropdown */}
                                 {notificationDropdownOpen && (
-
                                     <div
                                         ref={notificationDropdownRef}
                                         className="absolute right-0 w-80 bg-white rounded-lg shadow-xl z-50"
@@ -448,86 +541,12 @@ export default function Navbar() {
                                         </div>
 
                                         <div className="max-h-96 overflow-y-auto">
-                                            {loading && pageNumber === 1 ? (
-                                                <div className="flex justify-center items-center py-4">
-                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                                                </div>
-                                            ) : notifications.length > 0 ? (
-                                                notifications
-                                                    // Nếu đang ở chế độ chỉ xem chưa đọc thì lọc ra các thông báo chưa đọc
-                                                    .filter(notification => !showingUnreadOnly || !notification.isRead)
-                                                    .map((notification, index) => {
-                                                        // Lấy userId từ accountId hoặc senderID (tùy API trả về)
-                                                        const userId = notification.accountId || notification.senderID;
-                                                        // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
-                                                        const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
-                                                        // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
-                                                        const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
-                                                        return (
-                                                            <div
-                                                                key={uniqueKey}
-                                                                className={`flex p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
-                                                                // Khi click vào thông báo:
-                                                                // 1. Nếu chưa đọc thì đánh dấu đã đọc
-                                                                // 2. Nếu có targetURL thì chuyển hướng đến link đó
-                                                                onClick={() => {
-                                                                    if (!notification.isRead) {
-                                                                        handleMarkAsRead(notification.notificationId);
-                                                                    }
-                                                                    if (notification.targetURL) {
-                                                                        navigate(notification.targetURL);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <div className="relative mr-3">
-                                                                    {/* Hiển thị avatar người gửi, ưu tiên avartarURL từ notification, nếu không có thì lấy từ senderInfo, nếu vẫn không có thì dùng placeholder */}
-                                                                    <img
-                                                                        src={notification.avartarURL || senderInfo?.avartarURL || "/api/placeholder/40/40"}
-                                                                        alt={senderInfo?.firstName || "User"}
-                                                                        className="w-12 h-12 rounded-full"
-                                                                    />
-                                                                    {/* Hiển thị icon loại thông báo */}
-                                                                    <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full border border-gray-200">
-                                                                        {getNotificationIcon(notification.type)}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
-                                                                    <p className="text-gray-800 text-sm">
-                                                                        <span className="font-semibold">
-                                                                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
-                                                                        </span>{' '}
-                                                                        {/* Nội dung thông báo */}
-                                                                        {notification.content || notification.message}
-                                                                    </p>
-                                                                    <div className="flex items-center mt-1">
-                                                                        {/* Thời gian gửi thông báo (dạng tương đối) */}
-                                                                        <span className="text-xs text-gray-500">
-                                                                            {getRelativeTime(notification.createdAt)}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                                {/* Nếu thông báo chưa đọc thì hiển thị chấm tròn màu xanh */}
-                                                                {!notification.isRead && (
-                                                                    <div className="flex items-center">
-                                                                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })
-                                            ) : (
-                                                <div className="text-center py-6 text-gray-500">
-                                                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
-                                                </div>
-                                            )}
-
+                                            {renderNotificationsDesktop()}
                                             {loading && pageNumber > 1 && (
                                                 <div className="flex justify-center items-center py-4">
                                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                                 </div>
                                             )}
-
                                             {hasMore && !loading && (
                                                 <div className="text-center py-2">
                                                     <button
@@ -658,6 +677,132 @@ export default function Navbar() {
                             Login
                         </Link>
                     )}
+                </div>
+            )}
+            {openPostModal && (
+                <PostModal
+                    postId={modalPostId}
+                    onClose={() => setOpenPostModal(false)}
+                />
+            )}
+
+            {/* Modal thông báo lời mời tham gia startup */}
+            {showInviteModal && inviteDetails && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="flex justify-between items-center pb-3 border-b">
+                                    <h3 className="text-lg font-medium text-gray-900" id="modal-title">
+                                        Lời mời tham gia startup
+                                    </h3>
+                                    <button
+                                        className="text-gray-400 hover:text-gray-500"
+                                        onClick={closeInviteModal}
+                                    >
+                                        <FontAwesomeIcon icon={faTimes} />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4">
+                                    {/* Thông tin người gửi lời mời */}
+                                    <div className="flex items-center mb-4 bg-blue-50 p-3 rounded-lg">
+                                        <div className="flex-shrink-0 h-12 w-12 rounded-full overflow-hidden">
+                                            <img
+                                                src={inviteDetails.senderAvatar || '/placeholder-avatar.png'}
+                                                alt="Người gửi"
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="ml-4">
+                                            <h4 className="text-md font-semibold text-gray-900">Người gửi lời mời</h4>
+                                            <p className="text-sm text-gray-600">{inviteDetails.senderEmail}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Thông tin người nhận */}
+                                    <div className="flex items-center mb-4 bg-gray-50 p-3 rounded-lg">
+                                        <div className="flex-shrink-0 h-12 w-12 rounded-full overflow-hidden">
+                                            <img
+                                                src={inviteDetails.receiveravatar || '/placeholder-avatar.png'}
+                                                alt="Người nhận"
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="ml-4">
+                                            <h4 className="text-md font-semibold text-gray-900">Người nhận lời mời</h4>
+                                            <p className="text-sm text-gray-600">{inviteDetails.receiverEmail}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Thông tin vai trò và startup */}
+                                    <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">Vai trò:</span>
+                                            <span className="text-sm font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                                {inviteDetails.roleName}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">ID Startup:</span>
+                                            <span className="text-sm text-gray-900">{inviteDetails.startupId}</span>
+                                        </div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+                                            <span className="text-sm font-semibold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                                                {inviteDetails.inviteStatus}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm font-medium text-gray-700">Thời gian gửi:</span>
+                                            <span className="text-sm text-gray-900">
+                                                {new Date(inviteDetails.inviteSentAt).toLocaleString('vi-VN')}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <p className="text-sm text-gray-600 mb-2">
+                                            Bạn có muốn tham gia startup này không?
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex items-center justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => handleInviteResponse(true)}
+                                    disabled={processingResponse}
+                                >
+                                    {processingResponse ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    ) : (
+                                        <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+                                    )}
+                                    Chấp nhận
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 w-full inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => handleInviteResponse(false)}
+                                    disabled={processingResponse}
+                                >
+                                    {processingResponse ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                                    ) : (
+                                        <FontAwesomeIcon icon={faTimesCircle} className="mr-2" />
+                                    )}
+                                    Từ chối
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </nav>

@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
+import PostModal from '@/components/PostMedia/PostModal';
 
 export default function MeNavbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -98,15 +99,18 @@ export default function MeNavbar() {
 
     // Lấy icon cho từng loại thông báo
     const getNotificationIcon = (type) => {
-        switch (type) {
-            case 'COMMENT':
+        switch (type?.toLowerCase()) {
+            case 'comment':
                 return <FontAwesomeIcon icon={faCommentAlt} className="text-blue-500" />;
-            case 'SYSTEM':
+            case 'system':
                 return <FontAwesomeIcon icon={faCheck} className="text-green-500" />;
-            case 'MENTION':
+            case 'mention':
                 return <FontAwesomeIcon icon={faUser} className="text-purple-500" />;
-            case 'SHARE':
+            case 'share':
                 return <FontAwesomeIcon icon={faShare} className="text-orange-500" />;
+            case 'like':
+                // Icon cho thông báo like (có thể thay đổi icon nếu muốn)
+                return <FontAwesomeIcon icon={faBell} className="text-pink-500" />;
             default:
                 return <FontAwesomeIcon icon={faBell} className="text-gray-500" />;
         }
@@ -120,6 +124,9 @@ export default function MeNavbar() {
         { label: 'Help Center', to: '/help', icon: faQuestionCircle },
         { label: 'Contact Support', to: '/support', icon: faHeadset },
     ];
+
+    const [openPostModal, setOpenPostModal] = useState(false);
+    const [modalPostId, setModalPostId] = useState(null);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-blue-900 to-blue-700 text-white shadow-md">
@@ -197,6 +204,14 @@ export default function MeNavbar() {
                                                                 if (!notification.isRead) {
                                                                     const idToUse = notification.notificationId || notification.id;
                                                                     handleMarkAsRead(idToUse);
+                                                                }
+                                                                if (notification.targetURL && notification.targetURL.startsWith('/post/')) {
+                                                                    const postId = notification.targetURL.split('/post/')[1];
+                                                                    setModalPostId(postId);
+                                                                    setOpenPostModal(true);
+                                                                    setNotificationDropdownOpen(false);
+                                                                } else if (notification.targetURL) {
+                                                                    navigate(notification.targetURL);
                                                                 }
                                                             }}
                                                         >
@@ -393,6 +408,14 @@ export default function MeNavbar() {
                                                                         const idToUse = notification.notificationId || notification.id;
                                                                         handleMarkAsRead(idToUse);
                                                                     }
+                                                                    if (notification.targetURL && notification.targetURL.startsWith('/post/')) {
+                                                                        const postId = notification.targetURL.split('/post/')[1];
+                                                                        setModalPostId(postId);
+                                                                        setOpenPostModal(true);
+                                                                        setNotificationDropdownOpen(false);
+                                                                    } else if (notification.targetURL) {
+                                                                        navigate(notification.targetURL);
+                                                                    }
                                                                 }}
                                                             >
                                                                 <div className="relative mr-3">
@@ -530,6 +553,12 @@ export default function MeNavbar() {
                     )}
                 </div>
             </div>
+            {openPostModal && (
+                <PostModal
+                    postId={modalPostId}
+                    onClose={() => setOpenPostModal(false)}
+                />
+            )}
         </nav>
     );
 }

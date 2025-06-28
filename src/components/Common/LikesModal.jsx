@@ -52,7 +52,7 @@ const LikesModal = ({ postId, isOpen, onClose }) => {
     return (
         <Modal onClose={onClose}>
             <div className="p-2">
-                <h3 className="text-xl font-semibold mb-4">People who liked this post</h3>
+                <h3 className="text-xl text-black font-semibold mb-4">People who liked this post</h3>
                 {isLoadingLikes ? (
                     <div className="flex justify-center py-4">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -60,12 +60,12 @@ const LikesModal = ({ postId, isOpen, onClose }) => {
                 ) : currentPostLikes.length > 0 ? (
                     <div className="max-h-96 overflow-y-auto">
                         {currentPostLikes.map((user) => (
-                            <div key={user.accountId} className="flex items-center gap-3 mb-3 p-2 hover:bg-gray-50">
+                            <div key={user.accountId} className="flex text-black items-center gap-3 mb-3 p-2 hover:bg-gray-50">
                                 <Link to={`/profile/${user.accountId}`}>
                                     <img
                                         src={user.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                         alt={user.fullName || "User"}
-                                        className="w-10 h-10 rounded-full object-cover"
+                                        className="w-10 h-10  rounded-full object-cover"
                                     />
                                 </Link>
                                 <div>

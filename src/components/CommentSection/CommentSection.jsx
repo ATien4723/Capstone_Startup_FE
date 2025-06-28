@@ -572,7 +572,7 @@ const CommentSection = ({
                         value={commentContent}
                         onChange={(e) => setCommentContent(e.target.value)}
                         placeholder="Thêm bình luận..."
-                        className="w-full p-2 pl-4 pr-12 border rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
+                        className="w-full p-2 pl-4 pr-12 border text-black rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
                     />
                     <button
                         onClick={handleCreateComment}

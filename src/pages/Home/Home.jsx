@@ -1,7 +1,7 @@
 import { useProfileData } from '@/hooks/useProfileHooks';
 import { useNewsFeedData } from '@/hooks/useNewsFeedData';
 import { usePostActions, useInfiniteScroll } from '@/hooks/useProfileHooks';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -18,6 +18,7 @@ import { getPostLikesByPostId } from '@/apis/postService';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
+import { LikeContext } from '@/contexts/LikeContext.jsx';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -96,6 +97,11 @@ const Home = () => {
     //         document.removeEventListener('mousedown', handleClickOutside);
     //     };
     // }, [openDropdownPostId]);
+
+    const { likeTrigger } = useContext(LikeContext);
+    useEffect(() => {
+        fetchPosts(1);
+    }, [likeTrigger]);
 
     // Render UI
     if (isLoadingProfile) {

@@ -287,3 +287,172 @@ export const getPostById = async (postId) => {
         throw error;
     }
 };
+
+// Tìm kiếm bài viết
+export const searchPosts = async (searchText, currentAccountId, pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`search-posts?searchText=${encodeURIComponent(searchText)}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi tìm kiếm bài viết:', error);
+        throw error;
+    }
+};
+
+// Lấy tất cả lý do báo cáo
+export const getAllReportReasons = async () => {
+    try {
+        const response = await axiosClient.get('report-reasons');
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách lý do báo cáo:', error);
+        throw error;
+    }
+};
+
+// Lấy lý do báo cáo theo ID
+export const getReportReasonById = async (id) => {
+    try {
+        const response = await axiosClient.get(`report-reasons/${id}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy lý do báo cáo theo ID:', error);
+        throw error;
+    }
+};
+
+// Tạo lý do báo cáo mới
+export const createReportReason = async (reasonData) => {
+    try {
+        const response = await axiosClient.post('report-reasons', reasonData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi tạo lý do báo cáo mới:', error);
+        throw error;
+    }
+};
+
+// Cập nhật lý do báo cáo
+export const updateReportReason = async (id, reasonData) => {
+    try {
+        const response = await axiosClient.put(`report-reasons/${id}`, reasonData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi cập nhật lý do báo cáo:', error);
+        throw error;
+    }
+};
+
+// Xóa lý do báo cáo
+export const deleteReportReason = async (id) => {
+    try {
+        const response = await axiosClient.delete(`report-reasons/${id}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi xóa lý do báo cáo:', error);
+        throw error;
+    }
+};
+
+// Báo cáo bài viết
+export const reportPost = async (reportData) => {
+    try {
+        const response = await axiosClient.post('post-reports', reportData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi báo cáo bài viết:', error);
+        throw error;
+    }
+};
+
+// Tạo bài đăng tuyển dụng thực tập
+export const createInternshipPost = async (internshipData) => {
+    try {
+        const response = await axiosClient.post('create-internship-post', internshipData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi tạo bài đăng tuyển dụng:', error);
+        throw error;
+    }
+};
+
+// Lấy feed của startup
+export const getStartupFeed = async (startupId, page = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`startup-feeds/${startupId}?page=${page}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy feed của startup:', error);
+        throw error;
+    }
+};
+
+// Lấy thống kê tương tác hàng ngày của startup
+export const getStartupDailyStats = async (startupId) => {
+    try {
+        const response = await axiosClient.get(`startup/${startupId}/interactions/daily`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy thống kê tương tác của startup:', error);
+        throw error;
+    }
+};
+
+// Lấy các bài viết đã lên lịch
+export const getScheduledPosts = async () => {
+    try {
+        const response = await axiosClient.get('scheduled');
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy các bài viết đã lên lịch:', error);
+        throw error;
+    }
+};
+
+// Đăng bài viết đã lên lịch
+export const publishPost = async (postId) => {
+    try {
+        const response = await axiosClient.put(`publish/${postId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi đăng bài viết đã lên lịch:', error);
+        throw error;
+    }
+};
+
+// Cập nhật trạng thái bài đăng tuyển dụng
+export const updateInternshipPostStatus = async (internshipPostId) => {
+    try {
+        const response = await axiosClient.put(`update-internshippost-status?internshipPostId=${internshipPostId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi cập nhật trạng thái bài đăng tuyển dụng:', error);
+        throw error;
+    }
+};
+
+// Nộp CV ứng tuyển
+export const applyCv = async (cvData) => {
+    try {
+        const response = await axiosClient.post('apply-cv', cvData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi nộp CV ứng tuyển:', error);
+        throw error;
+    }
+};
+
+// Lấy danh sách CV theo startup
+export const getCvsByStartup = async (startupId, page = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`candidateCv/${startupId}?page=${page}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách CV theo startup:', error);
+        throw error;
+    }
+};

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { getNotifications, getUnreadNotificationCount, markNotificationAsRead } from "@/apis/notificationService";
 import { getAccountInfo } from "@/apis/accountService";
+import { getInviteById } from "@/apis/startupService";
 import signalRService from "@/services/signalRService";
 import Cookies from "js-cookie";
 import { toast } from 'react-toastify';
@@ -15,6 +16,11 @@ export default function useNotifications(currentUserId, isAuthenticated) {
     const [userInfoMap, setUserInfoMap] = useState({});
     const [showingUnreadOnly, setShowingUnreadOnly] = useState(false);
     const notificationTimeoutRef = useRef(null);
+
+    // Thêm state cho thông báo lời mời
+    const [inviteDetails, setInviteDetails] = useState(null);
+    const [loadingInvite, setLoadingInvite] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
 
     // Kết nối SignalR khi component mount
     useEffect(() => {
@@ -38,6 +44,14 @@ export default function useNotifications(currentUserId, isAuthenticated) {
                     } else {
                         setNotifications(prev => [notification, ...prev]);
                         setUnreadCount(prev => prev + 1);
+                    }
+
+                    // Hiển thị toast thông báo đặc biệt cho lời mời startup
+                    if (notification.type?.toLowerCase() === 'invite') {
+                        toast.info('Bạn có lời mời tham gia startup mới!', {
+                            autoClose: 5000,
+                            position: 'top-right'
+                        });
                     }
                 },
                 onReceiveUnreadCount: (count) => {
@@ -101,6 +115,18 @@ export default function useNotifications(currentUserId, isAuthenticated) {
                             }
                         } catch (error) { }
                     }
+
+                    // Nếu là thông báo lời mời, thêm thông tin đặc biệt
+                    if (processedItem.type?.toLowerCase() === 'invite' && processedItem.targetURL) {
+                        processedItem.isInvite = true;
+
+                        // Lấy inviteId từ targetURL nếu có
+                        const inviteIdMatch = processedItem.targetURL.match(/\/invite\/(\d+)/);
+                        if (inviteIdMatch && inviteIdMatch[1]) {
+                            processedItem.inviteId = inviteIdMatch[1];
+                        }
+                    }
+
                     return processedItem;
                 });
                 const processedItems = await Promise.all(processedItemsPromises);
@@ -169,6 +195,31 @@ export default function useNotifications(currentUserId, isAuthenticated) {
         setShowingUnreadOnly(!showingUnreadOnly);
     };
 
+    // Xử lý khi nhấp vào thông báo lời mời
+    const handleInviteNotification = async (notification) => {
+        if (!notification || !notification.inviteId) return null;
+
+        try {
+            setLoadingInvite(true);
+            const inviteData = await getInviteById(notification.inviteId);
+            setInviteDetails(inviteData);
+            setShowInviteModal(true);
+            return inviteData;
+        } catch (error) {
+            console.error('Lỗi khi lấy thông tin lời mời:', error);
+            toast.error('Không thể lấy thông tin lời mời');
+            return null;
+        } finally {
+            setLoadingInvite(false);
+        }
+    };
+
+    // Đóng modal lời mời
+    const closeInviteModal = () => {
+        setShowInviteModal(false);
+        setInviteDetails(null);
+    };
+
     return {
         notifications,
         unreadCount,
@@ -186,5 +237,13 @@ export default function useNotifications(currentUserId, isAuthenticated) {
         toggleUnreadOnly,
         setPageNumber,
         setNotifications,
+        // Thêm các hàm và state mới cho xử lý lời mời
+        inviteDetails,
+        loadingInvite,
+        showInviteModal,
+        handleInviteNotification,
+        closeInviteModal,
+        setInviteDetails,
+        setShowInviteModal
     };
 } 

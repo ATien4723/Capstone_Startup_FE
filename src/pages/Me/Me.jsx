@@ -20,7 +20,7 @@ const Me = () => {
             <MeSidebar />
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col ml-64">
+            <div className="flex-1 flex flex-col">
                 {/* Navbar (Topbar) fixed */}
                 <div className="fixed top-0 left-64 right-0 z-30 w-[calc(100%-16rem)]">
                     <MeNavbar />
