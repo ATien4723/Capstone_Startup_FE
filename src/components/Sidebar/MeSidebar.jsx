@@ -9,7 +9,8 @@ import {
     faChartLine,
     faCog,
     faChevronDown,
-    faChevronUp
+    faChevronUp,
+    faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
 
 const meMenu = [
@@ -26,7 +27,12 @@ const meMenu = [
         ]
     },
     { label: "Member", icon: faUser, to: "/me/member" },
-    { label: "Statistics", icon: faChartLine, to: "/me/stats" },
+    {
+        label: "Quản lý dự án",
+        icon: faChartLine,
+        to: "/me/milestones",
+
+    },
     { label: "Settings", icon: faCog, to: "/me/settings" },
 ];
 

@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import InternshipDetail from "@pages/InternshipDetail/InternshipDetail";
 
 const StartupDetail = lazy(() => import('@/pages/StartupDetails/StartupDetail'));
 const Login = lazy(() => import('@/pages/Login/Login'));
@@ -20,6 +21,8 @@ const MeChat = lazy(() => import('@/pages/Me/Chat/Chat'));
 const MePost = lazy(() => import('@/pages/Me/Post/Post'));
 const MeInternshipPost = lazy(() => import('@/pages/Me/Post/InternshipPost'));
 const MeMember = lazy(() => import('@/pages/Me/Member/Member'));
+const MilestoneBoards = lazy(() => import('@/pages/Me/Milestone/MilestoneBoards'));
+const Milestone = lazy(() => import('@/pages/Me/Milestone/Milestone'));
 
 const routers = [
     {
@@ -104,6 +107,20 @@ const routers = [
         path: '/me/member',
         component: MeMember,
         parent: '/me'
-    }
+    },
+    {
+        path: '/me/milestones',
+        component: MilestoneBoards,
+        parent: '/me'
+    },
+    {
+        path: '/me/milestones/:boardId',
+        component: Milestone,
+        parent: '/me'
+    },
+    {
+        path: "/internship/:id",
+        component: InternshipDetail
+    },
 ];
 export default routers;

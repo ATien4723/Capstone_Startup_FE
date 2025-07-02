@@ -456,3 +456,25 @@ export const getCvsByStartup = async (startupId, page = 1, pageSize = 10) => {
         throw error;
     }
 };
+
+// Lấy bài viết theo ID của startup
+export const getPostsByStartupId = async (startupId, pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`GetPostsByStartupId?startupId=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy bài viết của startup:', error);
+        throw error;
+    }
+};
+
+// Lấy tất cả bài đăng tuyển dụng thực tập
+export const getAllInternshipPosts = async (startupId, pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`GetAllInternshipPosts?startupid=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách bài đăng tuyển dụng thực tập:', error);
+        throw error;
+    }
+};

@@ -197,3 +197,35 @@ export const respondToInvite = async (data) => {
     const response = await axiosClient.post('/api/Startup/invite/respond', data);
     return response;
 };
+
+// API: Lấy tất cả position requirement theo startupId
+export const getPositionRequirements = async (startupId, pageNumber = 1, pageSize = 10) => {
+    const response = await axiosClient.get('/api/Startup/position-requirment', {
+        params: { startupId, pageNumber, pageSize }
+    });
+    return response;
+};
+
+// API: Lấy position requirement theo ID
+export const getPositionRequirementById = async (id) => {
+    const response = await axiosClient.get(`/api/Startup/position-requirment/${id}`);
+    return response;
+};
+
+// API: Tạo position requirement mới
+export const createPositionRequirement = async (data) => {
+    const response = await axiosClient.post('/api/Startup/position-requirment', data);
+    return response;
+};
+
+// API: Cập nhật position requirement
+export const updatePositionRequirement = async (id, data) => {
+    const response = await axiosClient.put(`/api/Startup/position-requirment/${id}`, data);
+    return response;
+};
+
+// API: Xóa position requirement
+export const deletePositionRequirement = async (id) => {
+    const response = await axiosClient.delete(`/api/Startup/position-requirment/${id}`);
+    return response;
+};

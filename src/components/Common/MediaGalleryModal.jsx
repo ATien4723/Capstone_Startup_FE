@@ -3,7 +3,7 @@ import { useState } from 'react';
 // Modal component
 const Modal = ({ children, onClose }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="w-full h-full max-w-7xl max-h-[90vh] relative p-6 flex flex-col">
+        <div className="w-full h-full max-w-5xl max-h-[80vh] relative p-6 flex flex-col">
             <button
                 className="absolute top-4 right-4 text-3xl text-white hover:text-gray-300 z-50"
                 onClick={onClose}
