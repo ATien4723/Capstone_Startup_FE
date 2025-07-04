@@ -474,7 +474,40 @@ export const getAllInternshipPosts = async (startupId, pageNumber = 1, pageSize 
         const response = await axiosClient.get(`GetAllInternshipPosts?startupid=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi lấy danh sách bài đăng tuyển dụng thực tập:', error);
+        console.error('Lỗi khi lấy tất cả bài đăng tuyển dụng:', error);
+        throw error;
+    }
+};
+
+// Lấy chi tiết bài đăng tuyển dụng thực tập theo ID
+export const getInternshipPostDetail = async (internshipPostId) => {
+    try {
+        const response = await axiosClient.get(`internshippost/${internshipPostId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy chi tiết bài đăng tuyển dụng:', error);
+        throw error;
+    }
+};
+
+// Tìm kiếm bài viết theo startupId
+export const searchStartupPosts = async (startupId, keyword = '', pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`search-startup-posts?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi tìm kiếm bài viết của startup:', error);
+        throw error;
+    }
+};
+
+// Tìm kiếm bài đăng tuyển dụng theo startupId
+export const searchStartupInternshipPosts = async (startupId, keyword = '', pageNumber = 1, pageSize = 10) => {
+    try {
+        const response = await axiosClient.get(`search-startup-internship-post?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi tìm kiếm bài tuyển dụng của startup:', error);
         throw error;
     }
 };

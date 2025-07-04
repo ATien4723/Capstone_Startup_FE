@@ -28,7 +28,7 @@ const meMenu = [
     },
     { label: "Member", icon: faUser, to: "/me/member" },
     {
-        label: "Quản lý dự án",
+        label: "Tasks",
         icon: faChartLine,
         to: "/me/milestones",
 

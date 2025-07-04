@@ -95,7 +95,7 @@ const CommentSection = ({
         } catch (error) {
             console.error('Lỗi khi lấy bình luận:', error);
             console.error('Chi tiết lỗi:', error.response || error.message);
-            toast.error('Không thể lấy bình luận');
+            toast.error('Unable to fetch comments');
         }
     };
 
@@ -159,7 +159,7 @@ const CommentSection = ({
             }
         } catch (error) {
             console.error('Lỗi khi lấy bình luận con:', error);
-            toast.error('Không thể lấy bình luận con');
+            toast.error('Unable to fetch child comments');
         }
     };
 
@@ -190,7 +190,7 @@ const CommentSection = ({
     // Tạo bình luận mới
     const handleCreateComment = async () => {
         if (!commentContent.trim()) {
-            toast.error('Vui lòng nhập nội dung bình luận');
+            toast.error('Please enter a comment');
             return;
         }
 
@@ -205,7 +205,7 @@ const CommentSection = ({
             };
 
             await createPostComment(commentData);
-            toast.success('Đã thêm bình luận thành công');
+            toast.success('Comment added successfully');
 
             // Làm mới danh sách bình luận
             await fetchComments();
@@ -220,7 +220,7 @@ const CommentSection = ({
                 onCommentCountChange(newCommentCount);
             }
         } catch (error) {
-            toast.error('Không thể thêm bình luận');
+            toast.error('Unable to add comment');
             console.error('Lỗi khi tạo bình luận:', error);
         }
     };
@@ -230,7 +230,7 @@ const CommentSection = ({
         const replyContent = childCommentContents[`${postId}-${commentId}`];
 
         if (!replyContent || !replyContent.trim()) {
-            toast.error('Vui lòng nhập nội dung trả lời');
+            toast.error('Please enter a reply');
             return;
         }
 
@@ -245,7 +245,7 @@ const CommentSection = ({
             };
 
             await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
+            toast.success('Reply added successfully');
 
             // Làm mới danh sách bình luận con
             await fetchChildComments(commentId);
@@ -260,7 +260,7 @@ const CommentSection = ({
                 [`${postId}-${commentId}`]: ''
             }));
         } catch (error) {
-            toast.error('Không thể trả lời bình luận');
+            toast.error('Unable to reply to comment');
             console.error('Lỗi khi trả lời bình luận:', error);
         }
     };
@@ -268,13 +268,13 @@ const CommentSection = ({
     // Cập nhật bình luận
     const handleUpdateComment = async (postcommentId) => {
         if (!editContent.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
+            toast.error('Comment content cannot be empty');
             return;
         }
 
         try {
             await updatePostComment({ postcommentId: postcommentId, content: editContent });
-            toast.success('Đã cập nhật bình luận thành công');
+            toast.success('Comment updated successfully');
 
             // Kiểm tra nếu là bình luận con
             if (editingParentId) {
@@ -293,7 +293,7 @@ const CommentSection = ({
             setEditingComment(null);
             setEditContent('');
         } catch (error) {
-            toast.error('Không thể cập nhật bình luận');
+            toast.error('Unable to update comment');
             console.error('Lỗi khi cập nhật bình luận:', error);
         }
     };
@@ -302,12 +302,12 @@ const CommentSection = ({
     const handleDeleteComment = async (commentId) => {
         try {
             await deletePostComment(commentId);
-            toast.success('Đã xóa bình luận thành công');
+            toast.success('Comment deleted successfully');
 
             // Làm mới danh sách bình luận
             await fetchComments();
         } catch (error) {
-            toast.error('Không thể xóa bình luận');
+            toast.error('Unable to delete comment');
             console.error('Lỗi khi xóa bình luận:', error);
         }
     };
@@ -334,7 +334,7 @@ const CommentSection = ({
                 }));
             }
         } catch (error) {
-            toast.error('Không thể thực hiện thao tác');
+            toast.error('Unable to perform action');
             console.error('Lỗi khi like/unlike bình luận:', error);
         }
     };
@@ -358,7 +358,7 @@ const CommentSection = ({
         const replyContent = childCommentContents[`${postId}-${childCommentId}`];
 
         if (!replyContent || !replyContent.trim()) {
-            toast.error('Vui lòng nhập nội dung trả lời');
+            toast.error('Please enter a reply');
             return;
         }
 
@@ -376,7 +376,7 @@ const CommentSection = ({
             console.log('Dữ liệu gửi đi:', commentData);
 
             await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
+            toast.success('Reply added successfully');
 
             // Cập nhật lại danh sách phản hồi của bình luận con
             if (showChildReplies[childCommentId]) {
@@ -393,7 +393,7 @@ const CommentSection = ({
                 [`${postId}-${childCommentId}`]: ''
             }));
         } catch (error) {
-            toast.error('Không thể trả lời bình luận');
+            toast.error('Unable to reply to comment');
             console.error('Error replying to child comment:', error);
         }
     };
@@ -401,7 +401,7 @@ const CommentSection = ({
     // Thêm hàm mới để trả lời bình luận con nhưng gắn vào bình luận cha
     const handleReplyToChildWithParent = async (childComment, content) => {
         if (!content || !content.trim()) {
-            toast.error('Nội dung bình luận không được để trống');
+            toast.error('Comment content cannot be empty');
             return;
         }
 
@@ -429,7 +429,7 @@ const CommentSection = ({
             console.log('Dữ liệu gửi đi (gắn vào bình luận cha):', commentData);
 
             await createPostComment(commentData);
-            toast.success('Đã trả lời bình luận thành công');
+            toast.success('Reply added successfully');
 
             // Cập nhật lại danh sách bình luận con của bình luận cha
             fetchChildComments(parentCommentId);
@@ -444,7 +444,7 @@ const CommentSection = ({
                 [`${postId}-${childComment.postcommentId}`]: ''
             }));
         } catch (error) {
-            toast.error('Không thể trả lời bình luận');
+            toast.error('Unable to reply to comment');
             console.error('Error replying to child comment with parent:', error);
         }
     };
@@ -512,7 +512,7 @@ const CommentSection = ({
                 className="hover:underline flex items-center gap-1"
                 onClick={() => toggleChildReplies(childCommentId)}
             >
-                {showChildReplies[childCommentId] ? 'Ẩn phản hồi' : 'Xem phản hồi'}
+                {showChildReplies[childCommentId] ? 'Hide replies' : 'View replies'}
                 <span className="ml-1 text-gray-500 font-normal">
                     ({count})
                 </span>
@@ -535,7 +535,7 @@ const CommentSection = ({
                         onClick={() => handleUpdateComment(commentId)}
                         className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm"
                     >
-                        Lưu
+                        Save
                     </button>
                     <button
                         onClick={() => {
@@ -545,7 +545,7 @@ const CommentSection = ({
                         }}
                         className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm"
                     >
-                        Hủy
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -571,7 +571,7 @@ const CommentSection = ({
                         type="text"
                         value={commentContent}
                         onChange={(e) => setCommentContent(e.target.value)}
-                        placeholder="Thêm bình luận..."
+                        placeholder="Add a comment..."
                         className="w-full p-2 pl-4 pr-12 border text-black rounded-full focus:outline-none focus:border-blue-500 bg-gray-100"
                     />
                     <button
@@ -628,7 +628,7 @@ const CommentSection = ({
                                                     }));
                                                 }}
                                             >
-                                                Trả lời
+                                                Reply
                                             </button>
                                             {/* Hiển thị nút xem phản hồi nếu có */}
                                             {commentReplyCounts[comment.postcommentId] > 0 && (
@@ -637,8 +637,8 @@ const CommentSection = ({
                                                     onClick={() => toggleChildComments(comment.postcommentId)}
                                                 >
                                                     {showChildComments[comment.postcommentId]
-                                                        ? 'Ẩn phản hồi'
-                                                        : `Xem ${commentReplyCounts[comment.postcommentId]} phản hồi`}
+                                                        ? 'Hide replies'
+                                                        : `View ${commentReplyCounts[comment.postcommentId]} replies`}
                                                 </button>
                                             )}
                                             {/* Nút chỉnh sửa và xóa */}
@@ -682,7 +682,7 @@ const CommentSection = ({
                                                         [`${postId}-${comment.postcommentId}`]: e.target.value
                                                     }))
                                                 }
-                                                placeholder="Viết phản hồi..."
+                                                placeholder="Write a reply..."
                                                 className="w-full p-2 pl-3 pr-12 border rounded-full text-sm focus:outline-none focus:border-blue-500 bg-gray-100"
                                             />
                                             <button
@@ -743,7 +743,7 @@ const CommentSection = ({
                                                                         }));
                                                                     }}
                                                                 >
-                                                                    Trả lời
+                                                                    Reply
                                                                 </button>
                                                                 {/* Hiển thị số lượng phản hồi của bình luận con */}
                                                                 <GetChildReplyCount childCommentId={childComment.postcommentId} />
@@ -788,7 +788,7 @@ const CommentSection = ({
                                                                             [`${postId}-${childComment.postcommentId}`]: e.target.value
                                                                         }))
                                                                     }
-                                                                    placeholder="Viết phản hồi..."
+                                                                    placeholder="Write a reply..."
                                                                     className="w-full p-2 pl-3 pr-16 border rounded-full text-sm focus:outline-none focus:border-blue-500 bg-gray-100"
                                                                 />
                                                                 <button
@@ -866,7 +866,7 @@ const CommentSection = ({
                                                                 ))
                                                             ) : (
                                                                 <div className="text-center text-gray-500 py-1 text-xs">
-                                                                    Đang tải phản hồi...
+                                                                    Loading replies...
                                                                 </div>
                                                             )}
                                                         </div>
@@ -881,7 +881,7 @@ const CommentSection = ({
                     ))
                 ) : (
                     <div className="text-center text-gray-500 py-4">
-                        Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+                        No comments yet. Be the first to comment!
                     </div>
                 )}
             </div>
@@ -890,13 +890,13 @@ const CommentSection = ({
             <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-2">
                 <div>
                     <FontAwesomeIcon icon={farComment} className="mr-2" />
-                    {commentCount || comments.length} bình luận
+                    {commentCount || comments.length} comments
                 </div>
                 <button
                     onClick={onToggle}
                     className="text-blue-500 hover:underline"
                 >
-                    {isOpen ? 'Ẩn bình luận' : 'Xem bình luận'}
+                    {isOpen ? 'Hide comments' : 'View comments'}
                 </button>
             </div>
         </div>

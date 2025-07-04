@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { createInternshipPost, getAllInternshipPosts, createPost, getPostsByStartupId } from '@/apis/postService';
+import { createInternshipPost, getAllInternshipPosts, createPost, getPostsByStartupId, searchStartupInternshipPosts, searchStartupPosts } from '@/apis/postService';
 import { getUserId } from '@/apis/authService';
 
 import {
@@ -95,7 +95,7 @@ export const useStartupPost = () => {
     const [isLoadingPosts, setIsLoadingPosts] = useState(false);
     const [postsPagination, setPostsPagination] = useState({
         currentPage: 1,
-        pageSize: 10,
+        pageSize: 5,
         totalItems: 0,
         totalPages: 0
     });
@@ -105,6 +105,13 @@ export const useStartupPost = () => {
     const [newPost, setNewPost] = useState({ content: '', files: [] });
     const [postError, setPostError] = useState('');
     const [isCreatingPost, setIsCreatingPost] = useState(false);
+
+    // State cho tìm kiếm bài đăng tuyển dụng
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    // State cho tìm kiếm bài đăng thông thường
+    const [postSearchText, setPostSearchText] = useState('');
+    const [isSearchingPosts, setIsSearchingPosts] = useState(false);
 
     // Fetch startup ID của user hiện tại
     useEffect(() => {
@@ -168,6 +175,93 @@ export const useStartupPost = () => {
         } finally {
             setLoadingPosts(false);
         }
+    };
+
+    // Tìm kiếm bài đăng tuyển dụng
+    const searchInternshipPosts = async (keyword = searchKeyword) => {
+        if (!userStartupId) return;
+
+        try {
+            setLoadingPosts(true);
+            const response = await searchStartupInternshipPosts(userStartupId, keyword, 1, pagination.pageSize);
+
+            if (response && response.data && response.data.items) {
+                setInternshipPosts(response.data.items);
+                setPagination({
+                    currentPage: 1,
+                    pageSize: pagination.pageSize,
+                    totalItems: response.data.totalCount || 0,
+                    totalPages: response.data.totalPages || 1
+                });
+            } else {
+                console.error('Cấu trúc dữ liệu không như mong đợi:', response);
+                setInternshipPosts([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi tìm kiếm bài đăng tuyển dụng:', error);
+            toast.error('Không thể tìm kiếm bài đăng tuyển dụng');
+            setInternshipPosts([]);
+        } finally {
+            setLoadingPosts(false);
+        }
+    };
+
+    // Xử lý thay đổi từ khóa tìm kiếm internshipost
+    const handleInternshipPostSearchKeywordChange = (e) => {
+        const newKeyword = e.target.value;
+        setSearchKeyword(newKeyword);
+
+        // Nếu từ khóa rỗng, tự động lấy lại danh sách ban đầu
+        if (newKeyword === '') {
+            fetchInternshipPosts(userStartupId, 1, pagination.pageSize);
+        }
+    };
+
+
+    // Hàm tìm kiếm bài đăng thông thường
+    const handlePostSearch = async (e) => {
+        e.preventDefault();
+        if (!userStartupId) return;
+
+        try {
+            setIsSearchingPosts(true);
+            const response = await searchStartupPosts(userStartupId, postSearchText, 1, postsPagination.pageSize);
+
+            if (response && response.data && response.data.items) {
+                setPosts(response.data.items);
+                setPostsPagination({
+                    currentPage: 1,
+                    pageSize: postsPagination.pageSize,
+                    totalItems: response.data.totalCount || 0,
+                    totalPages: response.data.totalPages || 1
+                });
+            } else {
+                console.error('Cấu trúc dữ liệu không như mong đợi:', response);
+                setPosts([]);
+                toast.info('Không tìm thấy bài viết nào');
+            }
+        } catch (error) {
+            console.error('Lỗi khi tìm kiếm bài viết:', error);
+            toast.error('Không thể tìm kiếm bài viết');
+        } finally {
+            setIsSearchingPosts(false);
+        }
+    };
+
+    // Xử lý thay đổi từ khóa tìm kiếm bài đăng thông thường
+    const handlePostSearchTextChange = (e) => {
+        const newText = e.target.value;
+        setPostSearchText(newText);
+
+        // Nếu từ khóa rỗng, tự động lấy lại danh sách ban đầu
+        if (newText === '') {
+            fetchStartupPosts(userStartupId, 1, postsPagination.pageSize);
+        }
+    };
+    // Xử lý submit form tìm kiếm
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        searchInternshipPosts();
     };
 
     // Xử lý chuyển trang
@@ -518,6 +612,16 @@ export const useStartupPost = () => {
         newPost,
         postError,
         isCreatingPost,
+        searchKeyword,
+        setSearchKeyword,
+        handleInternshipPostSearchKeywordChange,
+        handleSearchSubmit,
+        searchInternshipPosts,
+        postSearchText,
+        setPostSearchText,
+        isSearchingPosts,
+        handlePostSearchTextChange,
+        handlePostSearch,
 
         // Setters
         setShowCreateModal,

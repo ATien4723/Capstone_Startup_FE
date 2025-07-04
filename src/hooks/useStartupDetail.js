@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount } from '@/apis/postService';
+import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount, getPostCommentCount } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
 import { getStartupIdByAccountId } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
@@ -101,6 +101,7 @@ export const useStartupDetail = () => {
                     // Chỉ lấy thông tin like cho các bài viết không phải Internship
                     if (post.postId && post.type !== 'Internship') {
                         fetchPostLikes(post.postId, currentUserId);
+                        fetchPostComments(post.postId);
                     }
                 }
             } else {
@@ -140,6 +141,18 @@ export const useStartupDetail = () => {
         }
     };
 
+    // Lấy số lượng comment của bài viết
+    const fetchPostComments = async (postId) => {
+        try {
+            // Giả sử có API getPostCommentCount từ postService
+            // Nếu chưa có, bạn cần thêm API này
+            const commentCount = await getPostCommentCount(postId);
+            setPostCommentCounts(prev => ({ ...prev, [postId]: commentCount }));
+        } catch (error) {
+            console.error('Lỗi khi lấy số lượng comment:', error);
+        }
+    };
+
     // Xử lý like bài viết
     const handleLikePost = async (postId) => {
         try {
@@ -171,7 +184,7 @@ export const useStartupDetail = () => {
             // Kích hoạt tải lại bình luận
             setRefreshCommentTrigger(prev => !prev);
         } catch (error) {
-            console.error('Lỗi khi like/unlike bài viết:', error);
+            console.error('Error liking/unliking post:', error);
             // Lấy lại thông tin like nếu có lỗi
             const currentUserId = await getUserId();
             fetchPostLikes(postId, currentUserId);

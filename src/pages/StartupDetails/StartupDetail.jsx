@@ -96,7 +96,7 @@ const StartupDetail = () => {
                                         </span>
                                     </div>
                                     <div className="text-sm text-green-600 font-medium">
-                                        Thoả thuận
+                                        Negotiable
                                     </div>
                                 </div>
                             </div>
@@ -107,23 +107,23 @@ const StartupDetail = () => {
                         <div className="mb-4 flex flex-wrap gap-2">
                             <div className="text-gray-600 flex items-center text-sm">
                                 <FontAwesomeIcon icon={faLocationDot} className="mr-1.5 text-gray-500" />
-                                Hà Nội
+                                Hanoi
                             </div>
                             <div className="text-gray-600 flex items-center text-sm ml-4">
                                 <FontAwesomeIcon icon={faClock} className="mr-1.5 text-gray-500" />
-                                1 năm
+                                1 year
                             </div>
                         </div>
 
                         <div className="mt-4 flex items-center">
                             <button className="flex items-center text-sm text-blue-600">
                                 <FontAwesomeIcon icon={faComment} className="mr-1.5" />
-                                Vì sao việc làm này phù hợp với bạn?
+                                Why is this job right for you?
                             </button>
                         </div>
 
                         <div className="text-right text-xs text-gray-500 mt-2">
-                            Đăng {formatDate(post.createdAt)}
+                            Posted {formatDate(post.createdAt)}
                         </div>
                     </div>
                 </div>
@@ -190,7 +190,7 @@ const StartupDetail = () => {
                                     onClick={handleShowLikes}
                                 />
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-black">
                                 {postCommentCounts[post.postId] > 0 && (
                                     <span>{postCommentCounts[post.postId]} comments</span>
                                 )}
@@ -447,18 +447,18 @@ const StartupDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mx-auto w-[1000px]">
                             {/* Feed Posts Section */}
                             <div className="bg-white p-6 rounded-lg shadow-md mb-6  " >
-                                <h5 className="text-xl font-semibold mb-4">Bài đăng gần đây</h5>
+                                <h5 className="text-xl font-semibold mb-4">Recent Posts</h5>
 
                                 {loadingFeed ? (
                                     <div className="text-center py-20">
                                         <div className="flex justify-center items-center">
                                             <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
                                         </div>
-                                        <p className="mt-4 text-gray-600">Đang tải bài đăng...</p>
+                                        <p className="mt-4 text-gray-600">Loading posts...</p>
                                     </div>
                                 ) : feedPosts.length === 0 ? (
                                     <div className="text-center py-20 bg-gray-50 rounded-lg">
-                                        <p className="text-gray-500">Chưa có bài đăng nào</p>
+                                        <p className="text-gray-500">No posts yet</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
@@ -469,17 +469,17 @@ const StartupDetail = () => {
                                             {isLoadingMoreFeed ? (
                                                 <div className="flex items-center space-x-2">
                                                     <FontAwesomeIcon icon={faSpinner} className="text-blue-500 animate-spin" />
-                                                    <span className="text-gray-600">Đang tải thêm...</span>
+                                                    <span className="text-gray-600">Loading more...</span>
                                                 </div>
                                             ) : hasMoreFeed ? (
                                                 <button
                                                     className="px-6 py-2 border border-blue-500 text-blue-500 rounded-full hover:bg-blue-50 transition font-medium"
                                                     onClick={loadMoreFeed}
                                                 >
-                                                    Xem thêm bài đăng
+                                                    See more posts
                                                 </button>
                                             ) : feedPosts.length > 0 ? (
-                                                <p className="text-gray-500 text-sm">Đã hiển thị tất cả bài đăng</p>
+                                                <p className="text-gray-500 text-sm">All posts shown</p>
                                             ) : null}
                                         </div>
                                     </div>
