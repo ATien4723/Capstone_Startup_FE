@@ -30,6 +30,10 @@ const routers = [
         component: StartupDetail
     },
     {
+        path: "/",
+        component: Login
+    },
+    {
         path: "/login",
         component: Login
     },

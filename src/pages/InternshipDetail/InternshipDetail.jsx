@@ -244,7 +244,7 @@ const InternshipDetail = () => {
                                 <div className="mt-6 md:mt-0 flex flex-col gap-3">
                                     <button
                                         onClick={handleApply}
-                                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                        className="bg-gradient-to-r from-green-600 to-yellow-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
                                     >
                                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
                                         Ứng tuyển ngay
