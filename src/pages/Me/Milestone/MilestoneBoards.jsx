@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEllipsisV, faPencilAlt, faTrashAlt, faChartLine, faUserPlus, faStar } from '@fortawesome/free-solid-svg-icons';
-import useTask from "../../../hooks/useTask";
+import useTask from "@/hooks/useTaskBoard";
 
 const MilestoneBoards = () => {
     const navigate = useNavigate();
