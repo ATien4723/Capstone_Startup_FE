@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEllipsisV, faPencilAlt, faTrashAlt, faChartLine, faUserPlus, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEllipsisV, faPencilAlt, faTrashAlt, faChartLine, faUserPlus, faStar, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import useTask from "@/hooks/useTaskBoard";
 
 const MilestoneBoards = () => {
@@ -24,6 +24,13 @@ const MilestoneBoards = () => {
         dropdownRefs,
         colorOptions,
 
+        // Member search states
+        memberSearchQuery,
+        searchResults,
+        isSearching,
+        selectedMembers,
+        startupMembers,
+
         // Handlers
         fetchStartupId,
         handleAddBoard,
@@ -32,16 +39,23 @@ const MilestoneBoards = () => {
         handleDeleteBoard,
         toggleDropdown,
         handleOpenAddMemberForm,
+        handleCloseAddMemberForm,
         handleAddMember,
         toggleFavorite,
         getFilteredMilestones,
         navigateToMilestoneDetail,
+        searchMembers,
 
         // State setters
         setShowNewBoardForm,
         setShowAddMemberForm,
         setBoardFormData,
-        setNewMember
+        setNewMember,
+        setMemberSearchQuery,
+        setSearchResults,
+        setIsSearching,
+        addToSelectedMembers,
+        removeFromSelectedMembers
     } = useTask();
 
     // Lấy startupId khi component mount
@@ -123,44 +137,68 @@ const MilestoneBoards = () => {
             {/* Form thêm/sửa bảng */}
             {showNewBoardForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md animate-fadeIn">
+                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl animate-fadeIn">
                         <h2 className="text-xl font-bold mb-4">
                             {editingBoard ? 'Chỉnh sửa bảng' : 'Thêm bảng mới'}
                         </h2>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-medium">Tên bảng:</label>
-                            <input
-                                type="text"
-                                value={boardFormData.title}
-                                onChange={(e) => setBoardFormData({ ...boardFormData, title: e.target.value })}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Nhập tên bảng"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-medium">Mô tả:</label>
-                            <textarea
-                                value={boardFormData.description}
-                                onChange={(e) => setBoardFormData({ ...boardFormData, description: e.target.value })}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Mô tả về bảng"
-                                rows="3"
-                            ></textarea>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-medium">Màu sắc:</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {colorOptions.map(color => (
-                                    <div
-                                        key={color.value}
-                                        className={`h-10 rounded-lg cursor-pointer border-2 ${boardFormData.color === color.value ? 'border-black shadow-inner' : 'border-transparent'} ${color.value} transition-all duration-200 hover:opacity-90`}
-                                        onClick={() => setBoardFormData({ ...boardFormData, color: color.value })}
-                                        title={color.label}
-                                    ></div>
-                                ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Tên bảng:</label>
+                                    <input
+                                        type="text"
+                                        value={boardFormData.title}
+                                        onChange={(e) => setBoardFormData({ ...boardFormData, title: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Nhập tên bảng"
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Mô tả:</label>
+                                    <textarea
+                                        value={boardFormData.description}
+                                        onChange={(e) => setBoardFormData({ ...boardFormData, description: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Mô tả về bảng"
+                                        rows="5"
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Ngày bắt đầu:</label>
+                                    <input
+                                        type="date"
+                                        value={boardFormData.startDate || ''}
+                                        onChange={(e) => setBoardFormData({ ...boardFormData, startDate: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Ngày kết thúc:</label>
+                                    <input
+                                        type="date"
+                                        value={boardFormData.endDate || ''}
+                                        onChange={(e) => setBoardFormData({ ...boardFormData, endDate: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Màu sắc:</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {colorOptions.map(color => (
+                                            <div
+                                                key={color.value}
+                                                className={`h-10 rounded-lg cursor-pointer border-2 ${boardFormData.color === color.value ? 'border-black shadow-inner' : 'border-transparent'} ${color.value} transition-all duration-200 hover:opacity-90`}
+                                                onClick={() => setBoardFormData({ ...boardFormData, color: color.value })}
+                                                title={color.label}
+                                            ></div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
                             <button
                                 className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg mr-2 hover:bg-gray-300 transition-colors"
                                 onClick={() => setShowNewBoardForm(false)}
@@ -182,29 +220,158 @@ const MilestoneBoards = () => {
             {/* Form thêm thành viên */}
             {showAddMemberForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md animate-fadeIn">
-                        <h2 className="text-xl font-bold mb-4">Thêm thành viên mới</h2>
+                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg animate-fadeIn">
+                        <h2 className="text-xl font-bold mb-4">Thêm thành viên vào dự án</h2>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-medium">Tên thành viên:</label>
-                            <input
-                                type="text"
-                                value={newMember}
-                                onChange={(e) => setNewMember(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Nhập tên thành viên"
-                            />
+                            <label className="block text-gray-700 mb-2 font-medium">Tìm kiếm người dùng:</label>
+                            <div className="relative flex">
+                                <input
+                                    type="text"
+                                    value={memberSearchQuery}
+                                    onChange={(e) => {
+                                        setMemberSearchQuery(e.target.value);
+                                        console.log("Input changed:", e.target.value);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            console.log("Search triggered by Enter key:", memberSearchQuery);
+                                            searchMembers(memberSearchQuery);
+                                        }
+                                    }}
+                                    className="w-full border border-gray-300 rounded-l-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Nhập email hoặc tên người dùng..."
+                                />
+                                {/* <button
+                                    onClick={() => searchMembers(memberSearchQuery)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-0 rounded-r-lg transition-colors"
+                                >
+                                    Tìm
+                                </button> */}
+                            </div>
                         </div>
-                        <div className="flex justify-end">
+
+                        {/* Trạng thái tìm kiếm */}
+                        {isSearching && (
+                            <div className="my-4 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-r-2 border-blue-500 mr-2"></div>
+                                <span className="text-gray-600">Đang tìm kiếm...</span>
+                            </div>
+                        )}
+
+                        {/* Thông báo không có kết quả */}
+                        {!isSearching && memberSearchQuery.trim() && searchResults.length === 0 && (
+                            <div className="my-4 text-center text-gray-500">
+                                Không tìm thấy thành viên nào phù hợp
+                            </div>
+                        )}
+
+                        {/* Kết quả tìm kiếm */}
+                        {searchResults.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="font-medium text-gray-700 mb-2">Kết quả tìm kiếm:</h3>
+                                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                                    {searchResults.map((user) => (
+                                        <div
+                                            key={user.accountId}
+                                            className="flex items-center justify-between p-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                            onClick={() => addToSelectedMembers(user)}
+                                        >
+                                            <div className="flex items-center">
+                                                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                                                    {user.fullName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                                                </div>
+                                                <div className="ml-2">
+                                                    <div className="font-medium">{user.fullName || user.email}</div>
+                                                    <div className="text-xs text-gray-500">{user.email}</div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToSelectedMembers(user);
+                                                }}
+                                            >
+                                                Thêm
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Thành viên đã chọn */}
+                        <div className="mb-4">
+                            <h3 className="font-medium text-gray-700 mb-2">Thành viên đã chọn:</h3>
+                            {selectedMembers.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedMembers.map((member) => (
+                                        <div
+                                            key={member.accountId}
+                                            className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full flex items-center gap-1.5"
+                                        >
+                                            <span className="text-sm font-medium">{member.fullName || member.email}</span>
+                                            <button
+                                                className="text-blue-700 hover:text-blue-900"
+                                                onClick={() => removeFromSelectedMembers(member.accountId)}
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic">Chưa có thành viên nào được chọn</p>
+                            )}
+                        </div>
+
+                        {/* Danh sách thành viên startup */}
+                        {startupMembers.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="font-medium text-gray-700 mb-2">Thành viên startup:</h3>
+                                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                                    {startupMembers.map((member) => (
+                                        <div
+                                            key={member.accountId}
+                                            className="flex items-center justify-between p-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                            onClick={() => addToSelectedMembers(member)}
+                                        >
+                                            <div className="flex items-center">
+                                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
+                                                    {member.fullName?.charAt(0) || member.email?.charAt(0) || 'U'}
+                                                </div>
+                                                <div className="ml-2">
+                                                    <div className="font-medium">{member.fullName}</div>
+                                                    <div className="text-xs text-gray-500">{member.email}</div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToSelectedMembers(member);
+                                                }}
+                                            >
+                                                Thêm
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
                             <button
                                 className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg mr-2 hover:bg-gray-300 transition-colors"
-                                onClick={() => setShowAddMemberForm(false)}
+                                onClick={handleCloseAddMemberForm}
                             >
                                 Hủy
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
                                 onClick={handleAddMember}
-                                disabled={loading}
+                                disabled={loading || selectedMembers.length === 0}
                             >
                                 {loading ? 'Đang xử lý...' : 'Thêm'}
                             </button>
@@ -288,7 +455,19 @@ const MilestoneBoards = () => {
                                     )}
                                 </div>
                             </div>
-                            <p className="text-gray-600 mb-4 line-clamp-2 h-12">{board.milestoneDescription || board.description}</p>
+                            <p className="text-gray-600 mb-4 line-clamp-2 h-12">{board.description || board.milestoneDescription}</p>
+
+                            {/* Hiển thị thời gian */}
+                            {(board.startDate || board.endDate) && (
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                                    <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500" />
+                                    <span>
+                                        {board.startDate && new Date(board.startDate).toLocaleDateString('vi-VN')}
+                                        {board.startDate && board.endDate && ' - '}
+                                        {board.endDate && new Date(board.endDate).toLocaleDateString('vi-VN')}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Hiển thị thành viên */}
                             <div className="flex flex-wrap items-center mb-4">

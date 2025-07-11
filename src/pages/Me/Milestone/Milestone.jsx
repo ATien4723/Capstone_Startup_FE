@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPenToSquare, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPenToSquare, faClipboardList, faExclamationCircle, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList } from '@fortawesome/free-solid-svg-icons';
 import {
     DndContext,
     DragOverlay,
@@ -302,7 +302,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                     {renderAssigneesComponent(task, teamMembers)}
                 </div>
                 <div className="flex items-center text-gray-500">
-                    <FontAwesomeIcon icon={faClock} className="mr-1.5" />
+                    <FontAwesomeIcon icon={faCalendarAlt} className="mr-1.5" />
                     <span>{task.dueDate}</span>
                 </div>
             </div>
@@ -387,7 +387,7 @@ const DroppableMilestone = ({ milestone, onAddTask, onDeleteMilestone, tasks, on
 };
 
 // Task component dành riêng cho DragOverlay
-const TaskOverlay = ({ task, teamMembers }) => {
+const TaskOverlay = ({ task, teamMembers, renderOverlayAssignees }) => {
     // Hiển thị màu ưu tiên
     const getPriorityColor = (priority) => {
         switch (priority) {
@@ -429,7 +429,7 @@ const TaskOverlay = ({ task, teamMembers }) => {
 
     // Render overlay assignees dựa trên đối tượng từ hook
     const renderOverlayAssigneesComponent = () => {
-        const assigneeData = renderAssignees(task, teamMembers);
+        const assigneeData = renderOverlayAssignees(task, teamMembers);
 
         if (assigneeData.type === 'notAssigned') {
             return (
@@ -523,6 +523,7 @@ const Milestone = () => {
         currentUser,
         commentText,
         showComments,
+        loading,
         setShowNewMilestoneForm,
         setNewMilestoneTitle,
         setNewMilestoneDescription,
@@ -551,7 +552,9 @@ const Milestone = () => {
         formatCommentTime,
         renderAssignees,
         renderOverlayAssignees,
-        setEditingTask
+        fetchTaskBoard,
+        setEditingTask,
+        setEditingTaskField
     } = useMilestone();
 
     // Thêm state để quản lý chế độ xem (kanban hoặc list)
@@ -643,9 +646,36 @@ const Milestone = () => {
         }
     };
 
-    if (!boardData) {
-        return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu bảng...</div>;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
+                    <p className="text-gray-500">Đang tải dữ liệu bảng...</p>
+                </div>
+            </div>
+        );
     }
+
+    if (!boardData) {
+        return (
+            <div className="p-8 text-center text-gray-500 flex flex-col items-center">
+                <div className="mb-4">
+                    <FontAwesomeIcon icon={faExclamationCircle} className="text-4xl text-gray-400" />
+                </div>
+                <h3 className="text-xl font-medium mb-2">Không thể tải dữ liệu bảng</h3>
+                <p className="mb-4">Không thể tải dữ liệu milestone. Vui lòng thử lại sau.</p>
+                <button
+                    onClick={handleBackToBoards}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    Quay lại danh sách bảng
+                </button>
+            </div>
+        );
+    }
+
+    const hasColumns = Object.keys(columns).length > 0;
 
     return (
         <div className="p-4">
@@ -1446,185 +1476,217 @@ const Milestone = () => {
 
             {/* Chế độ xem Kanban */}
             {viewMode === 'kanban' && (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={pointerWithin}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    modifiers={[restrictToWindowEdges]}
-                >
-                    <div className="flex overflow-x-auto pb-4 space-x-4">
-                        {Object.values(columns).map(milestone => (
-                            <DroppableMilestone
-                                key={milestone.id}
-                                milestone={milestone}
-                                onAddTask={handleAddTask}
-                                onDeleteMilestone={handleDeleteMilestone}
-                                tasks={milestone.tasks}
-                                onEditTask={handleEditTask}
-                                onDeleteTask={handleDeleteTask}
-                                onEditTaskField={handleEditTaskField}
-                                onTaskClick={handleTaskClick}
-                                teamMembers={teamMembers}
-                            />
-                        ))}
-                    </div>
+                hasColumns ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={pointerWithin}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        modifiers={[restrictToWindowEdges]}
+                    >
+                        <div className="flex overflow-x-auto pb-4 space-x-4">
+                            {Object.values(columns).map(milestone => (
+                                <DroppableMilestone
+                                    key={milestone.id}
+                                    milestone={milestone}
+                                    onAddTask={handleAddTask}
+                                    onDeleteMilestone={handleDeleteMilestone}
+                                    tasks={milestone.tasks}
+                                    onEditTask={handleEditTask}
+                                    onDeleteTask={handleDeleteTask}
+                                    onEditTaskField={handleEditTaskField}
+                                    onTaskClick={handleTaskClick}
+                                    teamMembers={teamMembers}
+                                />
+                            ))}
+                        </div>
 
-                    {/* Hiển thị overlay khi kéo task */}
-                    <DragOverlay dropAnimation={null} modifiers={[restrictToWindowEdges]}>
-                        {activeTask ? (
-                            <TaskOverlay
-                                task={activeTask}
-                                teamMembers={teamMembers}
-                            />
-                        ) : null}
-                    </DragOverlay>
-                </DndContext>
+                        {/* Hiển thị overlay khi kéo task */}
+                        <DragOverlay dropAnimation={null} modifiers={[restrictToWindowEdges]}>
+                            {activeTask ? (
+                                <TaskOverlay
+                                    task={activeTask}
+                                    teamMembers={teamMembers}
+                                    renderOverlayAssignees={renderOverlayAssignees}
+                                />
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
+                ) : (
+                    <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-md border border-gray-200 flex flex-col items-center">
+                        <div className="mb-4">
+                            <FontAwesomeIcon icon={faClipboardList} className="text-4xl text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-medium mb-2">Chưa có cột nào</h3>
+                        <p className="mb-6">Milestone này chưa có cột nào. Hãy thêm milestone để bắt đầu.</p>
+                        <button
+                            onClick={() => setShowNewMilestoneForm(true)}
+                            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow flex items-center gap-2 transition-all font-medium"
+                        >
+                            <FontAwesomeIcon icon={faPlus} className="text-sm" /> Thêm Milestone
+                        </button>
+                    </div>
+                )
             )}
 
             {/* Chế độ xem danh sách */}
             {viewMode === 'list' && (
-                <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        ID
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Tiêu đề
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Ưu tiên
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Mô tả
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Hạn hoàn thành
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Tiến độ
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Trạng thái
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Ghi chú
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Người tạo
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Người được giao
-                                    </th>
-                                    {/* <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Thao tác
-                                    </th> */}
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {getAllTasks().map((task) => (
-                                    <tr
-                                        key={task.id}
-                                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => handleTaskClick(task.milestoneId, task)}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">{task.id}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeColor(task.priority)}`}>
-                                                {getPriorityName(task.priority)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-500 max-w-[200px] truncate">{task.description}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">{task.dueDate}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                                <div
-                                                    className="h-2.5 rounded-full transition-all duration-300 ease-out"
-                                                    style={{
-                                                        width: `${task.progress || 0}%`,
-                                                        backgroundColor: task.progress >= 100 ? '#10B981' : task.progress > 50 ? '#3B82F6' : '#60A5FA'
-                                                    }}
-                                                ></div>
-                                            </div>
-                                            <div className="text-xs text-gray-600 mt-1 text-center">{task.progress || 0}%</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
-                                                {getStatusName(task.status)}
-                                            </span>
-                                            <div className="text-xs text-gray-500 mt-1">{task.columnStatus}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-500">{task.note || '-'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">{task.createdBy || '-'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center space-x-1">
-                                                {task.assignees && task.assignees.length > 0 ? (
-                                                    task.assignees.slice(0, 2).map((assigneeId, idx) => {
-                                                        const member = teamMembers.find(m => m.id === assigneeId);
-                                                        return (
-                                                            <div key={idx} className={`w-6 h-6 rounded-full ${member?.color || 'bg-gray-500'} flex items-center justify-center text-white text-xs`}>
-                                                                {member?.id.charAt(0) || assigneeId.charAt(0)}
-                                                            </div>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <span className="text-sm text-gray-500">Chưa giao</span>
-                                                )}
-                                                {task.assignees && task.assignees.length > 2 && (
-                                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
-                                                        +{task.assignees.length - 2}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        {/* Thao tác */}
-                                        {/* <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <div className="flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditTaskField(task.milestoneId, task.id, 'title');
-                                                    }}
-                                                    className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteTask(task.milestoneId, task.id);
-                                                    }}
-                                                    className="text-red-600 hover:text-red-800 transition-colors"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrashAlt} />
-                                                </button>
-                                            </div>
-                                        </td> */}
+                hasColumns ? (
+                    <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            ID
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Tiêu đề
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Ưu tiên
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Mô tả
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Hạn hoàn thành
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Tiến độ
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Trạng thái
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Ghi chú
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Người tạo
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Người được giao
+                                        </th>
+                                        {/* <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Thao tác
+                                        </th> */}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {getAllTasks().map((task) => (
+                                        <tr
+                                            key={task.id}
+                                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                            onClick={() => handleTaskClick(task.milestoneId, task)}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{task.id}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium text-gray-900">{task.title}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeColor(task.priority)}`}>
+                                                    {getPriorityName(task.priority)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-500 max-w-[200px] truncate">{task.description}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{task.dueDate}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                                    <div
+                                                        className="h-2.5 rounded-full transition-all duration-300 ease-out"
+                                                        style={{
+                                                            width: `${task.progress || 0}%`,
+                                                            backgroundColor: task.progress >= 100 ? '#10B981' : task.progress > 50 ? '#3B82F6' : '#60A5FA'
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                                <div className="text-xs text-gray-600 mt-1 text-center">{task.progress || 0}%</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                                                    {getStatusName(task.status)}
+                                                </span>
+                                                <div className="text-xs text-gray-500 mt-1">{task.columnStatus}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-500">{task.note || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{task.createdBy || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center space-x-1">
+                                                    {task.assignees && task.assignees.length > 0 ? (
+                                                        task.assignees.slice(0, 2).map((assigneeId, idx) => {
+                                                            const member = teamMembers.find(m => m.id === assigneeId);
+                                                            return (
+                                                                <div key={idx} className={`w-6 h-6 rounded-full ${member?.color || 'bg-gray-500'} flex items-center justify-center text-white text-xs`}>
+                                                                    {member?.id.charAt(0) || assigneeId.charAt(0)}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <span className="text-sm text-gray-500">Chưa giao</span>
+                                                    )}
+                                                    {task.assignees && task.assignees.length > 2 && (
+                                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
+                                                            +{task.assignees.length - 2}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            {/* <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                <div className="flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditTaskField(task.milestoneId, task.id, 'title');
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteTask(task.milestoneId, task.id);
+                                                        }}
+                                                        className="text-red-600 hover:text-red-800 transition-colors"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrashAlt} />
+                                                    </button>
+                                                </div>
+                                            </td> */}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-md border border-gray-200 flex flex-col items-center">
+                        <div className="mb-4">
+                            <FontAwesomeIcon icon={faClipboardList} className="text-4xl text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-medium mb-2">Chưa có dữ liệu</h3>
+                        <p className="mb-6">Hiện tại không có task nào. Hãy thêm milestone và task để bắt đầu.</p>
+                        <button
+                            onClick={() => setShowNewMilestoneForm(true)}
+                            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow flex items-center gap-2 transition-all font-medium"
+                        >
+                            <FontAwesomeIcon icon={faPlus} className="text-sm" /> Thêm Milestone
+                        </button>
+                    </div>
+                )
             )}
         </div>
     );
 };
 
-export default Milestone; 
+export default Milestone;

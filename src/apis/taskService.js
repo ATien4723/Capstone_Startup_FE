@@ -49,7 +49,7 @@ export const getAllMilestones = async (startupId) => {
 };
 
 // Đổi cột (status) cho task
-export const updateTaskColumn = async (data) => {
+export const changeTaskColumn = async (data) => {
     const response = await axiosClient.put('/api/Task/Change-task-column', data);
     return response;
 };

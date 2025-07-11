@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
+import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn } from "@/apis/taskService";
+import { getUserId } from "@/apis/authService";
+import { getStartupIdByAccountId } from "@/apis/startupService";
+import { toast } from "react-toastify";
 
 const useMilestone = () => {
     const { boardId } = useParams();
@@ -8,59 +12,15 @@ const useMilestone = () => {
 
     // Thiết lập state cho các dữ liệu
     const [boardData, setBoardData] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     // State cho việc hiển thị task đang được kéo
     const [activeId, setActiveId] = useState(null);
     const [activeTask, setActiveTask] = useState(null);
     const [activeContainer, setActiveContainer] = useState(null);
 
-    // Dữ liệu mẫu cho các milestone và các task bên trong
-    const [columns, setColumns] = useState({
-        'milestone-2': {
-            id: 'milestone-2',
-            title: 'Sprint 2: Phát triển Backend',
-            description: 'Xây dựng API và cơ sở dữ liệu',
-            tasks: [
-                {
-                    id: 'task-3',
-                    title: 'Thiết kế Database Schema',
-                    description: 'Tạo cấu trúc cơ sở dữ liệu cho ứng dụng',
-                    priority: 'high',
-                    assignee: 'Lê Văn C',
-                    dueDate: '2023-12-20',
-                    status: 'todo',
-                    progress: 0
-                },
-                {
-                    id: 'task-4',
-                    title: 'Xây dựng REST API',
-                    description: 'Phát triển các endpoint cho frontend',
-                    priority: 'high',
-                    assignee: 'Phạm Thị D',
-                    dueDate: '2023-12-25',
-                    status: 'inProgress',
-                    progress: 40
-                }
-            ]
-        },
-        'milestone-3': {
-            id: 'milestone-3',
-            title: 'Sprint 3: Tích hợp và Kiểm thử',
-            description: 'Kết nối frontend và backend, thực hiện kiểm thử',
-            tasks: [
-                {
-                    id: 'task-5',
-                    title: 'Tích hợp Authentication',
-                    description: 'Kết nối API đăng nhập và đăng ký',
-                    priority: 'high',
-                    assignee: 'Nguyễn Văn A',
-                    dueDate: '2024-01-05',
-                    status: 'todo',
-                    progress: 20
-                }
-            ]
-        }
-    });
+    // State cho dữ liệu columns và tasks
+    const [columns, setColumns] = useState({});
 
     // Dữ liệu mẫu cho các bảng dự án
     const mockBoardsData = {
@@ -148,28 +108,155 @@ const useMilestone = () => {
         { id: 'ff', name: 'ff', color: 'bg-purple-600' }
     ]);
 
+    // Hàm chuyển đổi dữ liệu API sang định dạng cần thiết
+    const mapApiDataToColumns = (data) => {
+        const columnsData = {};
+
+        if (data && Array.isArray(data)) {
+            data.forEach(column => {
+                const tasks = column.tasks ? column.tasks.map(task => ({
+                    id: `task-${task.taskId}`,
+                    taskId: task.taskId,
+                    title: task.title || 'Chưa có tiêu đề',
+                    description: task.description || '',
+                    priority: task.priority?.toLowerCase() || 'medium',
+                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+                    status: task.status || 'todo',
+                    progress: task.progress || 0,
+                    avatarURL: task.avatarURL || [],
+                    assignees: task.assignees || [] // Nếu API trả về assignees, sử dụng nó
+                })) : [];
+
+                columnsData[`milestone-${column.columnStatusId}`] = {
+                    id: `milestone-${column.columnStatusId}`,
+                    columnId: column.columnStatusId,
+                    title: column.columnName || 'Không có tên',
+                    description: column.description || '',
+                    sortOrder: column.sortOrder || 0,
+                    tasks: tasks
+                };
+            });
+        } else {
+            console.error('Data từ API không phải là một mảng:', data);
+        }
+
+        return columnsData;
+    };
+
+    // Lấy dữ liệu task board từ API
+    const fetchTaskBoard = async (milestoneId) => {
+        if (!milestoneId) {
+            console.error('Không có milestoneId');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await getTaskBoard(milestoneId);
+            console.log('API Response:', response);
+
+            if (response && Array.isArray(response)) {
+                console.log('Response data structure:', JSON.stringify(response.data));
+                const columnsData = mapApiDataToColumns(response);
+                setColumns(columnsData);
+            } else {
+                console.error('Response structure is invalid:', response);
+                toast.error('Không thể lấy dữ liệu task board');
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu task board:', error);
+            toast.error('Có lỗi xảy ra khi tải dữ liệu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Lấy dữ liệu của bảng dựa vào boardId
     useEffect(() => {
         if (boardId) {
-            try {
-                // Lấy dữ liệu từ localStorage nếu có
-                const savedBoardData = localStorage.getItem('currentBoardData');
-                if (savedBoardData) {
-                    setBoardData(JSON.parse(savedBoardData));
-                } else {
-                    // Nếu không có dữ liệu trong localStorage, sử dụng mock data
-                    setBoardData(mockBoardsData[boardId]);
-                }
+            setLoading(true);
 
-                // Lấy dữ liệu columns từ localStorage nếu có
-                const savedColumns = localStorage.getItem('currentMilestoneColumns');
-                if (savedColumns) {
-                    setColumns(JSON.parse(savedColumns));
-                }
-            } catch (error) {
-                console.error('Lỗi khi lấy dữ liệu từ localStorage:', error);
-                // Fallback to mockData
-                setBoardData(mockBoardsData[boardId]);
+            // Đầu tiên, kiểm tra xem có dữ liệu board trong localStorage không
+            const savedBoardData = localStorage.getItem(`milestone_${boardId}`);
+
+            if (savedBoardData) {
+                // Nếu có, sử dụng dữ liệu từ localStorage
+                const parsedData = JSON.parse(savedBoardData);
+                setBoardData(parsedData);
+
+                // Vẫn gọi fetchTaskBoard để lấy dữ liệu columns và tasks
+                fetchTaskBoard(boardId).finally(() => {
+                    setLoading(false);
+                });
+            } else {
+                // Nếu không có trong localStorage, thử lấy từ API getAllMilestones
+                const fetchData = async () => {
+                    try {
+                        // Lấy userId và startupId
+                        const userId = await getUserId();
+                        if (!userId) {
+                            throw new Error('Không thể xác định người dùng');
+                        }
+
+                        const startupId = await getStartupIdByAccountId(userId);
+                        if (!startupId) {
+                            throw new Error('Không thể xác định startup');
+                        }
+
+                        // Lấy tất cả milestones
+                        const milestonesResponse = await getAllMilestones(startupId);
+
+                        // Tìm milestone hiện tại theo boardId
+                        const currentMilestone = milestonesResponse.find(
+                            milestone => milestone.milestoneId == boardId
+                        );
+
+                        if (currentMilestone) {
+                            // Tạo boardData từ milestone tìm được
+                            const boardInfo = {
+                                id: currentMilestone.milestoneId,
+                                title: currentMilestone.name || 'Task Board',
+                                description: currentMilestone.description || '',
+                                color: currentMilestone.color || 'bg-blue-500'
+                            };
+
+                            // Lưu vào state và localStorage
+                            setBoardData(boardInfo);
+                            localStorage.setItem(`milestone_${boardId}`, JSON.stringify(boardInfo));
+                        } else {
+                            // Nếu không tìm thấy, sử dụng mock data
+                            setBoardData(mockBoardsData[boardId] || {
+                                id: boardId,
+                                title: 'Task Board',
+                                description: '',
+                                color: 'bg-blue-500'
+                            });
+                        }
+
+                        // Gọi fetchTaskBoard để lấy columns và tasks
+                        await fetchTaskBoard(boardId);
+                    } catch (error) {
+                        console.error('Lỗi khi lấy dữ liệu từ API:', error);
+
+                        // Sử dụng mock data nếu không lấy được từ API
+                        setBoardData(mockBoardsData[boardId] || {
+                            id: boardId,
+                            title: 'Task Board',
+                            description: '',
+                            color: 'bg-blue-500'
+                        });
+
+                        // Lấy columns từ localStorage nếu có
+                        const savedColumns = localStorage.getItem('currentMilestoneColumns');
+                        if (savedColumns) {
+                            setColumns(JSON.parse(savedColumns));
+                        }
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                fetchData();
             }
         }
     }, [boardId]);
@@ -262,7 +349,7 @@ const useMilestone = () => {
     };
 
     // Xử lý di chuyển task giữa các milestone
-    const handleCrossMilestoneMovement = (taskId, sourceMilestoneId, targetMilestoneId) => {
+    const handleCrossMilestoneMovement = async (taskId, sourceMilestoneId, targetMilestoneId) => {
         console.log(`Moving task between milestones: ${sourceMilestoneId} -> ${targetMilestoneId}`);
 
         const sourceColumn = columns[sourceMilestoneId];
@@ -300,6 +387,39 @@ const useMilestone = () => {
 
         console.log('Updated columns for cross-milestone move:', newColumns);
         setColumns(newColumns);
+
+        // Gọi API để thay đổi cột của task
+        try {
+            // Lấy taskId thực tế (số nguyên) từ taskToMove.taskId
+            const actualTaskId = taskToMove.taskId;
+
+            // Lấy columnStatusId từ destColumn
+            // columnId hoặc columnStatusId tùy vào cấu trúc dữ liệu
+            const targetColumnStatusId = destColumn.columnId || parseInt(targetMilestoneId.split('-')[1]);
+
+            if (!actualTaskId || !targetColumnStatusId) {
+                console.error('Thiếu thông tin để gọi API:', { actualTaskId, targetColumnStatusId, taskToMove, destColumn });
+                return;
+            }
+
+            const apiData = {
+                taskId: actualTaskId,
+                newColumnStatusId: targetColumnStatusId
+            };
+
+            console.log('Calling changeTaskColumn API with data:', apiData);
+            const response = await changeTaskColumn(apiData);
+
+            console.log('API Response for changeTaskColumn:', response);
+            // if (response.success) {
+            //     toast.success('Đã di chuyển task thành công!');
+            // } else {
+            //     toast.error('Có lỗi xảy ra khi di chuyển task.');
+            // }
+        } catch (error) {
+            console.error('Lỗi khi gọi API changeTaskColumn:', error);
+            toast.error('Có lỗi xảy ra khi di chuyển task.');
+        }
     };
 
     // Xử lý sắp xếp lại trong cùng milestone
@@ -713,7 +833,8 @@ const useMilestone = () => {
 
     // Render danh sách thành viên được giao
     const renderAssignees = (task, teamMembers) => {
-        if (!task.assignees || task.assignees.length === 0) {
+        // Sử dụng asignTo thay vì assignees để phù hợp với API
+        if (!task.asignTo || task.asignTo.length === 0) {
             return {
                 type: 'notAssigned',
                 content: 'Chưa giao'
@@ -721,10 +842,14 @@ const useMilestone = () => {
         }
 
         // Nếu chỉ có 1 thành viên
-        if (task.assignees.length === 1) {
-            const memberId = task.assignees[0];
-            const member = teamMembers.find(m => m.id === memberId);
 
+        // if (task.assignees.length === 1) {
+        //     const memberId = task.assignees[0];
+        //     const member = teamMembers.find(m => m.id === memberId);
+
+        if (task.asignTo.length === 1) {
+            const avatarUrl = task.asignTo[0];
+            // Sử dụng URL hình ảnh trực tiếp thay vì tìm trong teamMembers
             return {
                 type: 'singleMember',
                 memberId: member?.id || memberId.charAt(0),
@@ -798,6 +923,7 @@ const useMilestone = () => {
         currentUser,
         commentText,
         showComments,
+        loading,
 
         // State setters
         setShowNewMilestoneForm,
@@ -810,6 +936,7 @@ const useMilestone = () => {
         setCommentText,
         setShowComments,
         setEditingTask,
+        setEditingTaskField,
 
         // Handlers
         handleBackToBoards,
@@ -828,6 +955,7 @@ const useMilestone = () => {
         handleRemoveMember,
         handleAddComment,
         handleDeleteComment,
+        fetchTaskBoard,
 
         // Utils
         formatCommentTime,

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getUserId } from '@/apis/authService';
-import { getStartupIdByAccountId } from '@/apis/startupService';
+import { getStartupIdByAccountId, searchAccountByEmail, getStartupMembers } from '@/apis/startupService';
 import {
     createMilestone,
     addMembersToMilestone,
@@ -10,120 +10,7 @@ import {
     createTask,
     getTaskBoard,
     getAllMilestones,
-    updateTaskColumn
 } from '@/apis/taskService';
-
-// Dữ liệu mẫu từ Milestone.jsx
-const mockMilestoneData = {
-    // Dữ liệu mẫu cho các milestone và các task bên trong
-    columns: {
-        'milestone-1': {
-            id: 'milestone-1',
-            title: 'Sprint 1: Thiết kế UI/UX',
-            description: 'Hoàn thành thiết kế giao diện người dùng',
-            tasks: [
-                {
-                    id: 'task-1',
-                    title: 'Thiết kế Dashboard',
-                    description: 'Tạo wireframe và mockup cho dashboard',
-                    priority: 'high',
-                    assignee: 'Nguyễn Văn A',
-                    dueDate: '2023-12-15',
-                    status: 'inProgress'
-                },
-                {
-                    id: 'task-2',
-                    title: 'Thiết kế trang Profile',
-                    description: 'Tạo UI cho trang hồ sơ cá nhân',
-                    priority: 'medium',
-                    assignee: 'Trần Thị B',
-                    dueDate: '2023-12-10',
-                    status: 'done'
-                }
-            ]
-        },
-        'milestone-2': {
-            id: 'milestone-2',
-            title: 'Sprint 2: Phát triển Backend',
-            description: 'Xây dựng API và cơ sở dữ liệu',
-            tasks: [
-                {
-                    id: 'task-3',
-                    title: 'Thiết kế Database Schema',
-                    description: 'Tạo cấu trúc cơ sở dữ liệu cho ứng dụng',
-                    priority: 'high',
-                    assignee: 'Lê Văn C',
-                    dueDate: '2023-12-20',
-                    status: 'todo'
-                },
-                {
-                    id: 'task-4',
-                    title: 'Xây dựng REST API',
-                    description: 'Phát triển các endpoint cho frontend',
-                    priority: 'high',
-                    assignee: 'Phạm Thị D',
-                    dueDate: '2023-12-25',
-                    status: 'inProgress'
-                }
-            ]
-        },
-        'milestone-3': {
-            id: 'milestone-3',
-            title: 'Sprint 3: Tích hợp và Kiểm thử',
-            description: 'Kết nối frontend và backend, thực hiện kiểm thử',
-            tasks: [
-                {
-                    id: 'task-5',
-                    title: 'Tích hợp Authentication',
-                    description: 'Kết nối API đăng nhập và đăng ký',
-                    priority: 'high',
-                    assignee: 'Nguyễn Văn A',
-                    dueDate: '2024-01-05',
-                    status: 'todo'
-                }
-            ]
-        }
-    },
-    // Dữ liệu mẫu cho các bảng dự án
-    boardData: {
-        'board-1': {
-            id: 'board-1',
-            title: 'Phát triển ứng dụng di động',
-            description: 'Ứng dụng iOS và Android cho startup',
-            color: 'bg-blue-500',
-            tasks: 12,
-            members: ['NVA', 'TTB', 'LVC'],
-            progress: 45
-        },
-        'board-2': {
-            id: 'board-2',
-            title: 'Phát triển website',
-            description: 'Website chính thức của công ty',
-            color: 'bg-green-500',
-            tasks: 8,
-            members: ['NVA', 'PQR'],
-            progress: 60
-        },
-        'board-3': {
-            id: 'board-3',
-            title: 'Marketing Campaign Q4',
-            description: 'Chiến dịch quảng cáo quý 4/2023',
-            color: 'bg-purple-500',
-            tasks: 15,
-            members: ['TTB', 'LVC', 'XYZ'],
-            progress: 30
-        },
-        'board-4': {
-            id: 'board-4',
-            title: 'Phát triển sản phẩm mới',
-            description: 'Nghiên cứu và phát triển sản phẩm v2.0',
-            color: 'bg-amber-500',
-            tasks: 20,
-            members: ['NVA', 'TTB', 'LVC', 'PQR'],
-            progress: 15
-        }
-    }
-};
 
 const useTask = () => {
     const [loading, setLoading] = useState(false);
@@ -139,6 +26,8 @@ const useTask = () => {
     const [boardFormData, setBoardFormData] = useState({
         title: '',
         description: '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
         color: 'bg-blue-500'
     });
     const [searchQuery, setSearchQuery] = useState('');
@@ -148,6 +37,13 @@ const useTask = () => {
     const [newMember, setNewMember] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const dropdownRefs = useRef({});
+
+    // State cho tìm kiếm và thêm thành viên
+    const [memberSearchQuery, setMemberSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedMembers, setSelectedMembers] = useState([]);
+    const [startupMembers, setStartupMembers] = useState([]);
 
     // Danh sách màu sắc để chọn
     const colorOptions = [
@@ -162,12 +58,26 @@ const useTask = () => {
         { value: 'bg-teal-500', label: 'Xanh lục lam' }
     ];
 
-    // Hàm để lưu dữ liệu mẫu vào localStorage khi người dùng nhấp vào một milestone
+    // Hàm để lưu dữ liệu milestone vào localStorage khi người dùng nhấp vào một milestone
     const navigateToMilestoneDetail = (boardId) => {
         try {
-            // Lưu dữ liệu mẫu từ mockMilestoneData vào localStorage
-            localStorage.setItem('currentBoardData', JSON.stringify(mockMilestoneData.boardData[boardId] || mockMilestoneData.boardData['board-1']));
-            localStorage.setItem('currentMilestoneColumns', JSON.stringify(mockMilestoneData.columns));
+            // Tìm milestone tương ứng từ danh sách đã fetch được
+            const milestone = milestones.find(m => m.milestoneId == boardId);
+
+            if (milestone) {
+                // Tạo dữ liệu board từ milestone
+                const boardInfo = {
+                    id: milestone.milestoneId,
+                    title: milestone.name || 'Task Board',
+                    description: milestone.description || '',
+                    color: milestone.color || 'bg-blue-500'
+                };
+
+                // Lưu vào localStorage để sử dụng trong useMilestone
+                localStorage.setItem(`milestone_${boardId}`, JSON.stringify(boardInfo));
+            }
+
+            // Trả về đường dẫn đến trang chi tiết
             return `/me/milestones/${boardId}`;
         } catch (error) {
             console.error("Lỗi khi lưu dữ liệu milestone vào localStorage:", error);
@@ -238,23 +148,6 @@ const useTask = () => {
         }
     };
 
-    // Tạo cột mới cho milestone
-    const handleCreateColumn = async (columnData) => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await createColumn(columnData);
-            toast.success('Tạo cột thành công!');
-            return response;
-        } catch (err) {
-            setError(err.message || 'Đã xảy ra lỗi khi tạo cột');
-            toast.error('Không thể tạo cột. Vui lòng thử lại sau!');
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Lấy tất cả các cột theo milestoneId
     const fetchColumns = async (milestoneId) => {
         try {
@@ -272,39 +165,7 @@ const useTask = () => {
         }
     };
 
-    // Tạo task mới
-    const handleCreateTask = async (taskData) => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await createTask(taskData);
-            toast.success('Tạo task thành công!');
-            return response;
-        } catch (err) {
-            setError(err.message || 'Đã xảy ra lỗi khi tạo task');
-            toast.error('Không thể tạo task. Vui lòng thử lại sau!');
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    // Lấy task board theo milestoneId
-    const fetchTaskBoard = async (milestoneId) => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await getTaskBoard(milestoneId);
-            setTaskBoard(response.data || null);
-            return response.data;
-        } catch (err) {
-            setError(err.message || 'Đã xảy ra lỗi khi lấy dữ liệu task board');
-            toast.error('Không thể lấy dữ liệu task board. Vui lòng thử lại sau!');
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // Lấy tất cả milestone theo startupId
     const fetchMilestones = async (startupId) => {
@@ -323,23 +184,6 @@ const useTask = () => {
         }
     };
 
-    // Cập nhật cột cho task
-    const handleUpdateTaskColumn = async (updateData) => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await updateTaskColumn(updateData);
-            toast.success('Cập nhật task thành công!');
-            return response;
-        } catch (err) {
-            setError(err.message || 'Đã xảy ra lỗi khi cập nhật task');
-            toast.error('Không thể cập nhật task. Vui lòng thử lại sau!');
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Các hàm quản lý board từ MilestoneBoards.jsx
     // Mở form thêm bảng mới
     const handleAddBoard = () => {
@@ -351,6 +195,8 @@ const useTask = () => {
         setBoardFormData({
             title: '',
             description: '',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
             color: 'bg-blue-500'
         });
         setShowNewBoardForm(true);
@@ -360,8 +206,10 @@ const useTask = () => {
     // Mở form chỉnh sửa bảng
     const handleEditBoard = (board) => {
         setBoardFormData({
-            title: board.title || board.milestoneName,
+            title: board.title || board.milestoneName || board.name,
             description: board.description || board.milestoneDescription,
+            startDate: board.startDate ? new Date(board.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            endDate: board.endDate ? new Date(board.endDate).toISOString().split('T')[0] : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
             color: board.color || 'bg-blue-500'
         });
         setShowNewBoardForm(true);
@@ -380,13 +228,16 @@ const useTask = () => {
         try {
             if (editingBoard) {
                 // Cập nhật milestone hiện có (API chưa hỗ trợ, cần bổ sung)
-                toast.info("Chức năng cập nhật milestone sẽ được bổ sung sau");
+                toast.info("aaa chua lam");
             } else {
                 // Thêm milestone mới
                 const newMilestoneData = {
                     startupId: startupId,
-                    milestoneName: boardFormData.title,
-                    milestoneDescription: boardFormData.description,
+                    name: boardFormData.title,
+                    description: boardFormData.description,
+                    startDate: new Date(boardFormData.startDate).toISOString(),
+                    endDate: new Date(boardFormData.endDate).toISOString(),
+                    memberIds: [],
                     color: boardFormData.color
                 };
 
@@ -414,32 +265,135 @@ const useTask = () => {
         setOpenDropdownId(openDropdownId === boardId ? null : boardId);
     };
 
+    // Tìm kiếm người dùng theo email
+    const searchMembers = async (query) => {
+        // Nếu query rỗng, không hiển thị kết quả
+        if (!query.trim()) {
+            setSearchResults([]);
+            //xoa du lieu tim kiem
+            setIsSearching(false);
+            return;
+        }
+
+        try {
+            setIsSearching(true);
+
+            // Lấy ID của người dùng hiện tại
+            const currentUserId = await getUserId();
+
+            // Thay vì gọi API, lọc từ danh sách thành viên startup
+            const query_lower = query.toLowerCase();
+
+            // Tìm kiếm trong danh sách thành viên
+            const filteredResults = startupMembers.filter(member => {
+                const fullName = member.fullName?.toLowerCase() || '';
+                const email = member.email?.toLowerCase() || '';
+
+                // Kiểm tra nếu tên hoặc email chứa từ khóa tìm kiếm
+                return (fullName.includes(query_lower) || email.includes(query_lower)) &&
+                    // Loại bỏ tài khoản người dùng hiện tại
+                    String(member.accountId) !== String(currentUserId);
+            });
+
+            // Lọc bỏ các thành viên đã được chọn
+            const results = filteredResults.filter(member =>
+                !selectedMembers.some(selected => selected.accountId === member.accountId)
+            );
+
+            console.log('Search results from startup members:', results);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Lỗi khi tìm kiếm thành viên:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // Lấy danh sách thành viên của startup
+    const fetchStartupMembers = async (startupId) => {
+        try {
+            // Lấy ID người dùng hiện tại
+            const currentUserId = await getUserId();
+
+            const response = await getStartupMembers(startupId);
+            const members = response || [];
+
+            // Lọc bỏ người dùng hiện tại khỏi danh sách thành viên
+            const filteredMembers = members.filter(member =>
+                String(member.accountId) !== String(currentUserId)
+            );
+
+            setStartupMembers(filteredMembers);
+            return filteredMembers;
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách thành viên:', error);
+            return [];
+        }
+    };
+
+    // Thêm một thành viên vào danh sách đã chọn
+    const addToSelectedMembers = (member) => {
+        // Kiểm tra nếu thành viên đã được chọn
+        if (!selectedMembers.some(m => m.accountId === member.accountId)) {
+            setSelectedMembers([...selectedMembers, member]);
+        }
+    };
+
+    // Xóa một thành viên khỏi danh sách đã chọn
+    const removeFromSelectedMembers = (accountId) => {
+        setSelectedMembers(selectedMembers.filter(m => m.accountId !== accountId));
+    };
+
+    // Reset form thêm thành viên
+    const resetMemberForm = () => {
+        setMemberSearchQuery('');
+        setSearchResults([]);
+        setSelectedMembers([]);
+    };
+
     // Mở form thêm thành viên
-    const handleOpenAddMemberForm = (boardId) => {
+    const handleOpenAddMemberForm = async (boardId) => {
         setCurrentBoardId(boardId);
         setNewMember('');
+        resetMemberForm();
         setShowAddMemberForm(true);
         setOpenDropdownId(null);
+
+        if (startupId) {
+            await fetchStartupMembers(startupId);
+        }
+    };
+
+    // Đóng form thêm thành viên
+    const handleCloseAddMemberForm = () => {
+        resetMemberForm();
+        setShowAddMemberForm(false);
+        setCurrentBoardId(null);
     };
 
     // Thêm thành viên mới
     const handleAddMember = async () => {
-        if (!newMember.trim() || !currentBoardId) return;
+        if (selectedMembers.length === 0 || !currentBoardId) {
+            toast.warning('Vui lòng chọn ít nhất một thành viên');
+            return;
+        }
 
         try {
+            const memberIds = selectedMembers.map(member => member.accountId);
+
             const memberData = {
                 milestoneId: currentBoardId,
-                members: [newMember.trim()]
+                members: memberIds
             };
 
             await handleAddMembersToMilestone(memberData);
             // Refresh lại danh sách milestone
             await fetchMilestones(startupId);
 
-            // Đóng form
-            setShowAddMemberForm(false);
-            setCurrentBoardId(null);
-            setNewMember('');
+            // Đóng form và reset form
+            handleCloseAddMemberForm();
+
+            toast.success('Thêm thành viên thành công!');
         } catch (error) {
             toast.error("Có lỗi xảy ra khi thêm thành viên");
         }
@@ -485,6 +439,21 @@ const useTask = () => {
         };
     }, [openDropdownId]);
 
+    // Đặt debounce cho tìm kiếm - luôn gọi searchMembers khi memberSearchQuery thay đổi
+    useEffect(() => {
+        console.log('memberSearchQuery changed:', memberSearchQuery);
+        const timeoutId = setTimeout(() => {
+            // if (memberSearchQuery.trim()) {
+            //     console.log('Calling searchMembers with:', memberSearchQuery);
+            //     searchMembers(memberSearchQuery);
+            // }
+            console.log('Calling searchMembers with:', memberSearchQuery);
+            searchMembers(memberSearchQuery);
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [memberSearchQuery]);
+
     return {
         // Data states
         loading,
@@ -507,18 +476,21 @@ const useTask = () => {
         dropdownRefs,
         colorOptions,
 
+        // Member search states
+        memberSearchQuery,
+        searchResults,
+        isSearching,
+        selectedMembers,
+        startupMembers,
+
         // Fetch functions
         fetchStartupId,
         fetchMilestones,
         fetchColumns,
-        fetchTaskBoard,
 
         // API handlers
         handleCreateMilestone,
         handleAddMembersToMilestone,
-        handleCreateColumn,
-        handleCreateTask,
-        handleUpdateTaskColumn,
 
         // Board UI handlers
         handleAddBoard,
@@ -527,9 +499,16 @@ const useTask = () => {
         handleDeleteBoard,
         toggleDropdown,
         handleOpenAddMemberForm,
+        handleCloseAddMemberForm,
         handleAddMember,
         toggleFavorite,
         getFilteredMilestones,
+
+        // Member handling
+        searchMembers,
+        addToSelectedMembers,
+        removeFromSelectedMembers,
+        resetMemberForm,
 
         // UI state setters
         setShowNewBoardForm,
@@ -538,9 +517,9 @@ const useTask = () => {
         setFilterFavorites,
         setNewMember,
         setShowAddMemberForm,
+        setMemberSearchQuery,
 
         // Mock data
-        mockMilestoneData,
         navigateToMilestoneDetail
     };
 };

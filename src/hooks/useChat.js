@@ -489,8 +489,38 @@ export default function useChat(currentUserId) {
             }
             setIsSearching(true);
             try {
+                // Lấy startupId từ channel được chọn hoặc từ thông tin người dùng hiện tại
+                let startupId = null;
+
+                // Kiểm tra nếu có channel được chọn, lấy startupId từ channel đó
+                const selectedRoom = channels.find(c => c.chatRoomId === selectedChannel);
+                if (selectedRoom && selectedRoom.startupId) {
+                    startupId = selectedRoom.startupId;
+                } else {
+                    // Nếu không lấy được từ channel, lấy từ thông tin người dùng
+                    try {
+                        const res = await startupService.getStartupIdByAccountId(currentUserId);
+                        if (res && res.data) {
+                            startupId = res.data;
+                        } else if (res && res.startupId) {
+                            startupId = res.startupId;
+                        } else if (typeof res === 'number') {
+                            startupId = res;
+                        }
+                    } catch (err) {
+                        console.error("Không lấy được startupId từ accountId:", err);
+                    }
+                }
+
+                // Sử dụng startupId để lấy danh sách thành viên
+                if (!startupId) {
+                    console.warn("Không tìm thấy startupId, sẽ không thể lấy danh sách thành viên");
+                    setSearchResults([]);
+                    return;
+                }
+
                 // Lấy danh sách thành viên startup
-                const res = await getStartupMembers(1); // Sử dụng ID startup mặc định là 1
+                const res = await getStartupMembers(startupId);
                 // console.log("Startup members:", res); // Log để debug
 
                 // Lấy danh sách thành viên chatroom hiện tại
