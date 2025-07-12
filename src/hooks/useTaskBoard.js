@@ -379,11 +379,11 @@ const useTask = () => {
         }
 
         try {
-            const memberIds = selectedMembers.map(member => member.accountId);
+            const memberIds = selectedMembers.map(member => member.memberid);
 
             const memberData = {
                 milestoneId: currentBoardId,
-                members: memberIds
+                MemberIds: memberIds
             };
 
             await handleAddMembersToMilestone(memberData);

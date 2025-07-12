@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
-import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn } from "@/apis/taskService";
-import { getUserId } from "@/apis/authService";
+import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment } from "@/apis/taskService";
+import { getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { getStartupIdByAccountId } from "@/apis/startupService";
 import { toast } from "react-toastify";
+import { getAccountInfo } from "@/apis/accountService";
 
 const useMilestone = () => {
     const { boardId } = useParams();
@@ -22,45 +23,7 @@ const useMilestone = () => {
     // State cho dữ liệu columns và tasks
     const [columns, setColumns] = useState({});
 
-    // Dữ liệu mẫu cho các bảng dự án
-    const mockBoardsData = {
-        'board-1': {
-            id: 'board-1',
-            title: 'Phát triển ứng dụng di động',
-            description: 'Ứng dụng iOS và Android cho startup',
-            color: 'bg-blue-500',
-            tasks: 12,
-            members: ['NVA', 'TTB', 'LVC'],
-            progress: 45
-        },
-        'board-2': {
-            id: 'board-2',
-            title: 'Phát triển website',
-            description: 'Website chính thức của công ty',
-            color: 'bg-green-500',
-            tasks: 8,
-            members: ['NVA', 'PQR'],
-            progress: 60
-        },
-        'board-3': {
-            id: 'board-3',
-            title: 'Marketing Campaign Q4',
-            description: 'Chiến dịch quảng cáo quý 4/2023',
-            color: 'bg-purple-500',
-            tasks: 15,
-            members: ['TTB', 'LVC', 'XYZ'],
-            progress: 30
-        },
-        'board-4': {
-            id: 'board-4',
-            title: 'Phát triển sản phẩm mới',
-            description: 'Nghiên cứu và phát triển sản phẩm v2.0',
-            color: 'bg-amber-500',
-            tasks: 20,
-            members: ['NVA', 'TTB', 'LVC', 'PQR'],
-            progress: 15
-        }
-    };
+
 
     // State cho việc tạo/chỉnh sửa milestone và task
     const [showNewMilestoneForm, setShowNewMilestoneForm] = useState(false);
@@ -73,7 +36,7 @@ const useMilestone = () => {
         priority: 'medium',
         assignee: '',
         dueDate: '',
-        progress: 0
+        note: ''
     });
 
     const [editingTaskField, setEditingTaskField] = useState(null);
@@ -99,14 +62,22 @@ const useMilestone = () => {
     const [showComments, setShowComments] = useState(false);
 
     // Danh sách thành viên
-    const [teamMembers, setTeamMembers] = useState([
-        { id: 'aa', name: 'aa', username: '@leanhtin5', color: 'bg-red-500' },
-        { id: 'bb', name: 'bb', color: 'bg-gray-500' },
-        { id: 'cc', name: 'cc', color: 'bg-indigo-600' },
-        { id: 'dd', name: 'dd', color: 'bg-yellow-500', avatar: '/path/to/avatar.jpg' },
-        { id: 'ee', name: 'ee', color: 'bg-teal-500' },
-        { id: 'ff', name: 'ff', color: 'bg-purple-600' }
-    ]);
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+
+    // State mới cho chế độ xem danh sách
+    const [tasksList, setTasksList] = useState([]);
+    const [tasksListLoading, setTasksListLoading] = useState(false);
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalItems: 0,
+        totalPages: 0
+    });
+    const [filterParams, setFilterParams] = useState({
+        search: '',
+        columnStatusId: null
+    });
 
     // Hàm chuyển đổi dữ liệu API sang định dạng cần thiết
     const mapApiDataToColumns = (data) => {
@@ -120,7 +91,7 @@ const useMilestone = () => {
                     title: task.title || 'Chưa có tiêu đề',
                     description: task.description || '',
                     priority: task.priority?.toLowerCase() || 'medium',
-                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+                    dueDate: task.dueDate || '',
                     status: task.status || 'todo',
                     progress: task.progress || 0,
                     avatarURL: task.avatarURL || [],
@@ -171,7 +142,53 @@ const useMilestone = () => {
         }
     };
 
-    // Lấy dữ liệu của bảng dựa vào boardId
+    // Hàm để lấy danh sách thành viên trong milestone
+    const fetchMembersInMilestone = async () => {
+        if (!boardId) return;
+
+        try {
+            setTeamMembersLoading(true);
+            const response = await getMembersInMilestone(boardId);
+            console.log('Members in milestone:', response);
+
+            if (response && Array.isArray(response)) {
+                const formattedMembers = response.map(member => ({
+                    id: member.accountId,
+                    memberId: member.memberId,
+                    name: member.fullName || 'Không có tên',
+                    color: 'bg-blue-500', // Thêm màu mặc định
+                    avatar: member.avatarUrl || null
+                }));
+
+                setTeamMembers(formattedMembers);
+            } else {
+                console.error('Định dạng phản hồi API không hợp lệ:', response);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách thành viên:', error);
+        } finally {
+            setTeamMembersLoading(false);
+        }
+    };
+
+
+    //     // Tạo số ngẫu nhiên từ id
+    //     let sum = 0;
+    //     for (let i = 0; i < id.toString().length; i++) {
+    //         sum += id.toString().charCodeAt(i);
+    //     }
+
+    //     return colors[sum % colors.length];
+    // }// Hàm tạo màu ngẫu nhiên từ ID
+    // // const generateRandomColor = (id) => {
+    // //     const colors = [
+    // //         'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+    // //         'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
+    // //         'bg-orange-500', 'bg-gray-500'
+    // //     ];;
+
+
+    // Lấy dữ liệu của bảng và thành viên khi component mount
     useEffect(() => {
         if (boardId) {
             setLoading(true);
@@ -185,9 +202,10 @@ const useMilestone = () => {
                 setBoardData(parsedData);
 
                 // Vẫn gọi fetchTaskBoard để lấy dữ liệu columns và tasks
-                fetchTaskBoard(boardId).finally(() => {
-                    setLoading(false);
-                });
+                Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone()])
+                    .finally(() => {
+                        setLoading(false);
+                    });
             } else {
                 // Nếu không có trong localStorage, thử lấy từ API getAllMilestones
                 const fetchData = async () => {
@@ -233,8 +251,8 @@ const useMilestone = () => {
                             });
                         }
 
-                        // Gọi fetchTaskBoard để lấy columns và tasks
-                        await fetchTaskBoard(boardId);
+                        // Gọi fetchTaskBoard và fetchMembersInMilestone song song
+                        await Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone()]);
                     } catch (error) {
                         console.error('Lỗi khi lấy dữ liệu từ API:', error);
 
@@ -251,6 +269,9 @@ const useMilestone = () => {
                         if (savedColumns) {
                             setColumns(JSON.parse(savedColumns));
                         }
+
+                        // Vẫn thử lấy danh sách thành viên
+                        await fetchMembersInMilestone();
                     } finally {
                         setLoading(false);
                     }
@@ -451,25 +472,61 @@ const useMilestone = () => {
     };
 
     // Thêm milestone mới
-    const handleAddMilestone = () => {
-        if (newMilestoneTitle.trim() === '') return;
+    const handleAddMilestone = async () => {
+        if (newMilestoneTitle.trim() === '') {
+            toast.error('Tên cột không được để trống!');
+            return;
+        }
 
-        const newMilestoneId = `milestone-${Date.now()}`;
-        const newMilestone = {
-            id: newMilestoneId,
-            title: newMilestoneTitle,
-            description: newMilestoneDescription,
-            tasks: []
-        };
+        try {
+            setLoading(true);
+            // Gọi API để tạo cột mới
+            const columnData = {
+                milestoneId: parseInt(boardId),
+                columnName: newMilestoneTitle,
+                description: newMilestoneDescription
+            };
 
-        setColumns({
-            ...columns,
-            [newMilestoneId]: newMilestone
-        });
+            const response = await createColumn(columnData);
+            console.log('API Response createColumn:', response);
 
-        setNewMilestoneTitle('');
-        setNewMilestoneDescription('');
-        setShowNewMilestoneForm(false);
+            if (response) {
+
+                //  // Cập nhật state sau khi tạo cột thành công
+                //  const newColumn = {
+                //     id: `milestone-${response.columnStatusId}`,
+                //     columnId: response.columnStatusId,
+                //     title: response.columnName,
+                //     description: response.description || '',
+                //     sortOrder: response.sortOrder || 0,
+                //     tasks: []
+                // };
+
+                // setColumns({
+                //     ...columns,
+                //     [`milestone-${response.columnStatusId}`]: newColumn
+                // });
+                // Reset form
+                setNewMilestoneTitle('');
+                setNewMilestoneDescription('');
+                setShowNewMilestoneForm(false);
+
+                // Tải lại dữ liệu task board để cập nhật UI ngay lập tức
+                await fetchTaskBoard(boardId);
+
+                toast.success('Đã tạo cột mới thành công!');
+                return response;
+            } else {
+                toast.error('Không thể tạo cột mới');
+                return null;
+            }
+        } catch (error) {
+            console.error('Lỗi khi tạo cột mới:', error);
+            toast.error('Có lỗi xảy ra khi tạo cột mới');
+            return null;
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Xử lý thêm task mới
@@ -486,6 +543,7 @@ const useMilestone = () => {
             priority: 'medium',
             assignee: '',
             dueDate: '',
+            note: '',
             progress: 0
         });
     };
@@ -504,62 +562,105 @@ const useMilestone = () => {
             priority: task.priority,
             assignee: task.assignee,
             dueDate: task.dueDate,
+            note: task.note || '',
             progress: task.progress || 0
         });
     };
 
     // Lưu task (thêm mới hoặc cập nhật)
-    const handleSaveTask = () => {
-        if (!editingTask || taskFormData.title.trim() === '') return;
+    const handleSaveTask = async () => {
+        if (!editingTask || taskFormData.title.trim() === '') {
+            toast.error('Tiêu đề không được để trống!');
+            return;
+        }
 
         const { milestoneId, taskId, isNew } = editingTask;
         const milestone = columns[milestoneId];
 
-        if (isNew) {
-            // Thêm task mới
-            const newTask = {
-                id: `task-${Date.now()}`,
-                ...taskFormData,
-                status: 'todo',
-                progress: Number(taskFormData.progress) || 0
-            };
+        try {
+            if (isNew) {
+                // Thêm task mới - xử lý trong một hàm khác
+                // TODO: Implement API call for createTask
+                const newTask = {
+                    id: `task-${Date.now()}`,
+                    ...taskFormData
+                };
 
-            setColumns({
-                ...columns,
-                [milestoneId]: {
-                    ...milestone,
-                    tasks: [...milestone.tasks, newTask]
+                setColumns({
+                    ...columns,
+                    [milestoneId]: {
+                        ...milestone,
+                        tasks: [...milestone.tasks, newTask]
+                    }
+                });
+            } else {
+                // Cập nhật task hiện có
+                const task = milestone.tasks.find(t => t.id === taskId);
+                if (!task) {
+                    console.error("Không tìm thấy task:", taskId);
+                    return;
                 }
-            });
-        } else {
-            // Cập nhật task hiện có
-            const updatedTasks = milestone.tasks.map(task =>
-                task.id === taskId ? {
-                    ...task,
-                    ...taskFormData,
-                    progress: Number(taskFormData.progress) || 0
-                } : task
-            );
 
-            setColumns({
-                ...columns,
-                [milestoneId]: {
-                    ...milestone,
-                    tasks: updatedTasks
+                // Lấy taskId thực tế (số nguyên)
+                const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+                // Tạo dữ liệu cập nhật cho API
+                const updateData = {
+                    taskId: actualTaskId,
+                    title: taskFormData.title,
+                    description: taskFormData.description || '',
+                    priority: taskFormData.priority || 'medium',
+                    dueDate: taskFormData.dueDate || null,
+                    columnnStatusId: milestone.columnId,
+                    note: taskFormData.note || ''
+                };
+
+                // Gọi API cập nhật task
+                console.log('Calling updateTask API with data:', updateData);
+                const response = await updateTask(updateData);
+                console.log('API Response for updateTask:', response);
+
+                // Cập nhật UI
+                const updatedTasks = milestone.tasks.map(t =>
+                    t.id === taskId ? {
+                        ...t,
+                        ...taskFormData
+                    } : t
+                );
+
+                setColumns({
+                    ...columns,
+                    [milestoneId]: {
+                        ...milestone,
+                        tasks: updatedTasks
+                    }
+                });
+
+                // Cập nhật viewingTask nếu đang xem task này
+                if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
+                    setViewingTask({
+                        ...viewingTask,
+                        ...taskFormData
+                    });
                 }
+
+                toast.success('Cập nhật công việc thành công!');
+            }
+        } catch (error) {
+            console.error('Lỗi khi lưu task:', error);
+            toast.error('Có lỗi xảy ra khi lưu công việc');
+        } finally {
+            // Reset form và trạng thái
+            setEditingTask(null);
+            setTaskFormData({
+                title: '',
+                description: '',
+                priority: 'medium',
+                assignee: '',
+                dueDate: '',
+                note: ''
             });
         }
-
-        // Reset form và trạng thái
-        setEditingTask(null);
-        setTaskFormData({
-            title: '',
-            description: '',
-            priority: 'medium',
-            assignee: '',
-            dueDate: '',
-            progress: 0
-        });
     };
 
     // Xóa task
@@ -611,38 +712,169 @@ const useMilestone = () => {
     };
 
     // Lưu giá trị mới cho trường đang được chỉnh sửa
-    const handleSaveTaskField = (newValue) => {
+    const handleSaveTaskField = async (newValue) => {
         const { field, taskId, milestoneId } = editFieldData;
         const milestone = columns[milestoneId];
 
         if (!milestone) return;
 
-        const updatedTasks = milestone.tasks.map(task =>
-            task.id === taskId ? { ...task, [field]: newValue } : task
-        );
+        // Tìm task trong milestone
+        const task = milestone.tasks.find(t => t.id === taskId);
+        if (!task) {
+            console.error("Không tìm thấy task:", taskId);
+            return;
+        }
 
-        setColumns({
-            ...columns,
-            [milestoneId]: {
-                ...milestone,
-                tasks: updatedTasks
+        // Lấy taskId thực tế (số nguyên)
+        const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+        try {
+            // Tạo dữ liệu cập nhật cho API
+            let updateData = {
+                taskId: actualTaskId,
+                title: task.title,
+                priority: task.priority,
+                description: task.description,
+                dueDate: task.dueDate,
+                columnnStatusId: milestone.columnId,
+                note: task.note || ''
+            };
+
+            // Cập nhật trường tương ứng
+            switch (field) {
+                case 'title':
+                    updateData.title = newValue;
+                    break;
+                case 'dueDate':
+                    // Đảm bảo định dạng ngày phù hợp với API
+                    updateData.dueDate = newValue;
+                    break;
+                case 'priority':
+                    updateData.priority = newValue;
+                    break;
+                default:
+                    break;
             }
-        });
 
-        setEditingTaskField(null);
+            // Gọi API cập nhật task
+            console.log('Calling updateTask API with data:', updateData);
+            const response = await updateTask(updateData);
+            console.log('API Response for updateTask:', response);
+
+            // Cập nhật state UI
+            const updatedTasks = milestone.tasks.map(t =>
+                t.id === taskId ? { ...t, [field]: newValue } : t
+            );
+
+            setColumns({
+                ...columns,
+                [milestoneId]: {
+                    ...milestone,
+                    tasks: updatedTasks
+                }
+            });
+
+            // Cập nhật viewingTask nếu đang xem task này
+            if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
+                setViewingTask({
+                    ...viewingTask,
+                    [field]: newValue
+                });
+            }
+
+            toast.success('Cập nhật thành công!');
+        } catch (error) {
+            console.error('Lỗi khi cập nhật task:', error);
+            toast.error('Có lỗi xảy ra khi cập nhật task');
+        } finally {
+            setEditingTaskField(null);
+        }
     };
 
     // Xử lý khi click vào task
-    const handleTaskClick = (milestoneId, task) => {
-        setViewingTask({
-            ...task,
-            milestoneId
-        });
-        setShowTaskDetailModal(true);
+    const handleTaskClick = async (milestoneId, task) => {
+        try {
+            // Hiển thị loading hoặc thông báo đang tải dữ liệu
+            setLoading(true);
+
+            // Lấy taskId thực tế (số nguyên) từ task.taskId hoặc từ id nếu task.taskId không tồn tại
+            const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+            if (!actualTaskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                toast.error('Không thể tải thông tin chi tiết task');
+                return;
+            }
+
+            // Gọi API để lấy chi tiết task
+            const response = await getTaskDetail(actualTaskId);
+
+            // Lấy bình luận của task từ API
+            let comments = [];
+            try {
+                const commentsResponse = await getCommentsByTaskId(actualTaskId);
+                console.log('Comments response:', commentsResponse);
+
+                // Chuyển đổi cấu trúc bình luận từ API sang định dạng phù hợp để hiển thị
+                if (commentsResponse && Array.isArray(commentsResponse)) {
+                    comments = commentsResponse.map(comment => ({
+                        id: comment.commentTaskId,
+                        text: comment.comment,
+                        userId: comment.accountId,
+                        userName: comment.fullName,
+                        timestamp: comment.createAt,
+                        userAvatar: comment.avatarUrl
+                    }));
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy bình luận:', error);
+            }
+
+            if (response) {
+                // Chuyển đổi dữ liệu API thành định dạng viewingTask
+                const taskDetail = {
+                    ...task,
+                    milestoneId,
+                    description: response.description || task.description,
+                    priority: response.priority?.toLowerCase() || task.priority,
+                    dueDate: response.dueDate || task.dueDate,
+                    status: response.status || task.status,
+                    progress: response.progress || task.progress || 0,
+                    assignees: response.assignees || task.assignees || [],
+                    comments: comments, // Sử dụng comments từ API
+                    note: response.note || task.note || '',
+                    createdBy: response.createdBy || task.createdBy || '',
+                    asignTo: response.asignTo || task.asignTo || []
+                };
+
+                setViewingTask(taskDetail);
+                setShowTaskDetailModal(true);
+            } else {
+                // Nếu không lấy được dữ liệu từ API, sử dụng dữ liệu từ state
+                setViewingTask({
+                    ...task,
+                    milestoneId,
+                    comments: comments // Vẫn sử dụng comments từ API nếu có
+                });
+                setShowTaskDetailModal(true);
+                console.warn('Không thể lấy dữ liệu chi tiết từ API, sử dụng dữ liệu local');
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy chi tiết task:', error);
+            // Trong trường hợp lỗi, vẫn hiển thị dữ liệu từ state
+            setViewingTask({
+                ...task,
+                milestoneId
+            });
+            setShowTaskDetailModal(true);
+            toast.error('Có lỗi xảy ra khi tải thông tin chi tiết');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Xử lý thêm thành viên vào task
-    const handleAddMember = (taskId, milestoneId, memberId) => {
+    const handleAddMember = async (taskId, milestoneId, memberId) => {
         const milestone = columns[milestoneId];
 
         if (!milestone || !milestone.tasks) {
@@ -650,45 +882,74 @@ const useMilestone = () => {
             return;
         }
 
-        const updatedTasks = milestone.tasks.map(task => {
-            if (task.id === taskId) {
-                // Tạo mảng assignees nếu chưa có
-                const assignees = task.assignees || [];
-                // Chỉ thêm thành viên nếu chưa tồn tại
-                if (!assignees.includes(memberId)) {
-                    return {
-                        ...task,
-                        assignees: [...assignees, memberId]
-                    };
-                }
+        try {
+            // Tìm task trong milestone
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("⛔ Không tìm thấy task:", taskId);
+                return;
             }
-            return task;
-        });
 
-        // Cập nhật state để UI hiển thị ngay lập tức
-        setColumns({
-            ...columns,
-            [milestoneId]: {
-                ...milestone,
-                tasks: updatedTasks
+            // Lấy taskId thực tế (số nguyên)
+            const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+            if (!actualTaskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                toast.error('Không thể gán thành viên cho task');
+                return;
             }
-        });
 
-        // Cập nhật viewingTask nếu đang xem task này
-        if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
-            const updatedTask = updatedTasks.find(t => t.id === taskId);
-            setViewingTask({
-                ...viewingTask,
-                assignees: updatedTask.assignees
+            // Gọi API để gán task cho người dùng
+            const response = await assignTask({
+                taskId: actualTaskId,
+                accountId: memberId
             });
-        }
 
-        // Vẫn giữ dropdown mở để người dùng tiếp tục thêm thành viên khác
-        // setShowMemberDropdown(false);
+            console.log('Assign task response:', response);
+
+            // Cập nhật UI ngay lập tức (optimistic update)
+            const updatedTasks = milestone.tasks.map(t => {
+                if (t.id === taskId) {
+                    // Tạo mảng assignees nếu chưa có hoặc thêm vào mảng hiện có
+                    const assignees = t.assignees || [];
+                    // Chỉ thêm thành viên nếu chưa tồn tại
+                    if (!assignees.includes(memberId)) {
+                        return {
+                            ...t,
+                            assignees: [...assignees, memberId]
+                        };
+                    }
+                }
+                return t;
+            });
+
+            // Cập nhật state để UI hiển thị ngay lập tức
+            setColumns({
+                ...columns,
+                [milestoneId]: {
+                    ...milestone,
+                    tasks: updatedTasks
+                }
+            });
+
+            // Cập nhật viewingTask nếu đang xem task này
+            if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
+                const updatedTask = updatedTasks.find(t => t.id === taskId);
+                setViewingTask({
+                    ...viewingTask,
+                    assignees: updatedTask.assignees
+                });
+            }
+
+            toast.success('Đã thêm thành viên thành công');
+        } catch (error) {
+            console.error('Lỗi khi gán task cho người dùng:', error);
+            toast.error('Có lỗi xảy ra khi thêm thành viên');
+        }
     };
 
     // Xử lý xóa thành viên khỏi task
-    const handleRemoveMember = (taskId, milestoneId, memberIdToRemove) => {
+    const handleRemoveMember = async (taskId, milestoneId, memberIdToRemove) => {
         const milestone = columns[milestoneId];
 
         if (!milestone || !milestone.tasks) {
@@ -696,211 +957,658 @@ const useMilestone = () => {
             return;
         }
 
-        const updatedTasks = milestone.tasks.map(task => {
-            if (task.id === taskId && task.assignees) {
-                return {
-                    ...task,
-                    assignees: task.assignees.filter(memberId => memberId !== memberIdToRemove)
-                };
+        try {
+            // Tìm task trong milestone
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("⛔ Không tìm thấy task:", taskId);
+                return;
             }
-            return task;
-        });
 
-        // Cập nhật state để UI hiển thị ngay lập tức
-        setColumns({
-            ...columns,
-            [milestoneId]: {
-                ...milestone,
-                tasks: updatedTasks
+            // Lấy taskId thực tế (số nguyên)
+            const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+            if (!actualTaskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                toast.error('Không thể xóa thành viên khỏi task');
+                return;
             }
-        });
 
-        // Cập nhật viewingTask nếu đang xem task này
-        if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
-            const updatedTask = updatedTasks.find(t => t.id === taskId);
-            setViewingTask({
-                ...viewingTask,
-                assignees: updatedTask.assignees
+            // Gọi API để hủy gán task cho người dùng
+            const response = await unassignAccountFromTask(actualTaskId, memberIdToRemove);
+
+            console.log('Unassign task response:', response);
+
+            // Cập nhật UI ngay lập tức (optimistic update)
+            const updatedTasks = milestone.tasks.map(task => {
+                if (task.id === taskId && task.assignees) {
+                    return {
+                        ...task,
+                        assignees: task.assignees.filter(memberId => memberId !== memberIdToRemove)
+                    };
+                }
+                return task;
             });
+
+            // Cập nhật state để UI hiển thị ngay lập tức
+            setColumns({
+                ...columns,
+                [milestoneId]: {
+                    ...milestone,
+                    tasks: updatedTasks
+                }
+            });
+
+            // Cập nhật viewingTask nếu đang xem task này
+            if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
+                const updatedTask = updatedTasks.find(t => t.id === taskId);
+                setViewingTask({
+                    ...viewingTask,
+                    assignees: updatedTask.assignees
+                });
+            }
+
+            toast.success('Đã xóa thành viên thành công');
+        } catch (error) {
+            console.error('Lỗi khi hủy gán task cho người dùng:', error);
+            toast.error('Có lỗi xảy ra khi xóa thành viên');
         }
-
-        // Không đóng dropdown sau khi xóa thành viên
-    };
-
-    // Format thời gian bình luận
-    const formatCommentTime = (timestamp) => {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffMins < 1) return 'Vừa xong';
-        if (diffMins < 60) return `${diffMins} phút trước`;
-        if (diffHours < 24) return `${diffHours} giờ trước`;
-        if (diffDays < 7) return `${diffDays} ngày trước`;
-
-        // Hiển thị ngày tháng
-        return date.toLocaleDateString('vi-VN', {
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric'
-        });
     };
 
     // Thêm bình luận cho task
-    const handleAddComment = (taskId, milestoneId, text) => {
+    const handleAddComment = async (taskId, milestoneId, text) => {
         if (!text.trim()) return;
 
         const milestone = columns[milestoneId];
         if (!milestone || !milestone.tasks) return;
 
-        const updatedTasks = milestone.tasks.map(task => {
-            if (task.id === taskId) {
-                const comments = task.comments || [];
-                return {
-                    ...task,
-                    comments: [
-                        ...comments,
-                        {
-                            id: `comment-${Date.now()}`,
-                            text: text.trim(),
-                            userId: currentUser.id,
-                            userName: currentUser.name,
-                            timestamp: new Date().toISOString(),
-                            userColor: 'bg-red-500' // Màu của người dùng hiện tại
+        try {
+            // Tìm task trong milestone
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("Không tìm thấy task:", taskId);
+                return;
+            }
+
+            // Lấy taskId thực tế (số nguyên)
+            const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+            if (!actualTaskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                toast.error('Không thể thêm bình luận');
+                return;
+            }
+
+            // Lấy thông tin người dùng từ token
+            const userInfo = getUserInfoFromToken();
+            if (!userInfo || !userInfo.userId) {
+                console.error('Không thể xác thực người dùng');
+                toast.error('Bạn cần đăng nhập để thêm bình luận');
+                return;
+            }
+
+            // Tạo dữ liệu comment để gửi lên API
+            const commentData = {
+                taskId: actualTaskId,
+                accountId: userInfo.userId, // Sử dụng ID từ token
+                comment: text.trim()
+            };
+
+            // Gọi API để thêm bình luận
+            const response = await addCommentToTask(commentData);
+            console.log('API Response for addCommentToTask:', response);
+
+            // Sau khi thêm bình luận thành công, lấy lại danh sách bình luận mới từ API
+            try {
+                const commentsResponse = await getCommentsByTaskId(actualTaskId);
+
+                // Chuyển đổi cấu trúc bình luận từ API sang định dạng phù hợp để hiển thị
+                if (commentsResponse && Array.isArray(commentsResponse)) {
+                    const comments = commentsResponse.map(comment => ({
+                        id: comment.commentTaskId,
+                        text: comment.comment,
+                        userId: comment.accountId,
+                        userName: comment.fullName,
+                        timestamp: comment.createAt,
+                        userAvatar: comment.avatarUrl
+                    }));
+
+                    // Cập nhật task hiện tại với danh sách bình luận mới
+                    const updatedTasks = milestone.tasks.map(t => {
+                        if (t.id === taskId) {
+                            return {
+                                ...t,
+                                comments: comments
+                            };
                         }
-                    ]
-                };
-            }
-            return task;
-        });
+                        return t;
+                    });
 
-        setColumns({
-            ...columns,
-            [milestoneId]: {
-                ...milestone,
-                tasks: updatedTasks
-            }
-        });
+                    // Cập nhật state columns
+                    setColumns({
+                        ...columns,
+                        [milestoneId]: {
+                            ...milestone,
+                            tasks: updatedTasks
+                        }
+                    });
 
-        // Cập nhật viewingTask nếu đang xem task này
-        if (viewingTask && viewingTask.id === taskId) {
-            const updatedTask = updatedTasks.find(t => t.id === taskId);
-            setViewingTask({
-                ...viewingTask,
-                comments: updatedTask.comments
-            });
+                    // Cập nhật viewingTask nếu đang xem task này
+                    if (viewingTask && viewingTask.id === taskId) {
+                        setViewingTask({
+                            ...viewingTask,
+                            comments: comments
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy lại danh sách bình luận:', error);
+
+                // Nếu không lấy được danh sách bình luận mới, thêm bình luận vào UI theo cách thông thường
+                // Lấy thông tin chi tiết người dùng từ API getAccountInfo
+                let userDetails = null;
+                try {
+                    userDetails = await getAccountInfo(userInfo.userId);
+                } catch (error) {
+                    console.error('Lỗi khi lấy thông tin chi tiết người dùng:', error);
+                }
+
+                // Cập nhật UI ngay lập tức (optimistic update)
+                const updatedTasks = milestone.tasks.map(t => {
+                    if (t.id === taskId) {
+                        const comments = t.comments || [];
+                        return {
+                            ...t,
+                            comments: [
+                                ...comments,
+                                {
+                                    id: response?.id || `comment-${Date.now()}`,
+                                    text: text.trim(),
+                                    userId: userInfo.userId,
+                                    userName: userDetails?.fullname || userInfo.email || 'Người dùng',
+                                    timestamp: response?.createAt,
+                                    userAvatar: userDetails?.avatarUrl || null
+                                }
+                            ]
+                        };
+                    }
+                    return t;
+                });
+
+                // Cập nhật state để UI hiển thị ngay lập tức
+                setColumns({
+                    ...columns,
+                    [milestoneId]: {
+                        ...milestone,
+                        tasks: updatedTasks
+                    }
+                });
+
+                // Cập nhật viewingTask nếu đang xem task này
+                if (viewingTask && viewingTask.id === taskId) {
+                    const updatedTask = updatedTasks.find(t => t.id === taskId);
+                    setViewingTask({
+                        ...viewingTask,
+                        comments: updatedTask.comments
+                    });
+                }
+            }
+
+            toast.success('Đã thêm bình luận thành công');
+
+            // Reset input
+            setCommentText('');
+        } catch (error) {
+            console.error('Lỗi khi thêm bình luận:', error);
+            toast.error('Có lỗi xảy ra khi thêm bình luận');
         }
-
-        // Reset input
-        setCommentText('');
     };
 
     // Xóa bình luận
-    const handleDeleteComment = (taskId, milestoneId, commentId) => {
+    const handleDeleteComment = async (taskId, milestoneId, commentId) => {
         const milestone = columns[milestoneId];
         if (!milestone || !milestone.tasks) return;
 
-        const updatedTasks = milestone.tasks.map(task => {
-            if (task.id === taskId && task.comments) {
-                return {
-                    ...task,
-                    comments: task.comments.filter(comment => comment.id !== commentId)
-                };
-            }
-            return task;
-        });
+        try {
+            // Gọi API xóa bình luận
+            await deleteTaskComment(commentId);
+            toast.success('Đã xóa bình luận thành công');
 
-        setColumns({
-            ...columns,
-            [milestoneId]: {
-                ...milestone,
-                tasks: updatedTasks
+            // Tìm task trong milestone
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("Không tìm thấy task:", taskId);
+                return;
             }
-        });
 
-        // Cập nhật viewingTask nếu đang xem task này
-        if (viewingTask && viewingTask.id === taskId) {
-            const updatedTask = updatedTasks.find(t => t.id === taskId);
-            setViewingTask({
-                ...viewingTask,
-                comments: updatedTask.comments
-            });
+            // Lấy taskId thực tế (số nguyên)
+            const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
+
+            if (!actualTaskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                return;
+            }
+
+            // Lấy lại danh sách bình luận mới từ API
+            try {
+                const commentsResponse = await getCommentsByTaskId(actualTaskId);
+
+                // Chuyển đổi cấu trúc bình luận từ API sang định dạng phù hợp để hiển thị
+                if (commentsResponse && Array.isArray(commentsResponse)) {
+                    const comments = commentsResponse.map(comment => ({
+                        id: comment.commentTaskId,
+                        text: comment.comment,
+                        userId: comment.accountId,
+                        userName: comment.fullName,
+                        timestamp: comment.createAt,
+                        userAvatar: comment.avatarUrl
+                    }));
+
+                    // Cập nhật task hiện tại với danh sách bình luận mới
+                    const updatedTasks = milestone.tasks.map(t => {
+                        if (t.id === taskId) {
+                            return {
+                                ...t,
+                                comments: comments
+                            };
+                        }
+                        return t;
+                    });
+
+                    // Cập nhật state columns
+                    setColumns({
+                        ...columns,
+                        [milestoneId]: {
+                            ...milestone,
+                            tasks: updatedTasks
+                        }
+                    });
+
+                    // Cập nhật viewingTask nếu đang xem task này
+                    if (viewingTask && viewingTask.id === taskId) {
+                        setViewingTask({
+                            ...viewingTask,
+                            comments: comments
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy lại danh sách bình luận:', error);
+
+                // Nếu không lấy được danh sách bình luận mới, chỉ xóa bình luận trong UI
+                const updatedTasks = milestone.tasks.map(task => {
+                    if (task.id === taskId && task.comments) {
+                        return {
+                            ...task,
+                            comments: task.comments.filter(comment => comment.id !== commentId)
+                        };
+                    }
+                    return task;
+                });
+
+                // Cập nhật state để UI hiển thị ngay lập tức
+                setColumns({
+                    ...columns,
+                    [milestoneId]: {
+                        ...milestone,
+                        tasks: updatedTasks
+                    }
+                });
+
+                // Cập nhật viewingTask nếu đang xem task này
+                if (viewingTask && viewingTask.id === taskId) {
+                    const updatedTask = updatedTasks.find(t => t.id === taskId);
+                    setViewingTask({
+                        ...viewingTask,
+                        comments: updatedTask.comments
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Lỗi khi xóa bình luận:', error);
+            toast.error('Có lỗi xảy ra khi xóa bình luận');
         }
     };
 
     // Render danh sách thành viên được giao
     const renderAssignees = (task, teamMembers) => {
-        // Sử dụng asignTo thay vì assignees để phù hợp với API
-        if (!task.asignTo || task.asignTo.length === 0) {
+        // Nếu có assignees (mảng các id), ưu tiên sử dụng
+        if (task.assignees && task.assignees.length > 0) {
+            // Nếu chỉ có 1 thành viên
+            if (task.assignees.length === 1) {
+                const memberId = task.assignees[0];
+                const member = teamMembers.find(m => m.id === memberId);
+
+                return {
+                    type: 'singleMember',
+                    memberId: member?.id || memberId,
+                    memberName: member?.name || memberId,
+                    avatar: member?.avatar || null,
+                    color: member?.color || 'bg-blue-500'
+                };
+            }
+
+            // Nếu có nhiều thành viên, hiển thị số lượng
+            const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
+
             return {
-                type: 'notAssigned',
-                content: 'Chưa giao'
+                type: 'multipleMembers',
+                memberId: firstMember?.id || task.assignees[0],
+                memberName: firstMember?.name || 'Thành viên',
+                avatar: firstMember?.avatar || null,
+                count: task.assignees.length - 1,
+                color: firstMember?.color || 'bg-blue-500'
             };
         }
 
-        // Nếu chỉ có 1 thành viên
+        // Nếu có asignTo (mảng các URL avatar), sử dụng
+        if (task.asignTo && task.asignTo.length > 0) {
+            // Nếu chỉ có 1 URL avatar
+            if (task.asignTo.length === 1) {
+                return {
+                    type: 'singleAvatar',
+                    avatarUrl: task.asignTo[0]
+                };
+            }
 
-        // if (task.assignees.length === 1) {
-        //     const memberId = task.assignees[0];
-        //     const member = teamMembers.find(m => m.id === memberId);
-
-        if (task.asignTo.length === 1) {
-            const avatarUrl = task.asignTo[0];
-            // Sử dụng URL hình ảnh trực tiếp thay vì tìm trong teamMembers
+            // Nếu có nhiều URL avatar
             return {
-                type: 'singleMember',
-                memberId: member?.id || memberId.charAt(0),
-                memberName: member?.name || memberId,
-                color: member?.color || 'bg-blue-500'
+                type: 'multipleAvatars',
+                avatarUrl: task.asignTo[0],
+                count: task.asignTo.length - 1
             };
         }
 
-        // Nếu có nhiều thành viên, hiển thị số lượng
-        const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
-
+        // Nếu không có cả hai
         return {
-            type: 'multipleMembers',
-            memberId: firstMember?.id || task.assignees[0].charAt(0),
-            count: task.assignees.length - 1,
-            color: firstMember?.color || 'bg-blue-500'
+            type: 'notAssigned',
+            content: 'Chưa giao'
         };
     };
 
     // Render người được giao cho TaskOverlay
     const renderOverlayAssignees = (task, teamMembers) => {
-        if (!task.assignees || task.assignees.length === 0) {
+        // Nếu có assignees (mảng các id), ưu tiên sử dụng
+        if (task.assignees && task.assignees.length > 0) {
+            // Nếu chỉ có 1 thành viên
+            if (task.assignees.length === 1) {
+                const memberId = task.assignees[0];
+                const member = teamMembers.find(m => m.id === memberId);
+
+                return {
+                    type: 'singleMember',
+                    memberId: member?.id || memberId,
+                    memberName: member?.name || memberId,
+                    avatar: member?.avatar || null,
+                    color: member?.color || 'bg-blue-500'
+                };
+            }
+
+            // Nếu có nhiều thành viên, hiển thị số lượng
+            const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
+
             return {
-                type: 'notAssigned',
-                content: 'Chưa giao'
+                type: 'multipleMembers',
+                memberId: firstMember?.id || task.assignees[0],
+                memberName: firstMember?.name || 'Thành viên',
+                avatar: firstMember?.avatar || null,
+                count: task.assignees.length - 1,
+                color: firstMember?.color || 'bg-blue-500'
             };
         }
 
-        // Nếu chỉ có 1 người được giao
-        if (task.assignees.length === 1) {
-            const memberId = task.assignees[0];
-            const member = teamMembers.find(m => m.id === memberId);
+        // Nếu có asignTo (mảng các URL avatar), sử dụng
+        if (task.asignTo && task.asignTo.length > 0) {
+            // Nếu chỉ có 1 URL avatar
+            if (task.asignTo.length === 1) {
+                return {
+                    type: 'singleAvatar',
+                    avatarUrl: task.asignTo[0]
+                };
+            }
 
+            // Nếu có nhiều URL avatar
             return {
-                type: 'singleMember',
-                memberId: member?.id || memberId.charAt(0),
-                memberName: member?.name || memberId,
-                color: member?.color || 'bg-blue-500'
+                type: 'multipleAvatars',
+                avatarUrl: task.asignTo[0],
+                count: task.asignTo.length - 1
             };
         }
 
-        // Nếu có nhiều người, hiển thị người đầu tiên + số lượng
-        const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
-
+        // Nếu không có cả hai
         return {
-            type: 'multipleMembers',
-            memberId: firstMember?.id || task.assignees[0].charAt(0),
-            count: task.assignees.length - 1,
-            color: firstMember?.color || 'bg-blue-500'
+            type: 'notAssigned',
+            content: 'Chưa giao'
         };
     };
+
+    // Hàm lấy danh sách task theo milestone cho chế độ xem danh sách
+    const fetchTasksList = async (milestoneId, pageNumber = 1, pageSize = 10, search = null, columnStatusId = null) => {
+        if (!milestoneId) return;
+
+        try {
+            setTasksListLoading(true);
+            const response = await getTasksByMilestone(milestoneId, pageNumber, pageSize, search, columnStatusId);
+
+            if (response && response.items) {
+                setTasksList(response.items);
+                setPagination({
+                    pageNumber: response.pageNumber || 1,
+                    pageSize: response.pageSize || 10,
+                    totalItems: response.totalItems || 0,
+                    totalPages: response.totalPages || 0
+                });
+            } else {
+                console.error('Định dạng phản hồi API không hợp lệ:', response);
+                toast.error('Không thể tải danh sách task');
+                setTasksList([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách task:', error);
+            setTasksList([]);
+        } finally {
+            setTasksListLoading(false);
+        }
+    };
+
+    // Hàm xử lý thay đổi trang
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        setPagination({ ...pagination, pageNumber: newPage });
+        fetchTasksList(boardId, newPage, pagination.pageSize, filterParams.search, filterParams.columnStatusId);
+    };
+
+    // Hàm xử lý thay đổi kích thước trang
+    const handlePageSizeChange = (newSize) => {
+        setPagination({ ...pagination, pageSize: newSize, pageNumber: 1 });
+        fetchTasksList(boardId, 1, newSize, filterParams.search, filterParams.columnStatusId);
+    };
+
+    // Hàm xử lý tìm kiếm
+    const handleSearch = (searchTerm) => {
+        setFilterParams({ ...filterParams, search: searchTerm });
+        fetchTasksList(boardId, 1, pagination.pageSize, searchTerm, filterParams.columnStatusId);
+    };
+
+    // Hàm xử lý lọc theo trạng thái cột
+    const handleFilterByColumn = (columnId) => {
+        setFilterParams({ ...filterParams, columnStatusId: columnId });
+        fetchTasksList(boardId, 1, pagination.pageSize, filterParams.search, columnId);
+    };
+
+    // Hàm xử lý tìm kiếm cục bộ
+    const handleLocalSearch = (searchTerm) => {
+        // Cập nhật state filterParams
+        const newFilterParams = { ...filterParams, search: searchTerm };
+        setFilterParams(newFilterParams);
+
+        // Luôn bắt đầu từ danh sách gốc
+        let filteredTasks = [...originalTasksList];
+
+        // Lọc tasks theo từ khóa tìm kiếm
+        if (searchTerm && searchTerm.trim() !== '') {
+            const searchLower = searchTerm.toLowerCase();
+            filteredTasks = filteredTasks.filter(task =>
+                task.title?.toLowerCase().includes(searchLower) ||
+                task.description?.toLowerCase().includes(searchLower) ||
+                task.note?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Lọc theo columnStatusId nếu có
+        if (newFilterParams.columnStatusId) {
+            filteredTasks = filteredTasks.filter(task =>
+                task.columnStatusId == newFilterParams.columnStatusId
+            );
+        }
+
+        // Cập nhật state tasksList với kết quả lọc
+        setTasksList(filteredTasks);
+
+        // Cập nhật phân trang
+        const totalItems = filteredTasks.length;
+        const totalPages = Math.ceil(totalItems / pagination.pageSize);
+        setPagination({
+            ...pagination,
+            totalItems,
+            totalPages,
+            pageNumber: 1 // Reset về trang đầu tiên khi tìm kiếm
+        });
+    };
+
+    // Hàm lọc theo cột cục bộ
+    const handleLocalFilterByColumn = (columnId) => {
+        // Cập nhật state filterParams
+        const newFilterParams = { ...filterParams, columnStatusId: columnId };
+        setFilterParams(newFilterParams);
+
+        // Luôn bắt đầu từ danh sách gốc
+        let filteredTasks = [...originalTasksList];
+
+        // Lọc tasks theo từ khóa tìm kiếm hiện tại
+        if (newFilterParams.search && newFilterParams.search.trim() !== '') {
+            const searchLower = newFilterParams.search.toLowerCase();
+            filteredTasks = filteredTasks.filter(task =>
+                task.title?.toLowerCase().includes(searchLower) ||
+                task.description?.toLowerCase().includes(searchLower) ||
+                task.note?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Lọc theo columnStatusId
+        if (columnId) {
+            filteredTasks = filteredTasks.filter(task =>
+                task.columnStatusId == columnId
+            );
+        }
+
+        // Cập nhật state tasksList với kết quả lọc
+        setTasksList(filteredTasks);
+
+        // Cập nhật phân trang
+        const totalItems = filteredTasks.length;
+        const totalPages = Math.ceil(totalItems / pagination.pageSize);
+        setPagination({
+            ...pagination,
+            totalItems,
+            totalPages,
+            pageNumber: 1 // Reset về trang đầu tiên khi lọc
+        });
+    };
+
+    // Hàm để phân trang cục bộ
+    const handleLocalPageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        setPagination({ ...pagination, pageNumber: newPage });
+    };
+
+    // Hàm xử lý thay đổi kích thước trang cục bộ
+    const handleLocalPageSizeChange = (newSize) => {
+        const totalPages = Math.ceil(pagination.totalItems / newSize);
+        setPagination({
+            ...pagination,
+            pageSize: newSize,
+            pageNumber: 1,
+            totalPages
+        });
+    };
+
+    // Lưu trữ danh sách task gốc từ API
+    const [originalTasksList, setOriginalTasksList] = useState([]);
+
+    // Gọi API lấy danh sách task khi chuyển sang chế độ xem danh sách
+    const loadTasksListView = async () => {
+        try {
+            setTasksListLoading(true);
+            const response = await getTasksByMilestone(boardId, 1, 1000); // Lấy tất cả task với pageSize lớn
+
+            if (response && response.items) {
+                // Lưu trữ danh sách gốc và danh sách hiển thị
+                setOriginalTasksList(response.items);
+                setTasksList(response.items);
+
+                // Cập nhật phân trang
+                setPagination({
+                    pageNumber: 1,
+                    pageSize: 10,
+                    totalItems: response.items.length,
+                    totalPages: Math.ceil(response.items.length / 10)
+                });
+            } else {
+                console.error('Định dạng phản hồi API không hợp lệ:', response);
+                toast.error('Không thể tải danh sách task');
+                setTasksList([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách task:', error);
+            setTasksList([]);
+        } finally {
+            setTasksListLoading(false);
+        }
+    };
+
+    // // Thêm column mới bằng API
+    // const handleCreateColumn = async (columnData) => {
+    //     if (!columnData.columnName || !columnData.milestoneId) {
+    //         toast.error('Tên cột và milestoneId không được để trống!');
+    //         return;
+    //     }
+
+    //     try {
+    //         setLoading(true);
+    //         const response = await createColumn(columnData);
+    //         console.log('API Response createColumn:', response);
+
+    //         if (response) {
+    //             // Cập nhật state sau khi tạo cột thành công
+    //             const newColumn = {
+    //                 id: response.columnStatusId,
+    //                 columnId: response.columnStatusId,
+    //                 title: response.columnName,
+    //                 description: response.description || '',
+    //                 sortOrder: response.sortOrder || 0,
+    //                 tasks: []
+    //             };
+
+    //             setColumns({
+    //                 ...columns,
+    //                 [`milestone-${response.columnStatusId}`]: newColumn
+    //             });
+
+    //             toast.success('Đã tạo cột mới thành công!');
+    //             return response;
+    //         } else {
+    //             toast.error('Không thể tạo cột mới');
+    //             return null;
+    //         }
+    //     } catch (error) {
+    //         console.error('Lỗi khi tạo cột mới:', error);
+    //         toast.error('Có lỗi xảy ra khi tạo cột mới');
+    //         return null;
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     return {
         // State
@@ -924,6 +1632,11 @@ const useMilestone = () => {
         commentText,
         showComments,
         loading,
+        tasksList,
+        tasksListLoading,
+        pagination,
+        filterParams,
+
 
         // State setters
         setShowNewMilestoneForm,
@@ -955,12 +1668,22 @@ const useMilestone = () => {
         handleRemoveMember,
         handleAddComment,
         handleDeleteComment,
-        fetchTaskBoard,
-
-        // Utils
-        formatCommentTime,
         renderAssignees,
-        renderOverlayAssignees
+        renderOverlayAssignees,
+        fetchTaskBoard,
+        fetchTasksList,
+        handlePageChange,
+        handlePageSizeChange,
+        handleSearch,
+        handleFilterByColumn,
+        loadTasksListView,
+        setEditFieldData,
+        handleLocalSearch,
+        handleLocalFilterByColumn,
+        handleLocalPageChange,
+        handleLocalPageSizeChange,
+        originalTasksList
+        // handleCreateColumn,
     };
 };
 

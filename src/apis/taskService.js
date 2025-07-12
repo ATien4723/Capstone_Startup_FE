@@ -107,3 +107,30 @@ export const getCommentsByTaskId = async (taskId) => {
     });
     return response;
 };
+
+// Xóa bình luận task
+export const deleteTaskComment = async (commentId) => {
+    try {
+        const response = await axiosClient.delete('/api/Task/delete-task-comment', {
+            params: { commentId }
+        });
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi xóa bình luận task:', error);
+        throw error;
+    }
+};
+
+// Lấy chi tiết của task
+export const getTaskDetail = async (taskId) => {
+    const response = await axiosClient.get(`/api/Task/task-detail/${taskId}`);
+    return response;
+};
+
+// Lấy danh sách thành viên trong milestone
+export const getMembersInMilestone = async (milestoneId) => {
+    const response = await axiosClient.get('/api/Task/members-in-milestone', {
+        params: { milestoneId }
+    });
+    return response;
+};

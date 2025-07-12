@@ -476,10 +476,22 @@ const MilestoneBoards = () => {
                                         {board.members.slice(0, 3).map((member, index) => (
                                             <div
                                                 key={index}
-                                                className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center text-xs font-medium border-2 border-white text-white shadow-sm"
-                                                title={member}
+                                                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white shadow-sm overflow-hidden"
+                                                title={typeof member === 'object' ? member.fullName : member}
                                             >
-                                                {typeof member === 'string' ? member.substring(0, 2) : 'N/A'}
+                                                {typeof member === 'object' && member.avatarUrl ? (
+                                                    <img
+                                                        src={member.avatarUrl}
+                                                        alt={member.fullName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center text-white">
+                                                        {typeof member === 'object'
+                                                            ? member.fullName.charAt(0).toUpperCase()
+                                                            : (typeof member === 'string' ? member.charAt(0).toUpperCase() : 'N/A')}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                         {board.members.length > 3 && (

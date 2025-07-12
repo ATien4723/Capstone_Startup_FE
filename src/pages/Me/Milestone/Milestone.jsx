@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPenToSquare, faClipboardList, faExclamationCircle, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPenToSquare, faClipboardList, faExclamationCircle, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList, faSearch, faAngleDoubleLeft, faAngleLeft, faAngleRight, faAngleDoubleRight } from '@fortawesome/free-solid-svg-icons';
 import {
     DndContext,
     DragOverlay,
@@ -24,6 +24,9 @@ import {
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import useMilestone from '@/hooks/useMilestone';
+import { formatVietnameseDate } from '@/utils/dateUtils';
+import { getUserInfoFromToken } from '@/apis/authService';
+import { getAccountInfo } from '@/apis/accountService';
 
 // Component cho Task có thể kéo thả và sắp xếp
 const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTaskClick, teamMembers }) => {
@@ -76,34 +79,34 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
         }
     };
 
-    // Hiển thị trạng thái task
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'todo':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-gray-100 text-gray-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-gray-500 mr-1.5"></span>
-                        To Do
-                    </span>
-                );
-            case 'inProgress':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-blue-50 text-blue-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
-                        Đang làm
-                    </span>
-                );
-            case 'done':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-green-50 text-green-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
-                        Hoàn thành
-                    </span>
-                );
-            default:
-                return null;
-        }
-    };
+    // // Hiển thị trạng thái task
+    // const getStatusBadge = (status) => {
+    //     switch (status) {
+    //         case 'todo':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-gray-100 text-gray-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-gray-500 mr-1.5"></span>
+    //                     To Do
+    //                 </span>
+    //             );
+    //         case 'inProgress':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-blue-50 text-blue-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
+    //                     Đang làm
+    //                 </span>
+    //             );
+    //         case 'done':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-green-50 text-green-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
+    //                     Hoàn thành
+    //                 </span>
+    //             );
+    //         default:
+    //             return null;
+    //     }
+    // };
 
     // Handle mở dropdown menu
     const toggleDropdown = (e) => {
@@ -182,18 +185,71 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
         } else if (assigneeData.type === 'singleMember') {
             return (
                 <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium`}>
-                        {assigneeData.memberId}
-                    </div>
+                    {assigneeData.avatar ? (
+                        <img
+                            src={assigneeData.avatar}
+                            alt={assigneeData.memberName}
+                            className="w-6 h-6 rounded-full object-cover mr-1"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(assigneeData.memberName) + "&background=random";
+                            }}
+                        />
+                    ) : (
+                        <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium`}>
+                            {assigneeData.memberName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
                     <span className="ml-1 text-xs text-gray-600 truncate max-w-[60px]">{assigneeData.memberName}</span>
                 </div>
             );
         } else if (assigneeData.type === 'multipleMembers') {
             return (
                 <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium`}>
-                        {assigneeData.memberId}
-                    </div>
+                    {assigneeData.avatar ? (
+                        <img
+                            src={assigneeData.avatar}
+                            alt={assigneeData.memberName}
+                            className="w-6 h-6 rounded-full object-cover"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(assigneeData.memberName) + "&background=random";
+                            }}
+                        />
+                    ) : (
+                        <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium`}>
+                            {assigneeData.memberName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                    <span className="ml-1 text-xs text-gray-600">+{assigneeData.count}</span>
+                </div>
+            );
+        } else if (assigneeData.type === 'singleAvatar') {
+            return (
+                <div className="flex items-center">
+                    <img
+                        src={assigneeData.avatarUrl}
+                        alt="Người được giao"
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://ui-avatars.com/api/?name=User&background=random";
+                        }}
+                    />
+                </div>
+            );
+        } else if (assigneeData.type === 'multipleAvatars') {
+            return (
+                <div className="flex items-center">
+                    <img
+                        src={assigneeData.avatarUrl}
+                        alt="Người được giao"
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://ui-avatars.com/api/?name=User&background=random";
+                        }}
+                    />
                     <span className="ml-1 text-xs text-gray-600">+{assigneeData.count}</span>
                 </div>
             );
@@ -245,24 +301,24 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                             >
                                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-gray-500" /> Chỉnh sửa ngày
                             </button>
-                            <button
+                            {/* <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('progress', e)}
                             >
                                 <FontAwesomeIcon icon={faArrowRight} className="mr-3 text-gray-500" /> Cập nhật tiến độ
-                            </button>
+                            </button> */}
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('priority', e)}
                             >
-                                <FontAwesomeIcon icon={faTag} className="mr-3 text-gray-500" /> Đổi độ ưu tiên
+                                <FontAwesomeIcon icon={faCopy} className="mr-3 text-gray-500" /> Đổi độ ưu tiên
                             </button>
-                            <button
+                            {/* <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('status', e)}
                             >
                                 <FontAwesomeIcon icon={faCopy} className="mr-3 text-gray-500" /> Đổi trạng thái
-                            </button>
+                            </button> */}
                             <div className="border-t border-gray-200 my-1"></div>
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
@@ -276,12 +332,12 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
             </div>
             <h4 className="font-semibold mt-2 text-gray-800">{task.title}</h4>
             <p className="text-gray-600 text-sm mt-1 line-clamp-2">{task.description}</p>
-            <div className="mt-3">
+            {/* <div className="mt-3">
                 {getStatusBadge(task.status)}
-            </div>
+            </div> */}
 
             {/* Thanh tiến độ */}
-            <div className="mt-4">
+            {/* <div className="mt-4">
                 <div className="flex justify-between text-xs mb-1 font-medium">
                     <span className="text-gray-600">Tiến độ</span>
                     <span className="text-blue-600 font-semibold">{task.progress || 0}%</span>
@@ -295,7 +351,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                         }}
                     ></div>
                 </div>
-            </div>
+            </div> */}
 
             <div className="mt-4 flex justify-between items-center text-xs">
                 <div>
@@ -303,7 +359,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                 </div>
                 <div className="flex items-center text-gray-500">
                     <FontAwesomeIcon icon={faCalendarAlt} className="mr-1.5" />
-                    <span>{task.dueDate}</span>
+                    <span>{task.dueDate ? formatVietnameseDate(task.dueDate) : "Chưa đặt hạn"}</span>
                 </div>
             </div>
         </div>
@@ -398,34 +454,34 @@ const TaskOverlay = ({ task, teamMembers, renderOverlayAssignees }) => {
         }
     };
 
-    // Hiển thị trạng thái task
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'todo':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-gray-100 text-gray-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-gray-500 mr-1.5"></span>
-                        To Do
-                    </span>
-                );
-            case 'inProgress':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-blue-50 text-blue-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
-                        Đang làm
-                    </span>
-                );
-            case 'done':
-                return (
-                    <span className="px-3 py-1 text-xs rounded-full font-medium bg-green-50 text-green-700 flex items-center w-fit">
-                        <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
-                        Hoàn thành
-                    </span>
-                );
-            default:
-                return null;
-        }
-    };
+    // // Hiển thị trạng thái task
+    // const getStatusBadge = (status) => {
+    //     switch (status) {
+    //         case 'todo':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-gray-100 text-gray-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-gray-500 mr-1.5"></span>
+    //                     To Do
+    //                 </span>
+    //             );
+    //         case 'inProgress':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-blue-50 text-blue-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
+    //                     Đang làm
+    //                 </span>
+    //             );
+    //         case 'done':
+    //             return (
+    //                 <span className="px-3 py-1 text-xs rounded-full font-medium bg-green-50 text-green-700 flex items-center w-fit">
+    //                     <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
+    //                     Hoàn thành
+    //                 </span>
+    //             );
+    //         default:
+    //             return null;
+    //     }
+    // };
 
     // Render overlay assignees dựa trên đối tượng từ hook
     const renderOverlayAssigneesComponent = () => {
@@ -440,18 +496,71 @@ const TaskOverlay = ({ task, teamMembers, renderOverlayAssignees }) => {
         } else if (assigneeData.type === 'singleMember') {
             return (
                 <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium mr-1`}>
-                        {assigneeData.memberId}
-                    </div>
+                    {assigneeData.avatar ? (
+                        <img
+                            src={assigneeData.avatar}
+                            alt={assigneeData.memberName}
+                            className="w-6 h-6 rounded-full object-cover mr-1"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(assigneeData.memberName) + "&background=random";
+                            }}
+                        />
+                    ) : (
+                        <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium mr-1`}>
+                            {assigneeData.memberName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
                     <span className="text-sm">{assigneeData.memberName}</span>
                 </div>
             );
         } else if (assigneeData.type === 'multipleMembers') {
             return (
                 <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium mr-1`}>
-                        {assigneeData.memberId}
-                    </div>
+                    {assigneeData.avatar ? (
+                        <img
+                            src={assigneeData.avatar}
+                            alt={assigneeData.memberName}
+                            className="w-6 h-6 rounded-full object-cover mr-1"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(assigneeData.memberName) + "&background=random";
+                            }}
+                        />
+                    ) : (
+                        <div className={`w-6 h-6 rounded-full ${assigneeData.color} flex items-center justify-center text-white font-medium mr-1`}>
+                            {assigneeData.memberName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                    <span className="text-sm">+{assigneeData.count}</span>
+                </div>
+            );
+        } else if (assigneeData.type === 'singleAvatar') {
+            return (
+                <div className="flex items-center">
+                    <img
+                        src={assigneeData.avatarUrl}
+                        alt="Người được giao"
+                        className="w-6 h-6 rounded-full object-cover mr-1"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://ui-avatars.com/api/?name=User&background=random";
+                        }}
+                    />
+                </div>
+            );
+        } else if (assigneeData.type === 'multipleAvatars') {
+            return (
+                <div className="flex items-center">
+                    <img
+                        src={assigneeData.avatarUrl}
+                        alt="Người được giao"
+                        className="w-6 h-6 rounded-full object-cover mr-1"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://ui-avatars.com/api/?name=User&background=random";
+                        }}
+                    />
                     <span className="text-sm">+{assigneeData.count}</span>
                 </div>
             );
@@ -467,9 +576,9 @@ const TaskOverlay = ({ task, teamMembers, renderOverlayAssignees }) => {
             </div>
             <h4 className="font-semibold mt-2 text-gray-800">{task.title}</h4>
             <p className="text-gray-600 text-sm mt-1 line-clamp-2">{task.description}</p>
-            <div className="mt-3">
+            {/* <div className="mt-3">
                 {getStatusBadge(task.status)}
-            </div>
+            </div> */}
 
             {/* Thanh tiến độ */}
             <div className="mt-4">
@@ -494,11 +603,66 @@ const TaskOverlay = ({ task, teamMembers, renderOverlayAssignees }) => {
                 </div>
                 <div className="flex items-center text-gray-500">
                     <FontAwesomeIcon icon={faClock} className="mr-1.5" />
-                    <span>{task.dueDate}</span>
+                    <span>{task.dueDate ? formatVietnameseDate(task.dueDate) : "Chưa đặt hạn"}</span>
                 </div>
             </div>
         </div>
     );
+};
+
+const UserAvatar = ({ userId }) => {
+    const [userInfo, setUserInfo] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            if (!userId) return;
+
+            try {
+                setLoading(true);
+                const info = await getAccountInfo(userId);
+                setUserInfo(info);
+            } catch (error) {
+                console.error('Lỗi khi lấy thông tin người dùng:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserInfo();
+    }, [userId]);
+
+    if (loading) {
+        return (
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center animate-pulse mr-3">
+            </div>
+        );
+    }
+
+    if (userInfo?.avatarUrl) {
+        return (
+            <img
+                src={userInfo.avatarUrl}
+                alt={userInfo.fullname || 'Avatar'}
+                className="w-8 h-8 rounded-full object-cover mr-3"
+                onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo.fullname || 'User')}&background=random`;
+                }}
+            />
+        );
+    } else {
+        // Lấy chữ cái đầu tiên để hiển thị
+        const displayChar = userInfo?.fullname?.charAt(0) ||
+            userInfo?.email?.charAt(0) ||
+            userId?.charAt(0) || '?';
+
+        return (
+            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white font-medium mr-3">
+                {displayChar.toUpperCase()}
+            </div>
+        );
+    }
 };
 
 const Milestone = () => {
@@ -549,12 +713,24 @@ const Milestone = () => {
         handleRemoveMember,
         handleAddComment,
         handleDeleteComment,
-        formatCommentTime,
         renderAssignees,
         renderOverlayAssignees,
         fetchTaskBoard,
         setEditingTask,
-        setEditingTaskField
+        setEditingTaskField,
+        filterParams,
+        tasksList,
+        pagination,
+        tasksListLoading,
+        loadTasksListView,
+        teamMembersLoading,
+        handleFilterByColumn,
+        handleSearch,
+        handleLocalSearch,
+        handleLocalFilterByColumn,
+        handleLocalPageSizeChange,
+        handleLocalPageChange,
+        setEditFieldData
     } = useMilestone();
 
     // Thêm state để quản lý chế độ xem (kanban hoặc list)
@@ -645,6 +821,13 @@ const Milestone = () => {
             default: return 'bg-gray-100 text-gray-700';
         }
     };
+
+    // Thêm useEffect để tải dữ liệu danh sách khi chuyển chế độ xem
+    useEffect(() => {
+        if (viewMode === 'list' && boardId) {
+            loadTasksListView();
+        }
+    }, [viewMode, boardId]);
 
     if (loading) {
         return (
@@ -805,8 +988,20 @@ const Milestone = () => {
                                         <option value="low">Thấp</option>
                                     </select>
                                 </div>
+
                             </div>
+
                             <div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-medium">Ghi chú:</label>
+                                    <textarea
+                                        value={taskFormData.note}
+                                        onChange={(e) => setTaskFormData({ ...taskFormData, note: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder="Ghi chú bổ sung cho công việc"
+                                        rows="3"
+                                    ></textarea>
+                                </div>
                                 <div className="mb-4">
                                     <label className="block text-gray-700 mb-2 font-medium">Người được giao:</label>
                                     <input
@@ -826,7 +1021,7 @@ const Milestone = () => {
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                                     />
                                 </div>
-                                <div className="mb-5">
+                                {/* <div className="mb-5">
                                     <label className="block text-gray-700 mb-2 font-medium">Tiến độ (%):</label>
                                     <input
                                         type="number"
@@ -846,8 +1041,8 @@ const Milestone = () => {
                                             }}
                                         ></div>
                                     </div>
-                                </div>
-                                <div className="mb-4">
+                                </div> */}
+                                {/* <div className="mb-4">
                                     <label className="block text-gray-700 mb-2 font-medium">Trạng thái:</label>
                                     <select
                                         value={taskFormData.status || 'todo'}
@@ -858,7 +1053,7 @@ const Milestone = () => {
                                         <option value="inProgress">Đang làm</option>
                                         <option value="done">Hoàn thành</option>
                                     </select>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                         <div className="flex justify-end space-x-3 mt-4">
@@ -1050,9 +1245,21 @@ const Milestone = () => {
                                         return (
                                             <div key={idx} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md">
                                                 <div className="flex items-center">
-                                                    <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white font-medium mr-2`}>
-                                                        {member.id}
-                                                    </div>
+                                                    {member.avatar ? (
+                                                        <img
+                                                            src={member.avatar}
+                                                            alt={member.name}
+                                                            className="w-8 h-8 rounded-full object-cover mr-2"
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.name) + "&background=random";
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white font-medium mr-2`}>
+                                                            {member.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
                                                     <span>{member.name}</span>
                                                 </div>
                                                 <button
@@ -1086,9 +1293,21 @@ const Milestone = () => {
                                             className="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer"
                                             onClick={() => handleAddMember(editFieldData.taskId, editFieldData.milestoneId, member.id)}
                                         >
-                                            <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white font-medium mr-2`}>
-                                                {member.id}
-                                            </div>
+                                            {member.avatar ? (
+                                                <img
+                                                    src={member.avatar}
+                                                    alt={member.name}
+                                                    className="w-8 h-8 rounded-full object-cover mr-2"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.name) + "&background=random";
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white font-medium mr-2`}>
+                                                    {member.name.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
                                             <span>{member.name}</span>
                                         </div>
                                     ))}
@@ -1134,7 +1353,7 @@ const Milestone = () => {
             )}
 
             {/* Popup chỉnh sửa trạng thái */}
-            {editingTaskField === 'status' && (
+            {/* {editingTaskField === 'status' && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
                         <h2 className="text-xl font-bold mb-4 text-gray-800">Đổi trạng thái</h2>
@@ -1166,306 +1385,325 @@ const Milestone = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
 
             {/* Modal chi tiết task */}
             {showTaskDetailModal && viewingTask && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
-                    <div className="bg-white p-7 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all animate-scaleIn">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-800">Chi tiết công việc</h2>
-                            <button
-                                onClick={() => setShowTaskDetailModal(false)}
-                                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors btn-hover-effect"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-2xl font-bold text-gray-800">{viewingTask.title}</h3>
-                                <div className="flex space-x-2">
-                                    {/* <button
-                                        className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                                        onClick={() => {
-                                            setShowTaskDetailModal(false);
-                                            handleEditTask(viewingTask.milestoneId, viewingTask);
-                                        }}
-                                    >
-                                        <FontAwesomeIcon icon={faEdit} />
-                                    </button> */}
-                                    <button
-                                        className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
-                                        onClick={() => {
-                                            setShowTaskDetailModal(false);
-                                            handleDeleteTask(viewingTask.milestoneId, viewingTask.id);
-                                        }}
-                                    >
-                                        <FontAwesomeIcon icon={faTrashAlt} />
-                                    </button>
-                                </div>
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden transform transition-all animate-scaleIn">
+                        {loading ? (
+                            <div className="py-12 flex flex-col items-center justify-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                                <p className="text-gray-500">Đang tải thông tin chi tiết...</p>
                             </div>
+                        ) : (
+                            <div className="flex h-full">
+                                {/* Phần thông tin chi tiết task - bên trái */}
+                                <div className="w-[60%] p-6 overflow-y-auto max-h-[90vh]">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold text-gray-800">Chi tiết công việc</h2>
+                                        <button
+                                            onClick={() => setShowTaskDetailModal(false)}
+                                            className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors btn-hover-effect"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
-                            <div className="mt-4 flex items-center space-x-2">
-                                {/* Hiển thị trạng thái task */}
-                                {viewingTask.status === 'todo' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-gray-100 text-gray-700 flex items-center">
-                                        <span className="w-2 h-2 rounded-full bg-gray-500 mr-1.5"></span>
-                                        Cần làm
-                                    </span>
-                                )}
-                                {viewingTask.status === 'inProgress' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-blue-50 text-blue-700 flex items-center">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
-                                        Đang làm
-                                    </span>
-                                )}
-                                {viewingTask.status === 'done' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-50 text-green-700 flex items-center">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
-                                        Hoàn thành
-                                    </span>
-                                )}
-
-                                {/* Hiển thị độ ưu tiên */}
-                                {viewingTask.priority === 'high' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-red-50 text-red-700 flex items-center">
-                                        Ưu tiên cao
-                                    </span>
-                                )}
-                                {viewingTask.priority === 'medium' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-yellow-50 text-yellow-700 flex items-center">
-                                        Ưu tiên trung bình
-                                    </span>
-                                )}
-                                {viewingTask.priority === 'low' && (
-                                    <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-50 text-green-700 flex items-center">
-                                        Ưu tiên thấp
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-500 mb-2">Mô tả</h4>
-                            <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">{viewingTask.description || "Không có mô tả"}</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-sm font-medium text-gray-500">Người được giao</h4>
-                                    <button
-                                        onClick={() => setShowMemberDropdown(!showMemberDropdown)}
-                                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center btn-hover-effect"
-                                    >
-                                        <FontAwesomeIcon icon={faPlus} className="mr-1" size="xs" />
-                                        Thêm
-                                    </button>
-                                </div>
-
-                                {/* Dropdown thêm thành viên */}
-                                {showMemberDropdown && (
-                                    <div className="bg-white shadow-md rounded-lg mt-1 p-2 absolute z-10 w-64 border border-gray-200 animate-fadeIn">
-                                        <div className="max-h-48 overflow-y-auto">
-                                            {teamMembers.filter(member =>
-                                                !(viewingTask.assignees || []).includes(member.id)
-                                            ).map((member, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="px-3 py-2 hover:bg-blue-50 rounded-md cursor-pointer flex items-center justify-between"
-                                                    onClick={() => handleAddMember(viewingTask.id, viewingTask.milestoneId, member.id)}
+                                    <div className="mb-6">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-2xl font-bold text-gray-800">{viewingTask.title}</h3>
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                                    onClick={() => {
+                                                        setShowTaskDetailModal(false);
+                                                        handleDeleteTask(viewingTask.milestoneId, viewingTask.id);
+                                                    }}
                                                 >
-                                                    <span>{member.name}</span>
-                                                    <FontAwesomeIcon icon={faPlus} className="text-blue-500" size="xs" />
-                                                </div>
-                                            ))}
+                                                    <FontAwesomeIcon icon={faTrashAlt} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        {teamMembers.filter(member =>
-                                            !(viewingTask.assignees || []).includes(member.id)
-                                        ).length === 0 && (
-                                                <div className="px-3 py-2 text-gray-500 text-sm text-center">
-                                                    Đã thêm tất cả thành viên
+
+                                        <div className="mt-4 flex items-center space-x-2">
+                                            {viewingTask.priority === 'high' && (
+                                                <span className="px-3 py-1 text-sm rounded-full font-medium bg-red-50 text-red-700 flex items-center">
+                                                    Ưu tiên cao
+                                                </span>
+                                            )}
+                                            {viewingTask.priority === 'medium' && (
+                                                <span className="px-3 py-1 text-sm rounded-full font-medium bg-yellow-50 text-yellow-700 flex items-center">
+                                                    Ưu tiên trung bình
+                                                </span>
+                                            )}
+                                            {viewingTask.priority === 'low' && (
+                                                <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-50 text-green-700 flex items-center">
+                                                    Ưu tiên thấp
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Mô tả</h4>
+                                        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">{viewingTask.description || "Không có mô tả"}</p>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Ghi chú</h4>
+                                        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                            {viewingTask.note ? viewingTask.note : "Không có ghi chú"}
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                        <div>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-sm font-medium text-gray-500">Người được giao</h4>
+                                                <button
+                                                    onClick={() => setShowMemberDropdown(!showMemberDropdown)}
+                                                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center btn-hover-effect"
+                                                >
+                                                    <FontAwesomeIcon icon={faPlus} className="mr-1" size="xs" />
+                                                    Thêm
+                                                </button>
+                                            </div>
+
+                                            {/* Dropdown thêm thành viên */}
+                                            {showMemberDropdown && (
+                                                <div className="bg-white shadow-md rounded-lg mt-1 p-2 absolute z-10 w-64 border border-gray-200 animate-fadeIn">
+                                                    <div className="mb-3">
+                                                        <input
+                                                            type="text"
+                                                            value={memberSearchQuery}
+                                                            onChange={(e) => setMemberSearchQuery(e.target.value)}
+                                                            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
+                                                            placeholder="Tìm kiếm thành viên..."
+                                                        />
+                                                    </div>
+
+                                                    {teamMembersLoading ? (
+                                                        <div className="flex justify-center items-center py-4">
+                                                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                                                            <span className="ml-2 text-sm text-gray-500">Đang tải...</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="max-h-48 overflow-y-auto">
+                                                            {teamMembers.filter(member => {
+                                                                // Lọc theo search query và loại bỏ thành viên đã được gán
+                                                                const viewingTaskAssignees = viewingTask.assignees || [];
+                                                                return !viewingTaskAssignees.includes(member.id) &&
+                                                                    member.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
+                                                            }).length > 0 ? (
+                                                                teamMembers.filter(member => {
+                                                                    const viewingTaskAssignees = viewingTask.assignees || [];
+                                                                    return !viewingTaskAssignees.includes(member.id) &&
+                                                                        member.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
+                                                                }).map((member, index) => (
+                                                                    <div
+                                                                        key={index}
+                                                                        className="px-3 py-2 hover:bg-blue-50 rounded-md cursor-pointer flex items-center justify-between"
+                                                                        onClick={() => handleAddMember(viewingTask.id, viewingTask.milestoneId, member.id)}
+                                                                    >
+                                                                        <div className="flex items-center">
+                                                                            {member.avatar || member.avatarURL ? (
+                                                                                <img
+                                                                                    src={member.avatar}
+                                                                                    alt={member.name}
+                                                                                    className="w-6 h-6 rounded-full object-cover mr-2"
+                                                                                    onError={(e) => {
+                                                                                        e.target.onerror = null;
+                                                                                        e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.name) + "&background=random";
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <div className={`w-6 h-6 rounded-full ${member.color} flex items-center justify-center text-white font-medium mr-2`}>
+                                                                                    {member.name.charAt(0).toUpperCase()}
+                                                                                </div>
+                                                                            )}
+                                                                            <span className="text-sm">{member.name}</span>
+                                                                        </div>
+                                                                        <FontAwesomeIcon icon={faPlus} className="text-blue-500" size="xs" />
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <div className="px-3 py-4 text-gray-500 text-sm text-center">
+                                                                    {memberSearchQuery ? 'Không tìm thấy thành viên phù hợp' : 'Đã thêm tất cả thành viên'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
-                                    </div>
-                                )}
 
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {(viewingTask.assignees && viewingTask.assignees.length > 0) ? (
-                                        viewingTask.assignees.map((memberId, index) => {
-                                            const member = teamMembers.find(m => m.id === memberId);
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm flex items-center group relative"
-                                                >
-                                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium mr-1">
-                                                        {member?.id || memberId.charAt(0)}
-                                                    </div>
-                                                    <span className="mr-1">{member?.name || memberId}</span>
-                                                    <button
-                                                        onClick={() => handleRemoveMember(viewingTask.id, viewingTask.milestoneId, memberId)}
-                                                        className="text-blue-400 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrashAlt} size="xs" />
-                                                    </button>
-                                                    {/* Tooltip hiển thị khi hover */}
-                                                    <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block">
-                                                        <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                                                            Gỡ bỏ
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <div className="text-gray-500 text-sm italic">Chưa có người được giao</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-500 mb-2">Hạn hoàn thành</h4>
-                                <div className="flex items-center text-gray-800">
-                                    <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-blue-500" />
-                                    {viewingTask.dueDate || "Chưa đặt hạn"}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-500 mb-2">Tiến độ</h4>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-sm font-medium text-gray-700">Hoàn thành</span>
-                                <span className="text-sm font-medium text-blue-600">{viewingTask.progress || 0}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                <div
-                                    className="h-3 rounded-full transition-all duration-300 ease-out progress-bar-animate"
-                                    style={{
-                                        width: `${viewingTask.progress || 0}%`,
-                                        backgroundColor: viewingTask.progress >= 100 ? '#10B981' : viewingTask.progress > 50 ? '#3B82F6' : '#60A5FA'
-                                    }}
-                                ></div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-200 pt-5 flex justify-between">
-                            <button
-                                onClick={() => {
-                                    setShowTaskDetailModal(false);
-                                    handleEditTaskField(viewingTask.milestoneId, viewingTask.id, 'status');
-                                }}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 transition-colors font-medium btn-hover-effect"
-                            >
-                                <FontAwesomeIcon icon={faCheck} />
-                                Đánh dấu hoàn thành
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    setShowMemberDropdown(!showMemberDropdown);
-                                    setShowComments(false); // Đóng phần bình luận nếu đang mở
-                                }}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors font-medium btn-hover-effect"
-                            >
-                                <FontAwesomeIcon icon={faUserFriends} />
-                                Thành viên
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    setShowComments(!showComments);
-                                    setShowMemberDropdown(false); // Đóng dropdown thành viên nếu đang mở
-                                    // Focus vào ô input khi mở phần bình luận
-                                    if (!showComments) {
-                                        setTimeout(() => {
-                                            if (commentInputRef.current) {
-                                                commentInputRef.current.focus();
-                                            }
-                                        }, 100);
-                                    }
-                                }}
-                                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg ${showComments ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700'} text-white transition-colors font-medium btn-hover-effect`}
-                            >
-                                <FontAwesomeIcon icon={faComment} />
-                                Bình luận {(viewingTask.comments?.length > 0) && `(${viewingTask.comments.length})`}
-                            </button>
-                        </div>
-
-                        {/* Phần bình luận */}
-                        {showComments && (
-                            <div className="mt-6 border-t border-gray-200 pt-4 animate-fadeIn">
-                                <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                                    <FontAwesomeIcon icon={faComment} className="mr-2 text-indigo-500" /> Bình luận
-                                </h3>
-
-                                {/* Danh sách bình luận */}
-                                <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto">
-                                    {viewingTask.comments && viewingTask.comments.length > 0 ? (
-                                        viewingTask.comments.map((comment) => (
-                                            <div key={comment.id} className="flex space-x-3 group">
-                                                <div className={`w-8 h-8 rounded-full ${comment.userColor || 'bg-gray-500'} flex items-center justify-center text-white font-medium`}>
-                                                    {comment.userId.charAt(0)}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="bg-gray-50 p-3 rounded-lg shadow-sm relative">
-                                                        <div className="flex justify-between items-center mb-1">
-                                                            <span className="font-medium text-gray-900">{comment.userName}</span>
-                                                            <span className="text-xs text-gray-500">{formatCommentTime(comment.timestamp)}</span>
-                                                        </div>
-                                                        <p className="text-gray-700">{comment.text}</p>
-
-                                                        {/* Nút xóa chỉ hiển thị cho bình luận của người dùng hiện tại */}
-                                                        {comment.userId === currentUser.id && (
-                                                            <button
-                                                                onClick={() => handleDeleteComment(viewingTask.id, viewingTask.milestoneId, comment.id)}
-                                                                className="absolute right-2 top-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {(viewingTask.assignees && viewingTask.assignees.length > 0) ? (
+                                                    viewingTask.assignees.map((memberId, index) => {
+                                                        const member = teamMembers.find(m => m.id === memberId);
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm flex items-center group relative"
                                                             >
-                                                                <FontAwesomeIcon icon={faTrashAlt} size="xs" />
-                                                            </button>
-                                                        )}
+                                                                {member?.avatar ? (
+                                                                    <img
+                                                                        src={member.avatar || member.avatarURL}
+                                                                        alt={member.name || member.fullname}
+                                                                        className="w-6 h-6 rounded-full object-cover mr-1"
+                                                                        onError={(e) => {
+                                                                            e.target.onerror = null;
+                                                                            e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.name || member.fullname) + "&background=random";
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium mr-1">
+                                                                        {member?.name?.charAt(0).toUpperCase() || memberId.toString().charAt(0)}
+                                                                    </div>
+                                                                )}
+                                                                <span className="mr-1">{member?.name || memberId}</span>
+                                                                <button
+                                                                    onClick={() => handleRemoveMember(viewingTask.id, viewingTask.milestoneId, memberId)}
+                                                                    className="text-blue-400 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrashAlt} size="xs" />
+                                                                </button>
+                                                                {/* Tooltip hiển thị khi hover */}
+                                                                <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block">
+                                                                    <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                                                                        Gỡ bỏ
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : viewingTask.asignTo && viewingTask.asignTo.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {viewingTask.asignTo.map((member, index) => (
+                                                            <div key={index} className="bg-blue-50 px-2 py-1 rounded-full flex items-center">
+                                                                <img
+                                                                    src={typeof member === 'string' ? member : member.avatarURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.fullname || 'User') + "&background=random"}
+                                                                    alt={typeof member === 'string' ? "Người được giao" : member.fullname || "Người được giao"}
+                                                                    className="w-6 h-6 rounded-full object-cover mr-2"
+                                                                    onError={(e) => {
+                                                                        e.target.onerror = null;
+                                                                        e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(typeof member === 'string' ? 'User' : member.fullname || 'User') + "&background=random";
+                                                                    }}
+                                                                />
+                                                                {typeof member !== 'string' && member.fullname && <span className="text-xs text-gray-700">{member.fullname}</span>}
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                </div>
+                                                ) : (
+                                                    <div className="text-gray-500 text-sm italic">Chưa có người được giao</div>
+                                                )}
                                             </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-6 text-gray-500">
-                                            Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
                                         </div>
-                                    )}
+
+                                        <div>
+                                            <h4 className="text-sm font-medium text-gray-500 mb-2">Hạn hoàn thành</h4>
+                                            <div className="flex items-center text-gray-800">
+                                                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-blue-500" />
+                                                {viewingTask.dueDate ? formatVietnameseDate(viewingTask.dueDate) : "Chưa đặt hạn"}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-gray-200 pt-5 flex justify-between">
+                                        <button
+                                            onClick={() => {
+                                                setShowTaskDetailModal(false);
+                                                handleEditTaskField(viewingTask.milestoneId, viewingTask.id, 'status');
+                                            }}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 transition-colors font-medium btn-hover-effect"
+                                        >
+                                            <FontAwesomeIcon icon={faCheck} />
+                                            Đánh dấu hoàn thành
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setShowMemberDropdown(!showMemberDropdown);
+                                            }}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors font-medium btn-hover-effect"
+                                        >
+                                            <FontAwesomeIcon icon={faUserFriends} />
+                                            Thành viên
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {/* Form nhập bình luận */}
-                                <div className="flex items-center mt-4">
-                                    <div className={`w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white font-medium mr-3`}>
-                                        {currentUser.id.charAt(0)}
+                                {/* Phần bình luận - bên phải */}
+                                <div className="w-[40%] border-l border-gray-200 p-6 overflow-y-auto max-h-[90vh] bg-gray-50">
+                                    <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+                                        <FontAwesomeIcon icon={faComment} className="mr-2 text-indigo-500" /> Bình luận {(viewingTask.comments?.length > 0) && `(${viewingTask.comments.length})`}
+                                    </h3>
+
+                                    {/* Danh sách bình luận */}
+                                    <div className="space-y-4 mb-4 max-h-[calc(90vh-180px)] overflow-y-auto">
+                                        {viewingTask?.comments && viewingTask.comments.length > 0 ? (
+                                            viewingTask.comments.map((comment) => (
+                                                <div key={comment.id} className="flex space-x-3 group">
+                                                    <UserAvatar userId={comment.userId} />
+                                                    <div className="flex-1">
+                                                        <div className="bg-white p-3 rounded-lg shadow-sm relative">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="font-medium text-gray-900">{comment.userName}</span>
+                                                                <span className="text-xs text-gray-500">{(comment.timestamp)}</span>
+                                                            </div>
+                                                            <p className="text-gray-700">{comment.text}</p>
+
+                                                            {/* Nút xóa chỉ hiển thị cho bình luận của người dùng hiện tại */}
+                                                            {(() => {
+                                                                const userInfo = getUserInfoFromToken();
+                                                                return userInfo && userInfo.userId === comment.userId && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteComment(viewingTask.id, viewingTask.milestoneId, comment.id)}
+                                                                        className="absolute right-2 top-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrashAlt} size="xs" />
+                                                                    </button>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex-1 relative">
-                                        <input
-                                            ref={commentInputRef}
-                                            type="text"
-                                            value={commentText}
-                                            onChange={(e) => setCommentText(e.target.value)}
-                                            placeholder="Thêm bình luận..."
-                                            className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                                            onKeyPress={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleAddComment(viewingTask.id, viewingTask.milestoneId, commentText);
-                                                }
-                                            }}
-                                        />
-                                        <button
-                                            onClick={() => handleAddComment(viewingTask.id, viewingTask.milestoneId, commentText)}
-                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-indigo-500 hover:text-indigo-700 p-1.5"
-                                            disabled={!commentText.trim()}
-                                        >
-                                            <FontAwesomeIcon icon={faPaperPlane} />
-                                        </button>
+
+                                    {/* Form nhập bình luận */}
+                                    <div className="sticky bottom-0 bg-gray-50 pt-4">
+                                        <div className="flex items-center">
+                                            <UserAvatar userId={getUserInfoFromToken()?.userId} />
+                                            <div className="flex-1 relative">
+                                                <input
+                                                    ref={commentInputRef}
+                                                    type="text"
+                                                    value={commentText}
+                                                    onChange={(e) => setCommentText(e.target.value)}
+                                                    placeholder="Thêm bình luận..."
+                                                    className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all bg-white"
+                                                    onKeyPress={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            handleAddComment(viewingTask.id, viewingTask.milestoneId, commentText);
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={() => handleAddComment(viewingTask.id, viewingTask.milestoneId, commentText)}
+                                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-indigo-500 hover:text-indigo-700 p-1.5"
+                                                    disabled={!commentText.trim()}
+                                                >
+                                                    <FontAwesomeIcon icon={faPaperPlane} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1533,141 +1771,269 @@ const Milestone = () => {
             {viewMode === 'list' && (
                 hasColumns ? (
                     <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            ID
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Tiêu đề
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ưu tiên
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Mô tả
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Hạn hoàn thành
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Tiến độ
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Trạng thái
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ghi chú
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Người tạo
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Người được giao
-                                        </th>
-                                        {/* <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Thao tác
-                                        </th> */}
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {getAllTasks().map((task) => (
-                                        <tr
-                                            key={task.id}
-                                            className="hover:bg-gray-50 transition-colors cursor-pointer"
-                                            onClick={() => handleTaskClick(task.milestoneId, task)}
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{task.id}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeColor(task.priority)}`}>
-                                                    {getPriorityName(task.priority)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-500 max-w-[200px] truncate">{task.description}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{task.dueDate}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                                    <div
-                                                        className="h-2.5 rounded-full transition-all duration-300 ease-out"
-                                                        style={{
-                                                            width: `${task.progress || 0}%`,
-                                                            backgroundColor: task.progress >= 100 ? '#10B981' : task.progress > 50 ? '#3B82F6' : '#60A5FA'
-                                                        }}
-                                                    ></div>
-                                                </div>
-                                                <div className="text-xs text-gray-600 mt-1 text-center">{task.progress || 0}%</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
-                                                    {getStatusName(task.status)}
-                                                </span>
-                                                <div className="text-xs text-gray-500 mt-1">{task.columnStatus}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-500">{task.note || '-'}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{task.createdBy || '-'}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center space-x-1">
-                                                    {task.assignees && task.assignees.length > 0 ? (
-                                                        task.assignees.slice(0, 2).map((assigneeId, idx) => {
-                                                            const member = teamMembers.find(m => m.id === assigneeId);
-                                                            return (
-                                                                <div key={idx} className={`w-6 h-6 rounded-full ${member?.color || 'bg-gray-500'} flex items-center justify-center text-white text-xs`}>
-                                                                    {member?.id.charAt(0) || assigneeId.charAt(0)}
-                                                                </div>
-                                                            );
-                                                        })
-                                                    ) : (
-                                                        <span className="text-sm text-gray-500">Chưa giao</span>
-                                                    )}
-                                                    {task.assignees && task.assignees.length > 2 && (
-                                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
-                                                            +{task.assignees.length - 2}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {/* <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <div className="flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditTaskField(task.milestoneId, task.id, 'title');
-                                                        }}
-                                                        className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                                                    >
-                                                        <FontAwesomeIcon icon={faEdit} />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteTask(task.milestoneId, task.id);
-                                                        }}
-                                                        className="text-red-600 hover:text-red-800 transition-colors"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrashAlt} />
-                                                    </button>
-                                                </div>
-                                            </td> */}
-                                        </tr>
+                        {/* Thanh tìm kiếm và lọc */}
+                        <div className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex gap-3 items-center">
+                                <div className="relative max-w-xs">
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm task..."
+                                        value={filterParams.search}
+                                        onChange={(e) => handleLocalSearch(e.target.value)}
+                                        className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                    />
+                                    <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500">
+                                        <FontAwesomeIcon icon={faSearch} />
+                                    </button>
+                                </div>
+                                <select
+                                    className="border border-gray-300 rounded-lg px-4 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-gray-700"
+                                    value={filterParams.columnStatusId || ''}
+                                    onChange={(e) => handleLocalFilterByColumn(e.target.value === '' ? null : e.target.value)}
+                                >
+                                    <option value="">Tất cả cột</option>
+                                    {Object.values(columns).map(milestone => (
+                                        <option key={milestone.id} value={milestone.columnId}>
+                                            {milestone.title}
+                                        </option>
                                     ))}
-                                </tbody>
-                            </table>
+                                </select>
+                            </div>
+                            <div className="text-gray-500 text-sm">
+                                Hiển thị {tasksList.length} trên tổng số {pagination.totalItems} task
+                            </div>
                         </div>
+
+                        {tasksListLoading ? (
+                            <div className="flex items-center justify-center h-64">
+                                <div className="flex flex-col items-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
+                                    <p className="text-gray-500">Đang tải danh sách task...</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    ID
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Tiêu đề
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Ưu tiên
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Mô tả
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Hạn hoàn thành
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Ghi chú
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Người tạo
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Người được giao
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {tasksList
+                                                .slice(
+                                                    (pagination.pageNumber - 1) * pagination.pageSize,
+                                                    pagination.pageNumber * pagination.pageSize
+                                                )
+                                                .map((task) => (
+                                                    <tr
+                                                        key={task.taskId || task.id}
+                                                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                                        onClick={() => handleTaskClick(task.milestoneId || task.columnStatusId, task)}
+                                                    >
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-900">{task.taskId || task.id}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm font-medium text-gray-900">{task.title}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeColor(task.priority)}`}>
+                                                                {getPriorityName(task.priority)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm text-gray-500 max-w-[200px] truncate">{task.description}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-900">
+                                                                {task.dueDate ? formatVietnameseDate(task.dueDate) : "Chưa đặt hạn"}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm text-gray-500 max-w-[200px] truncate">
+                                                                {task.note || '-'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center">
+                                                                <img
+                                                                    src={task.createdBy || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                    alt="Người tạo"
+                                                                    className="w-8 h-8 rounded-full object-cover"
+                                                                    onError={(e) => {
+                                                                        e.target.onerror = null;
+                                                                        e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center space-x-1">
+                                                                {(task.assignees && task.assignees.length > 0) ? (
+                                                                    task.assignees.slice(0, 2).map((assigneeId, idx) => {
+                                                                        const member = teamMembers.find(m => m.id === assigneeId);
+                                                                        return (
+                                                                            <div key={idx}>
+                                                                                {member?.avatar ? (
+                                                                                    <img
+                                                                                        src={member.avatar}
+                                                                                        alt={member.name}
+                                                                                        className="w-6 h-6 rounded-full object-cover"
+                                                                                        onError={(e) => {
+                                                                                            e.target.onerror = null;
+                                                                                            e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.name) + "&background=random";
+                                                                                        }}
+                                                                                    />
+                                                                                ) : (
+                                                                                    <div className={`w-6 h-6 rounded-full ${member?.color || 'bg-gray-500'} flex items-center justify-center text-white text-xs`}>
+                                                                                        {member?.name?.charAt(0).toUpperCase() || assigneeId.toString().charAt(0)}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                ) : (task.asignTo && task.asignTo.length > 0) ? (
+                                                                    task.asignTo.slice(0, 2).map((assignee, idx) => (
+                                                                        <div key={idx}>
+                                                                            {(typeof assignee === 'string' && assignee.includes('http')) || assignee.avatarURL ? (
+                                                                                <img
+                                                                                    src={typeof assignee === 'string' ? assignee : assignee.avatarURL}
+                                                                                    alt={typeof assignee === 'string' ? "Người được giao" : assignee.fullname || "Người được giao"}
+                                                                                    className="w-6 h-6 rounded-full object-cover"
+                                                                                    onError={(e) => {
+                                                                                        e.target.onerror = null;
+                                                                                        e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(typeof assignee === 'string' ? 'User' : assignee.fullname || 'User') + "&background=random";
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center text-white text-xs">
+                                                                                    {typeof assignee === 'string' ? assignee?.charAt(0) || 'U' : assignee.fullname?.charAt(0) || 'U'}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <span className="text-sm text-gray-500">Chưa giao</span>
+                                                                )}
+                                                                {task.assignees && task.assignees.length > 2 && (
+                                                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
+                                                                        +{task.assignees.length - 2}
+                                                                    </div>
+                                                                )}
+                                                                {task.asignTo && task.asignTo.length > 2 && (
+                                                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
+                                                                        +{task.asignTo.length - 2}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Phân trang */}
+                                {pagination.totalPages > 1 && (
+                                    <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                                        <div className="flex items-center">
+                                            <span className="text-sm text-gray-700 mr-2">Hiển thị</span>
+                                            <select
+                                                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                                                value={pagination.pageSize}
+                                                onChange={(e) => handleLocalPageSizeChange(Number(e.target.value))}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                            <span className="text-sm text-gray-700 ml-2">mục mỗi trang</span>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => handleLocalPageChange(1)}
+                                                disabled={pagination.pageNumber === 1}
+                                                className={`px-3 py-1 rounded ${pagination.pageNumber === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                            >
+                                                <FontAwesomeIcon icon={faAngleDoubleLeft} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleLocalPageChange(pagination.pageNumber - 1)}
+                                                disabled={pagination.pageNumber === 1}
+                                                className={`px-3 py-1 rounded ${pagination.pageNumber === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                            >
+                                                <FontAwesomeIcon icon={faAngleLeft} />
+                                            </button>
+
+                                            {/* Hiển thị các nút trang */}
+                                            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                                let pageNum;
+                                                if (pagination.totalPages <= 5) {
+                                                    pageNum = i + 1;
+                                                } else if (pagination.pageNumber <= 3) {
+                                                    pageNum = i + 1;
+                                                } else if (pagination.pageNumber >= pagination.totalPages - 2) {
+                                                    pageNum = pagination.totalPages - 4 + i;
+                                                } else {
+                                                    pageNum = pagination.pageNumber - 2 + i;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => handleLocalPageChange(pageNum)}
+                                                        className={`px-3 py-1 rounded ${pagination.pageNumber === pageNum ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+
+                                            <button
+                                                onClick={() => handleLocalPageChange(pagination.pageNumber + 1)}
+                                                disabled={pagination.pageNumber === pagination.totalPages}
+                                                className={`px-3 py-1 rounded ${pagination.pageNumber === pagination.totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                            >
+                                                <FontAwesomeIcon icon={faAngleRight} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleLocalPageChange(pagination.totalPages)}
+                                                disabled={pagination.pageNumber === pagination.totalPages}
+                                                className={`px-3 py-1 rounded ${pagination.pageNumber === pagination.totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                            >
+                                                <FontAwesomeIcon icon={faAngleDoubleRight} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-md border border-gray-200 flex flex-col items-center">
@@ -1685,7 +2051,7 @@ const Milestone = () => {
                     </div>
                 )
             )}
-        </div>
+        </div >
     );
 };
 
