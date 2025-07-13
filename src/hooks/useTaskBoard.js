@@ -119,7 +119,15 @@ const useTask = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await createMilestone(milestoneData);
+
+            // Lấy ID người dùng hiện tại và thêm vào dữ liệu milestone
+            const accountID = await getUserId();
+            const milestonePayload = {
+                ...milestoneData,
+                accountID
+            };
+
+            const response = await createMilestone(milestonePayload);
             toast.success('Tạo milestone thành công!');
             return response;
         } catch (err) {

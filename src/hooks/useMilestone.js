@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
-import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment } from "@/apis/taskService";
+import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, createTask, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment } from "@/apis/taskService";
 import { getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { getStartupIdByAccountId } from "@/apis/startupService";
 import { toast } from "react-toastify";
@@ -56,6 +56,9 @@ const useMilestone = () => {
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
     const [selectedMember, setSelectedMember] = useState(null);
 
+    // State cho thành viên của task hiện tại
+    const [taskMembers, setTaskMembers] = useState([]);
+
     // State cho người dùng hiện tại và bình luận
     const [currentUser, setCurrentUser] = useState({ id: 'LT', name: 'aa' });
     const [commentText, setCommentText] = useState('');
@@ -95,7 +98,9 @@ const useMilestone = () => {
                     status: task.status || 'todo',
                     progress: task.progress || 0,
                     avatarURL: task.avatarURL || [],
-                    assignees: task.assignees || [] // Nếu API trả về assignees, sử dụng nó
+                    assignees: task.assignees || [], // Nếu API trả về assignees, sử dụng nó
+                    assignto: task.assignto || [], // Xử lý trường assignto viết thường
+                    asignTo: task.asignTo || [] // Xử lý trường asignTo viết hoa
                 })) : [];
 
                 columnsData[`milestone-${column.columnStatusId}`] = {
@@ -127,7 +132,7 @@ const useMilestone = () => {
             console.log('API Response:', response);
 
             if (response && Array.isArray(response)) {
-                console.log('Response data structure:', JSON.stringify(response.data));
+                // console.log('Response data structure:', JSON.stringify(response));
                 const columnsData = mapApiDataToColumns(response);
                 setColumns(columnsData);
             } else {
@@ -171,6 +176,70 @@ const useMilestone = () => {
         }
     };
 
+    // Hàm để lấy danh sách thành viên trong task sử dụng API getMembersInTask
+    const getMembersInTaskFromMilestone = async (task) => {
+        if (!task) return [];
+
+        try {
+            // Lấy taskId thực tế (số nguyên)
+            const taskId = task.taskId || (task.id && parseInt(task.id.split('-')[1]));
+
+            if (!taskId) {
+                console.error('Không tìm thấy taskId hợp lệ:', task);
+                return [];
+            }
+
+            // Gọi API để lấy danh sách thành viên trong task
+            const response = await getMembersInTask(taskId);
+            // console.log('Members in task response:', response);
+            if (response && Array.isArray(response)) {
+                // Chuyển đổi định dạng phản hồi API thành định dạng taskMembers
+                const formattedMembers = response.map(member => ({
+                    id: member.accountId,
+                    memberId: member.memberId || member.accountId,
+                    name: member.fullName || 'Không có tên',
+                    color: 'bg-blue-500', // Màu mặc định
+                    avatar: member.avatarUrl || null
+                }));
+                return formattedMembers;
+            } else {
+                console.error('Định dạng phản hồi API không hợp lệ:', response);
+                return [];
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách thành viên trong task:', error);
+
+            // Trường hợp lỗi: sử dụng phương pháp cũ (dự phòng)
+            const assignedIds = [];
+            // Kiểm tra các trường khác nhau có thể chứa thông tin người được gán
+            if (task.assignees && Array.isArray(task.assignees)) {
+                assignedIds.push(...task.assignees);
+            }
+
+            if (task.asignTo && Array.isArray(task.asignTo)) {
+                task.asignTo.forEach(assignee => {
+                    if (typeof assignee === 'object' && assignee !== null) {
+                        assignedIds.push(assignee.id);
+                    } else if (typeof assignee === 'string' && !assignee.includes('http')) {
+                        assignedIds.push(assignee);
+                    }
+                });
+            }
+
+            if (task.assignto && Array.isArray(task.assignto)) {
+                task.assignto.forEach(assignee => {
+                    if (typeof assignee === 'object' && assignee !== null) {
+                        assignedIds.push(assignee.id);
+                    } else if (typeof assignee === 'string' && !assignee.includes('http')) {
+                        assignedIds.push(assignee);
+                    }
+                });
+            }
+
+            // Lọc thành viên từ danh sách teamMembers
+            return teamMembers.filter(member => assignedIds.includes(member.id));
+        }
+    };
 
     //     // Tạo số ngẫu nhiên từ id
     //     let sum = 0;
@@ -579,20 +648,53 @@ const useMilestone = () => {
 
         try {
             if (isNew) {
-                // Thêm task mới - xử lý trong một hàm khác
-                // TODO: Implement API call for createTask
-                const newTask = {
-                    id: `task-${Date.now()}`,
-                    ...taskFormData
+                // Thêm task mới
+                // Chuẩn bị dữ liệu cho API createTask
+                // Lấy thông tin người dùng hiện tại
+                const userInfo = getUserInfoFromToken();
+
+                const createTaskData = {
+                    milestoneId: parseInt(boardId),
+                    title: taskFormData.title,
+                    description: taskFormData.description || '',
+                    priority: taskFormData.priority || 'medium',
+                    dueDate: taskFormData.dueDate || null,
+                    columnnStatusId: milestone.columnId,
+                    note: taskFormData.note || '',
+                    assignedByAccountId: userInfo?.userId || null,
+                    assignToAccountIds: taskFormData.assignee ? [taskFormData.assignee] : []
                 };
 
-                setColumns({
-                    ...columns,
-                    [milestoneId]: {
-                        ...milestone,
-                        tasks: [...milestone.tasks, newTask]
-                    }
-                });
+                console.log('Calling createTask API with data:', createTaskData);
+                const response = await createTask(createTaskData);
+                console.log('API Response for createTask:', response);
+
+                if (response) {
+                    // Tạo đối tượng task mới từ kết quả API
+                    const newTask = {
+                        id: `task-${response.taskId || Date.now()}`,
+                        taskId: response.taskId,
+                        title: response.title || taskFormData.title,
+                        description: response.description || taskFormData.description || '',
+                        priority: response.priority || taskFormData.priority || 'medium',
+                        dueDate: response.dueDate || taskFormData.dueDate || null,
+                        note: response.note || taskFormData.note || '',
+                        assignees: taskFormData.assignee ? [taskFormData.assignee] : []
+                    };
+
+                    // Cập nhật UI
+                    setColumns({
+                        ...columns,
+                        [milestoneId]: {
+                            ...milestone,
+                            tasks: [...milestone.tasks, newTask]
+                        }
+                    });
+
+                    toast.success('Thêm công việc mới thành công!');
+                } else {
+                    toast.error('Không thể tạo công việc mới');
+                }
             } else {
                 // Cập nhật task hiện có
                 const task = milestone.tasks.find(t => t.id === taskId);
@@ -691,23 +793,31 @@ const useMilestone = () => {
 
     // Xử lý chỉnh sửa một trường cụ thể của task
     const handleEditTaskField = (milestoneId, taskId, field) => {
-        const milestone = columns[milestoneId];
+        // Lấy task từ columns dựa vào milestoneId và taskId
+        const task = columns[milestoneId]?.tasks.find(t => t.id === taskId);
 
-        if (!milestone || !milestone.tasks) {
-            console.error("⛔ Milestone không tồn tại hoặc chưa có tasks:", milestoneId);
-            console.log("📦 columns hiện tại:", columns);
-            return;
+        // Lưu thông tin task vào viewingTask
+        if (task) {
+            setViewingTask({ ...task, milestoneId });
         }
 
-        const task = milestone.tasks.find(t => t.id === taskId);
-        if (task) {
-            setEditFieldData({
-                field,
-                taskId,
-                milestoneId,
-                currentValue: task[field] || ''
-            });
-            setEditingTaskField(field);
+        // Còn lại giữ nguyên...
+        setEditingTaskField(field);
+        setEditFieldData({
+            milestoneId,
+            taskId,
+            field,
+            currentValue: task?.[field] || ''
+        });
+
+        // Nếu đang chỉnh sửa người được giao, lấy thành viên của task
+        if (field === 'assignee') {
+            // Sử dụng hàm async để lấy thành viên task
+            const fetchTaskMembers = async () => {
+                const members = await getMembersInTaskFromMilestone(task);
+                setTaskMembers(members);
+            };
+            fetchTaskMembers();
         }
     };
 
@@ -840,7 +950,6 @@ const useMilestone = () => {
                     dueDate: response.dueDate || task.dueDate,
                     status: response.status || task.status,
                     progress: response.progress || task.progress || 0,
-                    assignees: response.assignees || task.assignees || [],
                     comments: comments, // Sử dụng comments từ API
                     note: response.note || task.note || '',
                     createdBy: response.createdBy || task.createdBy || '',
@@ -848,24 +957,52 @@ const useMilestone = () => {
                 };
 
                 setViewingTask(taskDetail);
+
+                // Lấy danh sách thành viên của task từ API
+                const fetchTaskMembers = async () => {
+                    const members = await getMembersInTaskFromMilestone(taskDetail);
+                    setTaskMembers(members);
+                };
+                fetchTaskMembers();
+
                 setShowTaskDetailModal(true);
             } else {
                 // Nếu không lấy được dữ liệu từ API, sử dụng dữ liệu từ state
-                setViewingTask({
+                const taskWithComments = {
                     ...task,
                     milestoneId,
                     comments: comments // Vẫn sử dụng comments từ API nếu có
-                });
+                };
+
+                setViewingTask(taskWithComments);
+
+                // Lấy danh sách thành viên của task từ API
+                const fetchTaskMembers = async () => {
+                    const members = await getMembersInTaskFromMilestone(taskWithComments);
+                    setTaskMembers(members);
+                };
+                fetchTaskMembers();
+
                 setShowTaskDetailModal(true);
                 console.warn('Không thể lấy dữ liệu chi tiết từ API, sử dụng dữ liệu local');
             }
         } catch (error) {
             console.error('Lỗi khi lấy chi tiết task:', error);
             // Trong trường hợp lỗi, vẫn hiển thị dữ liệu từ state
-            setViewingTask({
+            const taskWithMilestoneId = {
                 ...task,
                 milestoneId
-            });
+            };
+
+            setViewingTask(taskWithMilestoneId);
+
+            // Lấy danh sách thành viên của task từ API
+            const fetchTaskMembers = async () => {
+                const members = await getMembersInTaskFromMilestone(taskWithMilestoneId);
+                setTaskMembers(members);
+            };
+            fetchTaskMembers();
+
             setShowTaskDetailModal(true);
             toast.error('Có lỗi xảy ra khi tải thông tin chi tiết');
         } finally {
@@ -875,6 +1012,12 @@ const useMilestone = () => {
 
     // Xử lý thêm thành viên vào task
     const handleAddMember = async (taskId, milestoneId, memberId) => {
+        if (!taskId || !milestoneId || !memberId) {
+            console.error("Thiếu tham số khi thêm thành viên:", { taskId, milestoneId, memberId });
+            toast.error('Không thể thêm thành viên: thiếu thông tin');
+            return;
+        }
+
         const milestone = columns[milestoneId];
 
         if (!milestone || !milestone.tasks) {
@@ -899,24 +1042,60 @@ const useMilestone = () => {
                 return;
             }
 
-            // Gọi API để gán task cho người dùng
+            // Lấy ID của người dùng hiện tại
+            const userInfo = getUserInfoFromToken();
+            if (!userInfo || !userInfo.userId) {
+                return;
+            }
+
+            // Gọi API để gán task cho người dùng với cấu trúc mới
             const response = await assignTask({
                 taskId: actualTaskId,
-                accountId: memberId
+                assignedByAccountId: userInfo.userId,
+                assignToAccountId: memberId
             });
 
             console.log('Assign task response:', response);
+
+            // Tìm thông tin đầy đủ của thành viên từ teamMembers
+            const memberInfo = teamMembers.find(m => m.id === memberId);
 
             // Cập nhật UI ngay lập tức (optimistic update)
             const updatedTasks = milestone.tasks.map(t => {
                 if (t.id === taskId) {
                     // Tạo mảng assignees nếu chưa có hoặc thêm vào mảng hiện có
                     const assignees = t.assignees || [];
+                    // Tạo hoặc cập nhật mảng assignto/asignTo nếu có
+                    let assignto = t.assignto || [];
+                    let asignTo = t.asignTo || [];
+
                     // Chỉ thêm thành viên nếu chưa tồn tại
                     if (!assignees.includes(memberId)) {
+                        // Thêm vào cả assignees và assignto/asignTo để đảm bảo hiển thị đúng
+                        if (memberInfo) {
+                            // Tạo đối tượng thành viên với thông tin đầy đủ
+                            const memberObject = {
+                                id: memberInfo.id,
+                                fullname: memberInfo.name,
+                                avatarURL: memberInfo.avatar
+                            };
+
+                            // Thêm vào asignTo nếu nó tồn tại
+                            if (Array.isArray(asignTo)) {
+                                asignTo = [...asignTo, memberObject];
+                            }
+
+                            // Thêm vào assignto nếu nó tồn tại
+                            if (Array.isArray(assignto)) {
+                                assignto = [...assignto, memberObject];
+                            }
+                        }
+
                         return {
                             ...t,
-                            assignees: [...assignees, memberId]
+                            assignees: [...assignees, memberId],
+                            assignto: assignto,
+                            asignTo: asignTo
                         };
                     }
                 }
@@ -937,8 +1116,17 @@ const useMilestone = () => {
                 const updatedTask = updatedTasks.find(t => t.id === taskId);
                 setViewingTask({
                     ...viewingTask,
-                    assignees: updatedTask.assignees
+                    assignees: updatedTask.assignees,
+                    assignto: updatedTask.assignto,
+                    asignTo: updatedTask.asignTo
                 });
+
+                // Lấy danh sách thành viên của task từ dữ liệu milestone
+                const fetchTaskMembers = async () => {
+                    const members = await getMembersInTaskFromMilestone(updatedTask);
+                    setTaskMembers(members);
+                };
+                fetchTaskMembers();
             }
 
             toast.success('Đã thêm thành viên thành công');
@@ -981,10 +1169,35 @@ const useMilestone = () => {
 
             // Cập nhật UI ngay lập tức (optimistic update)
             const updatedTasks = milestone.tasks.map(task => {
-                if (task.id === taskId && task.assignees) {
+                if (task.id === taskId) {
+                    // Xóa khỏi assignees nếu có
+                    const updatedAssignees = task.assignees ?
+                        task.assignees.filter(memberId => memberId !== memberIdToRemove) :
+                        task.assignees || [];
+
+                    // Xóa khỏi assignto nếu có
+                    const updatedAssignto = task.assignto ?
+                        task.assignto.filter(assignee =>
+                            typeof assignee === 'object' ?
+                                assignee.id !== memberIdToRemove :
+                                assignee !== memberIdToRemove
+                        ) :
+                        task.assignto || [];
+
+                    // Xóa khỏi asignTo nếu có
+                    const updatedAsignTo = task.asignTo ?
+                        task.asignTo.filter(assignee =>
+                            typeof assignee === 'object' ?
+                                assignee.id !== memberIdToRemove :
+                                assignee !== memberIdToRemove
+                        ) :
+                        task.asignTo || [];
+
                     return {
                         ...task,
-                        assignees: task.assignees.filter(memberId => memberId !== memberIdToRemove)
+                        assignees: updatedAssignees,
+                        assignto: updatedAssignto,
+                        asignTo: updatedAsignTo
                     };
                 }
                 return task;
@@ -1004,8 +1217,17 @@ const useMilestone = () => {
                 const updatedTask = updatedTasks.find(t => t.id === taskId);
                 setViewingTask({
                     ...viewingTask,
-                    assignees: updatedTask.assignees
+                    assignees: updatedTask.assignees,
+                    assignto: updatedTask.assignto,
+                    asignTo: updatedTask.asignTo
                 });
+
+                // Lấy danh sách thành viên của task từ dữ liệu milestone
+                const fetchTaskMembers = async () => {
+                    const members = await getMembersInTaskFromMilestone(updatedTask);
+                    setTaskMembers(members);
+                };
+                fetchTaskMembers();
             }
 
             toast.success('Đã xóa thành viên thành công');
@@ -1270,61 +1492,141 @@ const useMilestone = () => {
         }
     };
 
-    // Render danh sách thành viên được giao
-    const renderAssignees = (task, teamMembers) => {
-        // Nếu có assignees (mảng các id), ưu tiên sử dụng
-        if (task.assignees && task.assignees.length > 0) {
-            // Nếu chỉ có 1 thành viên
-            if (task.assignees.length === 1) {
-                const memberId = task.assignees[0];
-                const member = teamMembers.find(m => m.id === memberId);
+    // // Render danh sách thành viên được giao
+    // const renderAssignees = (task, teamMembers) => {
+    //     // Nếu có assignees (mảng các id), ưu tiên sử dụng
+    //     if (task.assignees && task.assignees.length > 0) {
+    //         // Nếu chỉ có 1 thành viên
+    //         if (task.assignees.length === 1) {
+    //             const memberId = task.assignees[0];
+    //             const member = teamMembers.find(m => m.id === memberId);
+    //             console.log('Member trong renderAssignees:', member);
 
-                return {
-                    type: 'singleMember',
-                    memberId: member?.id || memberId,
-                    memberName: member?.name || memberId,
-                    avatar: member?.avatar || null,
-                    color: member?.color || 'bg-blue-500'
-                };
-            }
+    //             return {
+    //                 type: 'singleMember',
+    //                 memberId: member?.id || memberId,
+    //                 memberName: member?.fullname || memberId,
+    //                 avatar: member?.avatarURL || null,
+    //                 color: member?.color || 'bg-blue-500'
+    //             };
+    //         }
 
-            // Nếu có nhiều thành viên, hiển thị số lượng
-            const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
+    //         // Nếu có nhiều thành viên, hiển thị số lượng
+    //         const firstMember = teamMembers.find(m => m.id === task.assignees[0]);
 
-            return {
-                type: 'multipleMembers',
-                memberId: firstMember?.id || task.assignees[0],
-                memberName: firstMember?.name || 'Thành viên',
-                avatar: firstMember?.avatar || null,
-                count: task.assignees.length - 1,
-                color: firstMember?.color || 'bg-blue-500'
-            };
-        }
+    //         return {
+    //             type: 'multipleMembers',
+    //             memberId: firstMember?.id || task.assignees[0],
+    //             memberName: firstMember?.fullname || 'Thành viên',
+    //             avatar: firstMember?.avatarURL || null,
+    //             count: task.assignees.length - 1,
+    //             color: firstMember?.color || 'bg-blue-500'
+    //         };
+    //     }
 
-        // Nếu có asignTo (mảng các URL avatar), sử dụng
-        if (task.asignTo && task.asignTo.length > 0) {
-            // Nếu chỉ có 1 URL avatar
-            if (task.asignTo.length === 1) {
-                return {
-                    type: 'singleAvatar',
-                    avatarUrl: task.asignTo[0]
-                };
-            }
+    //     // Kiểm tra trường "assignto" (viết thường)
+    //     if (task.assignto && task.assignto.length > 0) {
+    //         console.log('Assignto data:', task.assignto);
+    //         // Nếu chỉ có 1 thành viên
+    //         if (task.assignto.length === 1) {
+    //             const assignee = task.assignto[0];
+    //             console.log('Assignee object:', assignee);
 
-            // Nếu có nhiều URL avatar
-            return {
-                type: 'multipleAvatars',
-                avatarUrl: task.asignTo[0],
-                count: task.asignTo.length - 1
-            };
-        }
+    //             // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+    //             if (typeof assignee === 'object' && assignee !== null) {
+    //                 console.log('Avatar URL từ assignto:', assignee.avatarURL);
+    //                 return {
+    //                     type: 'singleMember',
+    //                     memberId: assignee.id || 'unknown',
+    //                     memberName: assignee.fullname || 'Thành viên',
+    //                     avatar: assignee.avatarURL || null,
+    //                     color: 'bg-blue-500'
+    //                 };
+    //             } else {
+    //                 // Nếu là URL avatar (chuỗi)
+    //                 return {
+    //                     type: 'singleAvatar',
+    //                     avatarUrl: assignee
+    //                 };
+    //             }
+    //         }
 
-        // Nếu không có cả hai
-        return {
-            type: 'notAssigned',
-            content: 'Chưa giao'
-        };
-    };
+    //         // Nếu có nhiều thành viên, hiển thị số lượng
+    //         const firstAssignee = task.assignto[0];
+
+    //         // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+    //         if (typeof firstAssignee === 'object' && firstAssignee !== null) {
+    //             return {
+    //                 type: 'multipleMembers',
+    //                 memberId: firstAssignee.id || 'unknown',
+    //                 memberName: firstAssignee.fullname || 'Thành viên',
+    //                 avatar: firstAssignee.avatarURL || null,
+    //                 count: task.assignto.length - 1,
+    //                 color: 'bg-blue-500'
+    //             };
+    //         } else {
+    //             // Nếu là URL avatar (chuỗi)
+    //             return {
+    //                 type: 'multipleAvatars',
+    //                 avatarUrl: firstAssignee,
+    //                 count: task.assignto.length - 1
+    //             };
+    //         }
+    //     }
+
+    //     // Kiểm tra trường "asignTo" (viết hoa) 
+    //     if (task.asignTo && task.asignTo.length > 0) {
+    //         // Nếu chỉ có 1 thành viên
+    //         if (task.asignTo.length === 1) {
+    //             const assignee = task.asignTo[0];
+
+    //             // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+    //             if (typeof assignee === 'object' && assignee !== null) {
+    //                 return {
+    //                     type: 'singleMember',
+    //                     memberId: assignee.id || 'unknown',
+    //                     memberName: assignee.fullname || 'Thành viên',
+    //                     avatar: assignee.avatarURL || null,
+    //                     color: 'bg-blue-500'
+    //                 };
+    //             } else {
+    //                 // Nếu là URL avatar (chuỗi)
+    //                 return {
+    //                     type: 'singleAvatar',
+    //                     avatarUrl: assignee
+    //                 };
+    //             }
+    //         }
+
+    //         // Nếu có nhiều thành viên, hiển thị số lượng
+    //         const firstAssignee = task.asignTo[0];
+
+    //         // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+    //         if (typeof firstAssignee === 'object' && firstAssignee !== null) {
+    //             return {
+    //                 type: 'multipleMembers',
+    //                 memberId: firstAssignee.id || 'unknown',
+    //                 memberName: firstAssignee.fullname || 'Thành viên',
+    //                 avatar: firstAssignee.avatarURL || null,
+    //                 count: task.asignTo.length - 1,
+    //                 color: 'bg-blue-500'
+    //             };
+    //         } else {
+    //             // Nếu là URL avatar (chuỗi)
+    //             return {
+    //                 type: 'multipleAvatars',
+    //                 avatarUrl: firstAssignee,
+    //                 count: task.asignTo.length - 1
+    //             };
+    //         }
+    //     }
+
+    //     // Nếu không có cả hai
+    //     return {
+    //         type: 'notAssigned',
+    //         content: 'Chưa giao'
+    //     };
+    // };
 
     // Render người được giao cho TaskOverlay
     const renderOverlayAssignees = (task, teamMembers) => {
@@ -1338,8 +1640,8 @@ const useMilestone = () => {
                 return {
                     type: 'singleMember',
                     memberId: member?.id || memberId,
-                    memberName: member?.name || memberId,
-                    avatar: member?.avatar || null,
+                    memberName: member?.fullname || memberId,
+                    avatar: member?.avatarURL || null,
                     color: member?.color || 'bg-blue-500'
                 };
             }
@@ -1350,29 +1652,105 @@ const useMilestone = () => {
             return {
                 type: 'multipleMembers',
                 memberId: firstMember?.id || task.assignees[0],
-                memberName: firstMember?.name || 'Thành viên',
-                avatar: firstMember?.avatar || null,
+                memberName: firstMember?.fullname || 'Thành viên',
+                avatar: firstMember?.avatarURL || null,
                 count: task.assignees.length - 1,
                 color: firstMember?.color || 'bg-blue-500'
             };
         }
 
-        // Nếu có asignTo (mảng các URL avatar), sử dụng
-        if (task.asignTo && task.asignTo.length > 0) {
-            // Nếu chỉ có 1 URL avatar
-            if (task.asignTo.length === 1) {
-                return {
-                    type: 'singleAvatar',
-                    avatarUrl: task.asignTo[0]
-                };
+        // Kiểm tra trường "assignto" (viết thường)
+        if (task.assignto && task.assignto.length > 0) {
+            // Nếu chỉ có 1 thành viên
+            if (task.assignto.length === 1) {
+                const assignee = task.assignto[0];
+
+                // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+                if (typeof assignee === 'object' && assignee !== null) {
+                    return {
+                        type: 'singleMember',
+                        memberId: assignee.id || 'unknown',
+                        memberName: assignee.fullname || 'Thành viên',
+                        avatar: assignee.avatarURL || null,
+                        color: 'bg-blue-500'
+                    };
+                } else {
+                    // Nếu là URL avatar (chuỗi)
+                    return {
+                        type: 'singleAvatar',
+                        avatarUrl: assignee
+                    };
+                }
             }
 
-            // Nếu có nhiều URL avatar
-            return {
-                type: 'multipleAvatars',
-                avatarUrl: task.asignTo[0],
-                count: task.asignTo.length - 1
-            };
+            // Nếu có nhiều thành viên, hiển thị số lượng
+            const firstAssignee = task.assignto[0];
+
+            // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+            if (typeof firstAssignee === 'object' && firstAssignee !== null) {
+                return {
+                    type: 'multipleMembers',
+                    memberId: firstAssignee.id || 'unknown',
+                    memberName: firstAssignee.fullname || 'Thành viên',
+                    avatar: firstAssignee.avatarURL || null,
+                    count: task.assignto.length - 1,
+                    color: 'bg-blue-500'
+                };
+            } else {
+                // Nếu là URL avatar (chuỗi)
+                return {
+                    type: 'multipleAvatars',
+                    avatarUrl: firstAssignee,
+                    count: task.assignto.length - 1
+                };
+            }
+        }
+
+        // Kiểm tra trường "asignTo" (viết hoa)
+        if (task.asignTo && task.asignTo.length > 0) {
+            // Nếu chỉ có 1 thành viên
+            if (task.asignTo.length === 1) {
+                const assignee = task.asignTo[0];
+
+                // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+                if (typeof assignee === 'object' && assignee !== null) {
+                    return {
+                        type: 'singleMember',
+                        memberId: assignee.id || 'unknown',
+                        memberName: assignee.fullname || 'Thành viên',
+                        avatar: assignee.avatarURL || null,
+                        color: 'bg-blue-500'
+                    };
+                } else {
+                    // Nếu là URL avatar (chuỗi)
+                    return {
+                        type: 'singleAvatar',
+                        avatarUrl: assignee
+                    };
+                }
+            }
+
+            // Nếu có nhiều thành viên, hiển thị số lượng
+            const firstAssignee = task.asignTo[0];
+
+            // Kiểm tra nếu là đối tượng có trường fullname và avatarURL
+            if (typeof firstAssignee === 'object' && firstAssignee !== null) {
+                return {
+                    type: 'multipleMembers',
+                    memberId: firstAssignee.id || 'unknown',
+                    memberName: firstAssignee.fullname || 'Thành viên',
+                    avatar: firstAssignee.avatarURL || null,
+                    count: task.asignTo.length - 1,
+                    color: 'bg-blue-500'
+                };
+            } else {
+                // Nếu là URL avatar (chuỗi)
+                return {
+                    type: 'multipleAvatars',
+                    avatarUrl: firstAssignee,
+                    count: task.asignTo.length - 1
+                };
+            }
         }
 
         // Nếu không có cả hai
@@ -1628,6 +2006,7 @@ const useMilestone = () => {
         showMemberDropdown,
         memberSearchQuery,
         teamMembers,
+        taskMembers,
         currentUser,
         commentText,
         showComments,
@@ -1650,6 +2029,8 @@ const useMilestone = () => {
         setShowComments,
         setEditingTask,
         setEditingTaskField,
+        setViewingTask,
+        setTaskMembers,
 
         // Handlers
         handleBackToBoards,
@@ -1668,10 +2049,10 @@ const useMilestone = () => {
         handleRemoveMember,
         handleAddComment,
         handleDeleteComment,
-        renderAssignees,
         renderOverlayAssignees,
         fetchTaskBoard,
         fetchTasksList,
+        getMembersInTaskFromMilestone,
         handlePageChange,
         handlePageSizeChange,
         handleSearch,
@@ -1683,7 +2064,6 @@ const useMilestone = () => {
         handleLocalPageChange,
         handleLocalPageSizeChange,
         originalTasksList
-        // handleCreateColumn,
     };
 };
 

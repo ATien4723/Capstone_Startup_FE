@@ -134,3 +134,11 @@ export const getMembersInMilestone = async (milestoneId) => {
     });
     return response;
 };
+
+// Lấy danh sách thành viên trong task
+export const getMembersInTask = async (taskId) => {
+    const response = await axiosClient.get(`/api/Task/members-in-task`, {
+        params: { taskId }
+    });
+    return response;
+};
