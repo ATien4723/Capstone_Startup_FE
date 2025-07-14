@@ -142,3 +142,17 @@ export const getMembersInTask = async (taskId) => {
     });
     return response;
 };
+
+// Lấy tất cả các labels
+export const getAllLabels = async () => {
+    const response = await axiosClient.get('/api/Task/labels');
+    return response;
+};
+
+// Lấy tất cả activity logs của milestone
+export const getAllActivityLogs = async (milestoneId) => {
+    const response = await axiosClient.get('/api/Task/all-activity-log', {
+        params: { milestoneId }
+    });
+    return response;
+};

@@ -183,7 +183,7 @@ const MilestoneBoards = () => {
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-                                <div className="mb-4">
+                                {/* <div className="mb-4">
                                     <label className="block text-gray-700 mb-2 font-medium">Màu sắc:</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {colorOptions.map(color => (
@@ -195,7 +195,7 @@ const MilestoneBoards = () => {
                                             ></div>
                                         ))}
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                         <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">

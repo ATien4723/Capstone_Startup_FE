@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
-import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, createTask, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment } from "@/apis/taskService";
+import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, createTask, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment, getAllLabels, getAllActivityLogs } from "@/apis/taskService";
 import { getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { getStartupIdByAccountId } from "@/apis/startupService";
 import { toast } from "react-toastify";
@@ -23,7 +23,9 @@ const useMilestone = () => {
     // State cho dữ liệu columns và tasks
     const [columns, setColumns] = useState({});
 
-
+    // State cho danh sách các màu
+    const [labelColors, setLabelColors] = useState([]);
+    const [labelsLoading, setLabelsLoading] = useState(false);
 
     // State cho việc tạo/chỉnh sửa milestone và task
     const [showNewMilestoneForm, setShowNewMilestoneForm] = useState(false);
@@ -36,7 +38,8 @@ const useMilestone = () => {
         priority: 'medium',
         assignee: '',
         dueDate: '',
-        note: ''
+        note: '',
+        labelcolorID: null
     });
 
     const [editingTaskField, setEditingTaskField] = useState(null);
@@ -81,6 +84,11 @@ const useMilestone = () => {
         search: '',
         columnStatusId: null
     });
+
+    // State cho activity logs
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+    const [showActivityLogs, setShowActivityLogs] = useState(false);
 
     // Hàm chuyển đổi dữ liệu API sang định dạng cần thiết
     const mapApiDataToColumns = (data) => {
@@ -241,21 +249,74 @@ const useMilestone = () => {
         }
     };
 
-    //     // Tạo số ngẫu nhiên từ id
-    //     let sum = 0;
-    //     for (let i = 0; i < id.toString().length; i++) {
-    //         sum += id.toString().charCodeAt(i);
-    //     }
+    // Hàm để lấy danh sách các màu từ API
+    const fetchLabels = async () => {
+        try {
+            setLabelsLoading(true);
+            const response = await getAllLabels();
+            if (response && Array.isArray(response)) {
+                setLabelColors(response);
+            } else {
+                console.error('Định dạng phản hồi API getAllLabels không hợp lệ:', response);
+                // Sử dụng dữ liệu mặc định nếu API không trả về kết quả như mong đợi
+                setLabelColors([
+                    { labelID: 1, labelName: "Xanh lá đậm", color: "#27664B" },
+                    { labelID: 2, labelName: "Nâu đất", color: "#9B7700" },
+                    { labelID: 3, labelName: "Cam đất", color: "#C2520C" },
+                    { labelID: 4, labelName: "Đỏ gạch", color: "#C33232" },
+                    { labelID: 5, labelName: "Tím oải hương", color: "#6B53B4" },
+                    { labelID: 6, labelName: "Xanh dương đậm", color: "#0056D2" },
+                    { labelID: 7, labelName: "Xanh teal", color: "#2C7085" },
+                    { labelID: 8, labelName: "Xanh rêu", color: "#4C6F23" },
+                    { labelID: 9, labelName: "Hồng mận", color: "#A24376" },
+                    { labelID: 10, labelName: "Xám tro", color: "#58616C" }
+                ]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách màu:', error);
+            // Sử dụng dữ liệu mặc định nếu có lỗi
+            setLabelColors([
+                { labelID: 1, labelName: "Xanh lá đậm", color: "#27664B" },
+                { labelID: 2, labelName: "Nâu đất", color: "#9B7700" },
+                { labelID: 3, labelName: "Cam đất", color: "#C2520C" },
+                { labelID: 4, labelName: "Đỏ gạch", color: "#C33232" },
+                { labelID: 5, labelName: "Tím oải hương", color: "#6B53B4" },
+                { labelID: 6, labelName: "Xanh dương đậm", color: "#0056D2" },
+                { labelID: 7, labelName: "Xanh teal", color: "#2C7085" },
+                { labelID: 8, labelName: "Xanh rêu", color: "#4C6F23" },
+                { labelID: 9, labelName: "Hồng mận", color: "#A24376" },
+                { labelID: 10, labelName: "Xám tro", color: "#58616C" }
+            ]);
+        } finally {
+            setLabelsLoading(false);
+        }
+    };
 
-    //     return colors[sum % colors.length];
-    // }// Hàm tạo màu ngẫu nhiên từ ID
-    // // const generateRandomColor = (id) => {
-    // //     const colors = [
-    // //         'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
-    // //         'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
-    // //         'bg-orange-500', 'bg-gray-500'
-    // //     ];;
+    // Hàm để lấy danh sách nhật ký hoạt động từ API
+    const fetchActivityLogs = async () => {
+        if (!boardId) return;
 
+        try {
+            setActivityLogsLoading(true);
+            const response = await getAllActivityLogs(boardId);
+            if (response && Array.isArray(response)) {
+                setActivityLogs(response);
+            } else {
+                console.error('Định dạng phản hồi API getAllActivityLogs không hợp lệ:', response);
+                setActivityLogs([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy nhật ký hoạt động:', error);
+            setActivityLogs([]);
+        } finally {
+            setActivityLogsLoading(false);
+        }
+    };
+
+    // Gọi API lấy danh sách màu khi component được mount
+    useEffect(() => {
+        fetchLabels();
+    }, []);
 
     // Lấy dữ liệu của bảng và thành viên khi component mount
     useEffect(() => {
@@ -271,7 +332,7 @@ const useMilestone = () => {
                 setBoardData(parsedData);
 
                 // Vẫn gọi fetchTaskBoard để lấy dữ liệu columns và tasks
-                Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone()])
+                Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone(), fetchLabels(), fetchActivityLogs()])
                     .finally(() => {
                         setLoading(false);
                     });
@@ -320,8 +381,8 @@ const useMilestone = () => {
                             });
                         }
 
-                        // Gọi fetchTaskBoard và fetchMembersInMilestone song song
-                        await Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone()]);
+                        // Gọi fetchTaskBoard, fetchMembersInMilestone, fetchLabels, và fetchActivityLogs song song
+                        await Promise.all([fetchTaskBoard(boardId), fetchMembersInMilestone(), fetchLabels(), fetchActivityLogs()]);
                     } catch (error) {
                         console.error('Lỗi khi lấy dữ liệu từ API:', error);
 
@@ -339,8 +400,8 @@ const useMilestone = () => {
                             setColumns(JSON.parse(savedColumns));
                         }
 
-                        // Vẫn thử lấy danh sách thành viên
-                        await fetchMembersInMilestone();
+                        // Vẫn thử lấy danh sách thành viên và nhật ký hoạt động
+                        await Promise.all([fetchMembersInMilestone(), fetchActivityLogs()]);
                     } finally {
                         setLoading(false);
                     }
@@ -492,9 +553,13 @@ const useMilestone = () => {
                 return;
             }
 
+            // Lấy thông tin người dùng hiện tại
+            const userInfo = getUserInfoFromToken();
+
             const apiData = {
                 taskId: actualTaskId,
-                newColumnStatusId: targetColumnStatusId
+                newColumnStatusId: targetColumnStatusId,
+                accountId: userInfo?.userId // Thêm accountId vào API request
             };
 
             console.log('Calling changeTaskColumn API with data:', apiData);
@@ -613,7 +678,7 @@ const useMilestone = () => {
             assignee: '',
             dueDate: '',
             note: '',
-            progress: 0
+            labelcolorID: null
         });
     };
 
@@ -632,7 +697,7 @@ const useMilestone = () => {
             assignee: task.assignee,
             dueDate: task.dueDate,
             note: task.note || '',
-            progress: task.progress || 0
+            labelcolorID: task.labelcolorID || null
         });
     };
 
@@ -714,7 +779,9 @@ const useMilestone = () => {
                     priority: taskFormData.priority || 'medium',
                     dueDate: taskFormData.dueDate || null,
                     columnnStatusId: milestone.columnId,
-                    note: taskFormData.note || ''
+                    note: taskFormData.note || '',
+                    labelcolorID: taskFormData.labelcolorID || task.labelcolorID || null,
+                    accountId: userInfo?.userId // Thêm accountId vào API request
                 };
 
                 // Gọi API cập nhật task
@@ -760,7 +827,8 @@ const useMilestone = () => {
                 priority: 'medium',
                 assignee: '',
                 dueDate: '',
-                note: ''
+                note: '',
+                labelcolorID: null
             });
         }
     };
@@ -839,6 +907,9 @@ const useMilestone = () => {
         const actualTaskId = task.taskId || parseInt(task.id.split('-')[1]);
 
         try {
+            // Lấy thông tin người dùng hiện tại
+            const userInfo = getUserInfoFromToken();
+
             // Tạo dữ liệu cập nhật cho API
             let updateData = {
                 taskId: actualTaskId,
@@ -847,7 +918,8 @@ const useMilestone = () => {
                 description: task.description,
                 dueDate: task.dueDate,
                 columnnStatusId: milestone.columnId,
-                note: task.note || ''
+                note: task.note || '',
+                accountId: userInfo?.userId // Thêm accountId vào API request
             };
 
             // Cập nhật trường tương ứng
@@ -862,6 +934,13 @@ const useMilestone = () => {
                 case 'priority':
                     updateData.priority = newValue;
                     break;
+                case 'note':
+                    updateData.note = newValue;
+                    break;
+                case 'coverColor':
+                    // Thêm labelcolorID vào dữ liệu cập nhật
+                    updateData.labelcolorID = newValue;
+                    break;
                 default:
                     break;
             }
@@ -873,7 +952,11 @@ const useMilestone = () => {
 
             // Cập nhật state UI
             const updatedTasks = milestone.tasks.map(t =>
-                t.id === taskId ? { ...t, [field]: newValue } : t
+                t.id === taskId ? {
+                    ...t,
+                    [field]: newValue,
+                    ...(field === 'coverColor' ? { labelcolorID: newValue } : {})
+                } : t
             );
 
             setColumns({
@@ -888,7 +971,8 @@ const useMilestone = () => {
             if (viewingTask && viewingTask.id === taskId && viewingTask.milestoneId === milestoneId) {
                 setViewingTask({
                     ...viewingTask,
-                    [field]: newValue
+                    [field]: newValue,
+                    ...(field === 'coverColor' ? { labelcolorID: newValue } : {})
                 });
             }
 
@@ -1945,48 +2029,6 @@ const useMilestone = () => {
         }
     };
 
-    // // Thêm column mới bằng API
-    // const handleCreateColumn = async (columnData) => {
-    //     if (!columnData.columnName || !columnData.milestoneId) {
-    //         toast.error('Tên cột và milestoneId không được để trống!');
-    //         return;
-    //     }
-
-    //     try {
-    //         setLoading(true);
-    //         const response = await createColumn(columnData);
-    //         console.log('API Response createColumn:', response);
-
-    //         if (response) {
-    //             // Cập nhật state sau khi tạo cột thành công
-    //             const newColumn = {
-    //                 id: response.columnStatusId,
-    //                 columnId: response.columnStatusId,
-    //                 title: response.columnName,
-    //                 description: response.description || '',
-    //                 sortOrder: response.sortOrder || 0,
-    //                 tasks: []
-    //             };
-
-    //             setColumns({
-    //                 ...columns,
-    //                 [`milestone-${response.columnStatusId}`]: newColumn
-    //             });
-
-    //             toast.success('Đã tạo cột mới thành công!');
-    //             return response;
-    //         } else {
-    //             toast.error('Không thể tạo cột mới');
-    //             return null;
-    //         }
-    //     } catch (error) {
-    //         console.error('Lỗi khi tạo cột mới:', error);
-    //         toast.error('Có lỗi xảy ra khi tạo cột mới');
-    //         return null;
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // };
 
     return {
         // State
@@ -2015,6 +2057,11 @@ const useMilestone = () => {
         tasksListLoading,
         pagination,
         filterParams,
+        labelColors,
+        labelsLoading,
+        activityLogs,
+        activityLogsLoading,
+        showActivityLogs,
 
 
         // State setters
@@ -2031,6 +2078,7 @@ const useMilestone = () => {
         setEditingTaskField,
         setViewingTask,
         setTaskMembers,
+        setShowActivityLogs,
 
         // Handlers
         handleBackToBoards,
@@ -2063,7 +2111,9 @@ const useMilestone = () => {
         handleLocalFilterByColumn,
         handleLocalPageChange,
         handleLocalPageSizeChange,
-        originalTasksList
+        originalTasksList,
+        fetchLabels,
+        fetchActivityLogs
     };
 };
 
