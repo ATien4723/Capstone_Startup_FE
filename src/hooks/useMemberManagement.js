@@ -244,10 +244,6 @@ export default function useMemberManagement(startupId) {
             return;
         }
 
-        if (!window.confirm("Bạn có chắc chắn muốn xóa thành viên này?")) {
-            return;
-        }
-
         setLoading(true);
         try {
             await startupService.removeMemberFromStartup(startupId, accountId);
@@ -331,6 +327,7 @@ export default function useMemberManagement(startupId) {
         setSearchEmail,
         setNewMemberRole,
         setNewRole,
+        setSelectedUser,
 
         // Methods
         fetchMembers,

@@ -17,9 +17,9 @@ import deleteSvg from '/delete-svgrepo-com.svg';
 import roleSvg from '/user-role-svgrepo-com.svg';
 
 const roleOptions = [
-    { value: 'Founder', label: 'Chủ startup' },
-    { value: 'Admin', label: 'Quản trị viên' },
-    { value: 'Member', label: 'Thành viên' }
+    { value: 'Founder', label: 'Founder' },
+    { value: 'Admin', label: 'Administrator' },
+    { value: 'Member', label: 'Member' }
 ];
 
 const Member = () => {
@@ -29,6 +29,8 @@ const Member = () => {
     const [editingRoleName, setEditingRoleName] = useState("");
     const [memberSearchTerm, setMemberSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [memberToDelete, setMemberToDelete] = useState(null);
 
     useEffect(() => {
         const fetchStartupId = async () => {
@@ -91,6 +93,13 @@ const Member = () => {
     const handleStartEditRole = (role) => {
         setEditingRoleId(role.roleId);
         setEditingRoleName(role.roleName);
+    };
+
+    // Đặt giá trị mặc định cho vai trò khi mở modal
+    const handleOpenAddMemberModal = () => {
+        // Đặt giá trị ban đầu của vai trò là rỗng để hiển thị lựa chọn "Hãy chọn vai trò"
+        setNewMemberRole("");
+        setShowAddMemberModal(true);
     };
 
     // Lưu chỉnh sửa vai trò
@@ -230,7 +239,7 @@ const Member = () => {
                     </button>
                     <button
                         className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                        onClick={() => setShowAddMemberModal(true)}
+                        onClick={handleOpenAddMemberModal}
                     >
                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
                         <span className="font-medium">Invite Member</span>
@@ -238,14 +247,15 @@ const Member = () => {
                     <button
                         className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                         onClick={() => {
-                            if (window.confirm('Bạn có chắc chắn muốn rời khỏi startup này?')) {
+                            if (window.confirm('Are you sure you want to leave this startup?')) {
                                 // Xử lý logic rời startup ở đây
-                                toast.info('Chức năng rời startup đang được phát triển');
+                                toast.info('Leave startup feature is under development');
                             }
                         }}
                     >
+
                         <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
-                        <span className="font-medium">Rời Startup</span>
+                        <span className="font-medium">Leave Startup</span>
                     </button>
                 </div>
             </div>
@@ -354,14 +364,16 @@ const Member = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="relative">
-                                                <button
-                                                    ref={ellipsisRef}
-                                                    className="text-gray-600 hover:text-gray-900 focus:outline-none"
-                                                    onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
-                                                    title="Thao tác"
-                                                >
-                                                    <FontAwesomeIcon icon={faEllipsisV} />
-                                                </button>
+                                                {member.roleName !== 'Founder' && (
+                                                    <button
+                                                        ref={ellipsisRef}
+                                                        className="text-gray-600 hover:text-gray-900 focus:outline-none"
+                                                        onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
+                                                        title="Thao tác"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEllipsisV} />
+                                                    </button>
+                                                )}
                                                 {openMenuIndex === index && (
                                                     <Dropdownstartup anchorRef={ellipsisRef} onClose={() => setOpenMenuIndex(null)}>
                                                         <button
@@ -373,18 +385,19 @@ const Member = () => {
                                                             disabled={member.roleName === 'Founder'}
                                                         >
                                                             <FontAwesomeIcon icon={faUserEdit} className="mr-2" />
-                                                            Chỉnh sửa vai trò
+                                                            Edit role
                                                         </button>
                                                         <button
                                                             className={`w-full flex items-center px-2 py-2 text-sm text-red-600 hover:bg-gray-100 ${member.roleName === 'Founder' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             onClick={() => {
-                                                                removeMember(member.accountId);
+                                                                setMemberToDelete(member);
+                                                                setShowDeleteConfirmModal(true);
                                                                 setOpenMenuIndex(null);
                                                             }}
                                                             disabled={member.roleName === 'Founder'}
                                                         >
                                                             <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
-                                                            Xóa thành viên
+                                                            Remove member
                                                         </button>
                                                     </Dropdownstartup>
                                                 )}
@@ -496,7 +509,9 @@ const Member = () => {
                                             className="w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             value={newMemberRole}
                                             onChange={(e) => setNewMemberRole(e.target.value)}
+                                            required
                                         >
+                                            <option value="" disabled>Please select a role</option>
                                             {roles.length > 0 ? (
                                                 roles.map(role => (
                                                     <option
@@ -526,9 +541,9 @@ const Member = () => {
                             <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                                 <button
                                     type="button"
-                                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${(!selectedUser || loading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${(!selectedUser || loading || !newMemberRole) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     onClick={inviteMember}
-                                    disabled={!selectedUser || loading}
+                                    disabled={!selectedUser || loading || !newMemberRole}
                                 >
                                     {loading ? (
                                         <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
@@ -758,18 +773,22 @@ const Member = () => {
                                                                         </div>
                                                                     ) : (
                                                                         <div className="flex space-x-3 justify-end">
-                                                                            <button
-                                                                                className="text-blue-600 hover:text-blue-800"
-                                                                                onClick={() => handleStartEditRole(role)}
-                                                                            >
-                                                                                <img src={updateSvg} alt="Edit role" className="w-5 h-5" />
-                                                                            </button>
-                                                                            <button
-                                                                                className="text-red-600 hover:text-red-800"
-                                                                                onClick={() => deleteRole(role.roleId)}
-                                                                            >
-                                                                                <img src={deleteSvg} alt="Delete role" className="w-5 h-5" />
-                                                                            </button>
+                                                                            {role.roleName !== 'Founder' && (
+                                                                                <>
+                                                                                    <button
+                                                                                        className="text-blue-600 hover:text-blue-800"
+                                                                                        onClick={() => handleStartEditRole(role)}
+                                                                                    >
+                                                                                        <img src={updateSvg} alt="Edit role" className="w-5 h-5" />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        className="text-red-600 hover:text-red-800"
+                                                                                        onClick={() => deleteRole(role.roleId)}
+                                                                                    >
+                                                                                        <img src={deleteSvg} alt="Delete role" className="w-5 h-5" />
+                                                                                    </button>
+                                                                                </>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </td>
@@ -794,6 +813,60 @@ const Member = () => {
                                     onClick={() => setShowAddRoleModal(false)}
                                 >
                                     Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal xác nhận xóa thành viên */}
+            {showDeleteConfirmModal && memberToDelete && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <FontAwesomeIcon icon={faUserMinus} className="h-6 w-6 text-red-600" />
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                            Remove member
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500">
+                                                Are you sure you want to remove <strong>{memberToDelete.fullName || memberToDelete.email}</strong> from the startup? This action cannot be undone.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => {
+                                        removeMember(memberToDelete.accountId);
+                                        setShowDeleteConfirmModal(false);
+                                        setMemberToDelete(null);
+                                    }}
+                                >
+                                    Confirm removal
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => {
+                                        setShowDeleteConfirmModal(false);
+                                        setMemberToDelete(null);
+                                    }}
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         </div>

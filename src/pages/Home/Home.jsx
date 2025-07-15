@@ -1,11 +1,12 @@
 import { useProfileData } from '@/hooks/useProfileHooks';
 import { useNewsFeedData } from '@/hooks/useNewsFeedData';
-import { usePostActions, useInfiniteScroll } from '@/hooks/useProfileHooks';
+import { usePostActions, useInfiniteScroll, useRecommendAccounts } from '@/hooks/useProfileHooks';
 import { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faEllipsisH, faImage, faPaperclip, faSmile, faPlus, faMapMarkerAlt, faEdit, faTrash, faShareSquare, faComment, faHeart, faEyeSlash
+    faEllipsisH, faImage, faPaperclip, faSmile, faPlus, faMapMarkerAlt, faEdit, faTrash, faShareSquare, faComment, faHeart, faEyeSlash,
+    faBriefcase, faLocationDot, faClock, faUserPlus, faUserCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -19,6 +20,7 @@ import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
 import { LikeContext } from '@/contexts/LikeContext.jsx';
+import useFollow from '@/hooks/useFollow';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -35,11 +37,71 @@ const Modal = ({ children, onClose }) => (
     </div>
 );
 
+// Function to format duration from dueDate to current date
+const formatDuration = (dueDate) => {
+    if (!dueDate) return "Không xác định";
+
+    const due = new Date(dueDate);
+    const now = new Date();
+
+    // Nếu dueDate không hợp lệ
+    if (isNaN(due.getTime())) return "Không xác định";
+
+    // Tính số năm
+    const yearDiff = due.getFullYear() - now.getFullYear();
+
+    // Tính số tháng
+    let monthDiff = (due.getMonth() + 12 * yearDiff) - now.getMonth();
+
+    // Điều chỉnh tháng nếu ngày trong tháng không đủ
+    if (due.getDate() < now.getDate()) {
+        monthDiff -= 1;
+    }
+
+    if (monthDiff >= 12) {
+        const years = Math.floor(monthDiff / 12);
+        return `${years} năm`;
+    } else if (monthDiff > 0) {
+        return `${monthDiff} tháng`;
+    } else {
+        return "Hết hạn";
+    }
+};
+
 const Home = () => {
+    const navigate = useNavigate();
     const currentUserId = getUserId();
     const {
         profileData, following, followers, isLoading: isLoadingProfile
     } = useProfileData(currentUserId);
+
+    // Hook cho Suggestions Card
+    const {
+        data: suggestedConnections,
+        isLoading: isLoadingSuggestions,
+        error: suggestionsError,
+        refetch: refetchSuggestions
+    } = useRecommendAccounts(currentUserId, 1, 5);
+
+    // Hook cho Follow/Unfollow
+    const {
+        handleFollow,
+        handleUnfollow,
+        isFollowing,
+        processingId,
+        followingIds
+    } = useFollow(currentUserId);
+
+    // Hàm xử lý khi bấm nút follow
+    const handleConnectUser = async (userId) => {
+        if (isFollowing(userId)) {
+            await handleUnfollow(userId);
+        } else {
+            await handleFollow(userId);
+        }
+        // Cập nhật lại danh sách gợi ý sau khi follow/unfollow
+        refetchSuggestions();
+    };
 
     const {
         posts, postLikes, userLikedPosts, postCommentCounts, openCommentPosts, refreshCommentTrigger,
@@ -102,6 +164,25 @@ const Home = () => {
     useEffect(() => {
         fetchPosts(1);
     }, [likeTrigger]);
+
+    // Chuyển đến trang chi tiết bài đăng
+    const goToPostDetail = (postId, type) => {
+        if (type === 'Internship') {
+            navigate(`/internship/${postId}`);
+        } else {
+            navigate(`/post/${postId}`);
+        }
+    };
+
+    // Hiển thị icon dựa trên type của bài đăng
+    const getPostTypeIcon = (type) => {
+        switch (type) {
+            case 'Internship':
+                return <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 mr-2" />;
+            default:
+                return null;
+        }
+    };
 
     // Render UI
     if (isLoadingProfile) {
@@ -173,37 +254,61 @@ const Home = () => {
                         <div className="bg-white rounded-lg shadow-md">
                             <div className="p-4">
                                 <div className="flex justify-between items-center mb-3">
-                                    <span className="font-bold">Suggestions</span>
-                                    <FontAwesomeIcon icon={faEllipsisH} className="text-gray-600" />
+                                    <span className="font-bold">Gợi ý kết nối</span>
                                 </div>
-                                {[
-                                    { name: 'Jessica William', role: 'Graphic Designer' },
-                                    { name: 'John Doe', role: 'PHP Developer' },
-                                    { name: 'Poonam', role: 'Wordpress Developer' },
-                                    { name: 'Bill Gates', role: 'C & C++ Developer' },
-                                    { name: 'Jessica William', role: 'Graphic Designer' },
-                                    { name: 'John Doe', role: 'PHP Developer' },
-                                ].map((suggestion, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center mb-3 p-2 hover:bg-gray-50 rounded-md transition-all"
-                                    >
-                                        <img
-                                            src="/api/placeholder/40/40"
-                                            alt={suggestion.name}
-                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
-                                        />
-                                        <div className="ml-3 flex-grow">
-                                            <div className="font-bold text-base">{suggestion.name}</div>
-                                            <div className="text-gray-600 text-sm">{suggestion.role}</div>
-                                        </div>
-                                        <button className="text-gray-600 hover:text-blue-600 transition-all">
-                                            <FontAwesomeIcon icon={faPlus} />
-                                        </button>
+                                {isLoadingSuggestions ? (
+                                    <div className="flex justify-center py-3">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                                     </div>
-                                ))}
-                                <Link to="#" className="block text-center mt-3 text-blue-600 text-sm hover:underline">
-                                    View More
+                                ) : suggestionsError ? (
+                                    <div className="text-center py-3 text-sm text-red-500">Không thể tải gợi ý</div>
+                                ) : suggestedConnections && suggestedConnections.length > 0 ? (
+                                    suggestedConnections.slice(0, 5).map((suggestion) => (
+                                        <div
+                                            key={suggestion.accountId}
+                                            className="flex items-center mb-3 p-2 hover:bg-gray-50 rounded-md transition-all"
+                                        >
+                                            <img
+                                                src={suggestion.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                alt={suggestion.fullName}
+                                                className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                }}
+                                            />
+                                            <div className="ml-3 flex-grow">
+                                                <div className="font-bold text-base">
+                                                    <Link to={`/profile/${suggestion.accountId}`}>
+                                                        {suggestion.fullName}
+                                                    </Link>
+                                                </div>
+                                                <div className="text-gray-600 text-sm">{suggestion.position || "Người dùng"}</div>
+                                            </div>
+                                            <button
+                                                className={`transition-all p-1.5 rounded-full flex items-center justify-center ${isFollowing(suggestion.accountId)
+                                                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                                    }`}
+                                                onClick={() => handleConnectUser(suggestion.accountId)}
+                                                disabled={processingId === suggestion.accountId}
+                                            >
+                                                {processingId === suggestion.accountId ? (
+                                                    <div className="w-4 h-4 border-2 border-t-transparent border-blue-600 rounded-full animate-spin"></div>
+                                                ) : isFollowing(suggestion.accountId) ? (
+                                                    <FontAwesomeIcon icon={faUserCheck} />
+                                                ) : (
+                                                    <FontAwesomeIcon icon={faUserPlus} />
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-3 text-sm text-gray-500">Không có gợi ý kết nối</div>
+                                )}
+
+                                <Link to="/network" className="block text-center mt-3 text-blue-600 text-sm hover:underline">
+                                    Xem thêm
                                 </Link>
                             </div>
                         </div>
@@ -463,117 +568,182 @@ const Home = () => {
                                         ref={index === posts.length - 1 ? lastElementRef : null}
                                         className="bg-white rounded-lg shadow-md"
                                     >
-                                        <div className="p-4">
-                                            {/* Post header */}
-                                            <div className="flex justify-between mb-3">
-                                                <div className="flex gap-3">
+                                        {post.type === 'Internship' ? (
+                                            <div
+                                                className="p-5 cursor-pointer border-2 border-blue-200 hover:border-blue-400 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+                                                onClick={() => goToPostDetail(post.postId, post.type)}
+                                            >
+                                                <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
+                                                    Internship
+                                                </div>
+                                                <div className="flex items-center mb-4">
                                                     <img
                                                         src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                        alt="Profile"
-                                                        className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                                        alt={post.name || post.fullName || post.firstName || "Unknown User"}
+                                                        className="h-12 w-12 rounded-full object-cover mr-3 border-2 border-gray-100"
                                                         onError={(e) => {
                                                             e.target.onerror = null;
                                                             e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                                                         }}
                                                     />
-                                                    <div>
-                                                        <h6 className="font-semibold mb-0">
-                                                            {post.name || post.fullName || post.firstName || "Unknown User"}
-                                                        </h6>
-                                                        <small className="text-gray-600">
-                                                            {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
-                                                        </small>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
+                                                                <div className="text-right text-xs text-gray-500 mt-2">
+                                                                    {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
+                                                                </div>
+                                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                                                    <FontAwesomeIcon icon={faBriefcase} className="mr-1" />
+                                                                    Pro
+                                                                </span>
+
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <PostDropdownMenu
-                                                    post={post}
-                                                    currentUserIdHome={currentUserId}
-                                                    isOpen={openDropdownPostId === post.postId}
-                                                    onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
-                                                    onEdit={(post) => { setEditingPost(post); setEditedPostContent(undefined); }}
-                                                    onDelete={confirmDeletePost}
-                                                    onHide={handleHidePost}
-                                                    onShare={handleSharePost}
+
+                                                <h3 className="font-bold text-xl mb-3 text-gray-800 mt-2">{post.title || post.content.substring(0, 50)}</h3>
+
+                                                <div className="mb-4 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg mt-4">
+                                                    <div className="text-gray-600 flex items-center text-sm">
+                                                        <FontAwesomeIcon icon={faLocationDot} className="mr-1.5 text-gray-500" />
+                                                        {post.address}
+                                                    </div>
+                                                    <div className="text-gray-600 flex items-center text-sm ml-4">
+                                                        <FontAwesomeIcon icon={faClock} className="mr-1.5 text-gray-500" />
+                                                        {formatDuration(post.dueDate)}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-6 flex items-center justify-between">
+                                                    <button className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                                                        <FontAwesomeIcon icon={faComment} className="mr-1.5" />
+                                                        Why is this job right for you?
+                                                    </button>
+                                                    <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                                                        Apply Now
+                                                    </button>
+                                                </div>
+
+
+                                            </div>
+                                        ) : (
+                                            <div className="p-4">
+                                                {/* Post header */}
+                                                <div className="flex justify-between mb-3">
+                                                    <div className="flex gap-3">
+                                                        <img
+                                                            src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                            alt="Profile"
+                                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                            }}
+                                                        />
+                                                        <div>
+                                                            <h6 className="font-semibold mb-0">
+                                                                {post.name || post.fullName || post.firstName || "Unknown User"}
+                                                            </h6>
+                                                            <small className="text-gray-600">
+                                                                {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+
+                                                    <PostDropdownMenu
+                                                        post={post}
+                                                        currentUserIdHome={currentUserId}
+                                                        isOpen={openDropdownPostId === post.postId}
+                                                        onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
+                                                        onEdit={(post) => { setEditingPost(post); setEditedPostContent(undefined); }}
+                                                        onDelete={confirmDeletePost}
+                                                        onHide={handleHidePost}
+                                                        onShare={handleSharePost}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
+                                                    <p className="text-gray-800 whitespace-pre-wrap break-words mb-3">{post.content}</p>
+
+                                                    {/* Hiển thị bài viết được chia sẻ nếu có */}
+                                                    {post.postShareId && (
+                                                        <SharedPost postShareId={post.postShareId} />
+                                                    )}
+
+                                                    {/* Hiển thị media */}
+                                                    {post.postMedia && post.postMedia.length > 0 && (
+                                                        <PostMediaGrid media={post.postMedia} />
+                                                    )}
+                                                </div>
+
+                                                {/* Hiển thị số lượng like và comment ở trên */}
+                                                {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
+                                                    <div className="flex justify-between items-center mt-3 mb-2 px-3">
+                                                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                            <LikeCounter
+                                                                postId={post.postId}
+                                                                count={postLikes[post.postId]}
+                                                                onClick={handleShowLikes}
+                                                            />
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            {postCommentCounts[post.postId] > 0 && (
+                                                                <span>{postCommentCounts[post.postId]} comments</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Đường kẻ phân cách */}
+                                                <hr className="my-2" />
+
+                                                <div className="flex justify-between items-center mt-3">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                            onClick={() => handleLikePost(post.postId)}
+                                                        >
+                                                            <FontAwesomeIcon
+                                                                icon={userLikedPosts[post.postId] ? faHeart : farHeart}
+                                                                className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
+                                                            />
+                                                            Like
+                                                        </button>
+                                                        <button
+                                                            className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
+                                                            onClick={() => toggleCommentSection(post.postId)}
+                                                        >
+                                                            <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
+                                                            Comment
+                                                        </button>
+                                                        <button
+                                                            className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                            onClick={() => handleSharePost(post)}
+                                                        >
+                                                            <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
+                                                            Share
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Comment Section - chỉ hiển thị nếu không phải Internship */}
+                                        {post.type !== 'Internship' && (
+                                            <div className="px-6 pb-4">
+                                                <CommentSection
+                                                    postId={post.postId}
+                                                    isOpen={openCommentPosts.includes(post.postId)}
+                                                    onToggle={() => toggleCommentSection(post.postId)}
+                                                    commentCount={postCommentCounts[post.postId] || 0}
+                                                    currentUserAvatar={profileData?.avatarUrl}
+                                                    refreshTrigger={refreshCommentTrigger}
+                                                    onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
                                                 />
                                             </div>
-                                            <div>
-                                                {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
-                                                <p className="text-gray-800 whitespace-pre-wrap break-words mb-3">{post.content}</p>
-
-                                                {/* Hiển thị bài viết được chia sẻ nếu có */}
-                                                {post.postShareId && (
-                                                    <SharedPost postShareId={post.postShareId} />
-                                                )}
-
-                                                {/* Hiển thị media */}
-                                                {post.postMedia && post.postMedia.length > 0 && (
-                                                    <PostMediaGrid media={post.postMedia} />
-                                                )}
-                                            </div>
-
-                                            {/* Hiển thị số lượng like và comment ở trên */}
-                                            {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
-                                                <div className="flex justify-between items-center mt-3 mb-2 px-3">
-                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                        <LikeCounter
-                                                            postId={post.postId}
-                                                            count={postLikes[post.postId]}
-                                                            onClick={handleShowLikes}
-                                                        />
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {postCommentCounts[post.postId] > 0 && (
-                                                            <span>{postCommentCounts[post.postId]} comments</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Đường kẻ phân cách */}
-                                            <hr className="my-2" />
-
-                                            <div className="flex justify-between items-center mt-3">
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => handleLikePost(post.postId)}
-                                                    >
-                                                        <FontAwesomeIcon
-                                                            icon={userLikedPosts[post.postId] ? faHeart : farHeart}
-                                                            className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
-                                                        />
-                                                        Like
-                                                    </button>
-                                                    <button
-                                                        className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
-                                                        onClick={() => toggleCommentSection(post.postId)}
-                                                    >
-                                                        <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
-                                                        Comment
-                                                    </button>
-                                                    <button
-                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => handleSharePost(post)}
-                                                    >
-                                                        <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
-                                                        Share
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Comment Section */}
-                                        <div className="px-6 pb-4">
-                                            <CommentSection
-                                                postId={post.postId}
-                                                isOpen={openCommentPosts.includes(post.postId)}
-                                                onToggle={() => toggleCommentSection(post.postId)}
-                                                commentCount={postCommentCounts[post.postId] || 0}
-                                                currentUserAvatar={profileData?.avatarUrl}
-                                                refreshTrigger={refreshCommentTrigger}
-                                                onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
-                                            />
-                                        </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (
