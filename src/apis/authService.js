@@ -149,13 +149,12 @@ export const cleanupStorage = () => {
 export const isAuthenticated = () => {
     try {
         const token = Cookies.get("accessToken");
-        if (!token) return false;
+        return !!token;
+        // const decodedToken = jwtDecode(token);
+        // const currentTime = Date.now() / 1000;
 
-        const decodedToken = jwtDecode(token);
-        const currentTime = Date.now() / 1000;
-
-        // Kiểm tra token có hợp lệ và chưa hết hạn
-        return decodedToken && decodedToken.exp > currentTime;
+        // // Kiểm tra token có hợp lệ và chưa hết hạn
+        // return decodedToken && decodedToken.exp > currentTime;
     } catch (error) {
         return false;
     }

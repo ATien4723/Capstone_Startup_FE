@@ -90,62 +90,79 @@ const routers = [
     {
         path: '/create-startup',
         component: CreateStartup,
-        protected: true
+        protected: true,
+        preventIfMember: true
     },
     // Thêm các đường dẫn mới
     {
         path: '/me',
         component: Me,
         children: true,
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/dashboard',
         component: MeDashboard,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/chat',
         component: MeChat,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/post',
         component: MePost,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/post/internship',
         component: MeInternshipPost,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/member',
         component: MeMember,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/milestones',
         component: MilestoneBoards,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/milestones/:boardId',
         component: Milestone,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
     },
     {
         path: '/me/cv',
         component: CV,
         parent: '/me',
-        protected: true
+        protected: true,
+        requireStartup: true
+    },
+    {
+        path: '/me/settings',
+        component: Settings,
+        parent: '/me',
+        protected: true,
+        requireStartup: true
     },
     {
         path: "/internship/:id",

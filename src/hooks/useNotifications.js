@@ -48,7 +48,7 @@ export default function useNotifications(currentUserId, isAuthenticated) {
 
                     // Hiển thị toast thông báo đặc biệt cho lời mời startup
                     if (notification.type?.toLowerCase() === 'invite') {
-                        toast.info('Bạn có lời mời tham gia startup mới!', {
+                        toast.info('You have an invitation to join a new startup!', {
                             autoClose: 5000,
                             position: 'top-right'
                         });

@@ -4,7 +4,7 @@ import * as Yup from 'yup';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle, faUserPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
-import { createStartup, getStage, checkMembership } from '@/apis/startupService';
+import { createStartup, getStage } from '@/apis/startupService';
 import { getAllCategories } from '@/apis/categoryService';
 import { getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { useNavigate } from 'react-router-dom';
@@ -108,7 +108,6 @@ export default function CreateStartup() {
     const [categories, setCategories] = useState([]);
     const currentUserId = getUserId();
     const navigate = useNavigate();
-    const [checkingMembership, setCheckingMembership] = useState(true);
 
     // Sử dụng hook useInviteAccounts
     const {
@@ -143,23 +142,6 @@ export default function CreateStartup() {
 
         fetchData();
     }, []);
-
-    // Kiểm tra membership khi vào trang
-    useEffect(() => {
-        const check = async () => {
-            try {
-                const res = await checkMembership(currentUserId);
-                if (res.isMember === true) {
-                    navigate('/me/dashboard');
-                } else {
-                    setCheckingMembership(false);
-                }
-            } catch (e) {
-                setCheckingMembership(false);
-            }
-        };
-        check();
-    }, [currentUserId, navigate]);
 
     const formik = useFormik({
         initialValues: {
@@ -204,14 +186,6 @@ export default function CreateStartup() {
             }
         },
     });
-
-    if (checkingMembership) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-lg">Đang kiểm tra quyền truy cập...</div>
-            </div>
-        );
-    }
 
     return (
         <ThemeProvider theme={theme}>

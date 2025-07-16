@@ -2,15 +2,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Suspense, useEffect } from 'react';
 import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
-import authService from '@/apis/authService';
 import { LikeProvider } from '@/contexts/LikeContext.jsx';
 import ProtectedRoute from './components/Common/ProtectedRoute';
-
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
-  useEffect(() => {
-    authService.cleanupStorage();
-  }, []);
+  // Không cần gọi authService.cleanupStorage() vì đã được xử lý trong AuthContext
 
   // Tạo cấu trúc route lồng nhau
   const renderRoutes = () => {
@@ -26,7 +23,7 @@ function App() {
             path={item.path}
             element={
               item.protected ? (
-                <ProtectedRoute>
+                <ProtectedRoute requireStartup={item.requireStartup} preventIfMember={item.preventIfMember}>
                   <item.component />
                 </ProtectedRoute>
               ) : (
@@ -43,7 +40,7 @@ function App() {
             path={parentRoute.path}
             element={
               parentRoute.protected ? (
-                <ProtectedRoute>
+                <ProtectedRoute requireStartup={parentRoute.requireStartup} preventIfMember={parentRoute.preventIfMember}>
                   <parentRoute.component />
                 </ProtectedRoute>
               ) : (
@@ -59,7 +56,7 @@ function App() {
                   path={childRoute.path.replace(`${parentRoute.path}/`, '')}
                   element={
                     childRoute.protected ? (
-                      <ProtectedRoute>
+                      <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
                         <childRoute.component />
                       </ProtectedRoute>
                     ) : (
@@ -77,16 +74,22 @@ function App() {
   };
 
   return (
-    <LikeProvider>
-      <BrowserRouter>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Routes>
-            {renderRoutes()}
-          </Routes>
-        </Suspense>
-        <CustomToastContainer />
-      </BrowserRouter>
-    </LikeProvider>
+    <AuthProvider>
+      <LikeProvider>
+        <BrowserRouter>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+          }>
+            <Routes>
+              {renderRoutes()}
+            </Routes>
+          </Suspense>
+          <CustomToastContainer />
+        </BrowserRouter>
+      </LikeProvider>
+    </AuthProvider>
   )
 }
 

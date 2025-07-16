@@ -10,6 +10,7 @@ import { getUserId } from '@/apis/authService';
 export default function Chat() {
     const currentUserId = getUserId(); // ID của người dùng hiện tại
     const [hasSearched, setHasSearched] = useState(false); // State để theo dõi đã tìm kiếm hay chưa
+    const [searchChannelKey, setSearchChannelKey] = useState(''); // State để lưu từ khóa tìm kiếm kênh
 
     const {
         // State
@@ -101,6 +102,11 @@ export default function Chat() {
         setHasSearched(false); // Reset trạng thái tìm kiếm
     };
 
+    // Lọc danh sách kênh chat theo từ khóa tìm kiếm
+    const filteredChannels = channels?.filter(channel =>
+        channel.roomName.toLowerCase().includes(searchChannelKey.toLowerCase())
+    ) || [];
+
     return (
         <>
             {/* Header */}
@@ -152,31 +158,54 @@ export default function Chat() {
                                     type="text"
                                     className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
                                     placeholder="Search channels..."
+                                    value={searchChannelKey}
+                                    onChange={(e) => setSearchChannelKey(e.target.value)}
                                 />
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
+                                {searchChannelKey && (
+                                    <button
+                                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                                        onClick={() => setSearchChannelKey('')}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <ul className="px-2 py-2 space-y-1">
-                            {(channels || []).map(channel => (
-                                <li key={channel.chatRoomId + '-' + channel.roomName}>
-                                    <button
-                                        onClick={() => setSelectedChannel(channel.chatRoomId)}
-                                        className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${selectedChannel === channel.chatRoomId
-                                            ? 'bg-blue-100 text-blue-700 font-bold shadow-sm'
-                                            : 'text-gray-700 hover:bg-gray-200'}`}
-                                    >
-                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
-                                            {channel.roomName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1 overflow-hidden">
-                                            <p className="font-medium truncate"># {channel.roomName}</p>
-                                            <p className="text-xs text-gray-500 truncate">Click to view messages</p>
-                                        </div>
-                                    </button>
+                            {filteredChannels.length > 0 ? (
+                                filteredChannels.map(channel => (
+                                    <li key={channel.chatRoomId + '-' + channel.roomName}>
+                                        <button
+                                            onClick={() => setSelectedChannel(channel.chatRoomId)}
+                                            className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${selectedChannel === channel.chatRoomId
+                                                ? 'bg-blue-100 text-blue-700 font-bold shadow-sm'
+                                                : 'text-gray-700 hover:bg-gray-200'}`}
+                                        >
+                                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
+                                                {channel.roomName.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="font-medium truncate"># {channel.roomName}</p>
+                                                <p className="text-xs text-gray-500 truncate">Click to view messages</p>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))
+                            ) : (
+                                <li className="px-4 py-3 text-center text-gray-500">
+                                    <div className="flex flex-col items-center justify-center py-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <p className="text-sm">Không tìm thấy kênh nào</p>
+                                    </div>
                                 </li>
-                            ))}
+                            )}
                         </ul>
                     </div>
                 </div>

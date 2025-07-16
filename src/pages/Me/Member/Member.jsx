@@ -32,6 +32,8 @@ const Member = () => {
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState(null);
 
+
+
     useEffect(() => {
         const fetchStartupId = async () => {
             try {
@@ -364,7 +366,8 @@ const Member = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="relative">
-                                                {member.roleName !== 'Founder' && (
+                                                {/* Chỉ hiển thị nút tùy chọn cho người dùng có vai trò Founder và không hiện ở hàng của chính họ */}
+                                                {members.find(m => m.accountId == getUserId())?.roleName === 'Founder' && member.accountId != getUserId() && (
                                                     <button
                                                         ref={ellipsisRef}
                                                         className="text-gray-600 hover:text-gray-900 focus:outline-none"

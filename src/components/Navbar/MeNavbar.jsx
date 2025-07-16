@@ -7,13 +7,14 @@ import {
     faCheck, faCommentAlt, faShare, faBuildingUser, faXmark, faCheckCircle, faTimesCircle, faHome
 } from '@fortawesome/free-solid-svg-icons';
 import { logout, getUserId, getUserInfoFromToken } from "@/apis/authService";
+import { useAuth } from '@/contexts/AuthContext'; // Thêm import useAuth
 import Cookies from "js-cookie";
 import { getRelativeTime } from "@/utils/dateUtils";
 import useNotifications from "@/hooks/useNotifications";
 import { useProfileData } from '@/hooks/useProfileHooks';
 import { checkMembership, getInviteById, respondToInvite } from '@/apis/startupService';
 import PostModal from '@/components/PostMedia/PostModal';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 // Hàm trả về icon phù hợp với từng loại thông báo dựa vào trường 'type' từ API
 const getNotificationIcon = (type) => {
@@ -60,7 +61,7 @@ export default function Navbar() {
     const {
         notifications,
         unreadCount,
-        loading,
+        loading: notificationLoading, // Đổi tên từ loading thành notificationLoading để phù hợp với Navbar.jsx
         hasMore,
         pageNumber,
         userInfoMap,
@@ -140,17 +141,15 @@ export default function Navbar() {
     ];
 
 
-    const handleMyStartupsClick = async () => {
-        try {
-            const res = await checkMembership(currentUserId);
-            console.log('checkMembership result:', res);
-            if (res.isMember) {
-                navigate('/me/dashboard');
-            } else {
-                navigate('/create-startup');
-            }
-        } catch (error) {
-            console.error('Error in checkMembership:', error);
+    // Sử dụng AuthContext
+    const { isMember } = useAuth();
+
+    const handleMyStartupsClick = () => {
+        // Sử dụng isMember từ AuthContext
+        if (isMember) {
+            navigate('/me/dashboard');
+        } else {
+            navigate('/create-startup');
         }
     };
 
@@ -165,15 +164,22 @@ export default function Navbar() {
 
     // Hàm xử lý khi nhấp vào thông báo
     const handleNotificationClick = async (notification) => {
-        if (!notification.isRead) {
+        if (!notification.isRead && notification.notificationId) {
             handleMarkAsRead(notification.notificationId);
         }
 
         // Kiểm tra nếu là thông báo lời mời tham gia startup
         if (notification.type?.toLowerCase() === 'invite') {
-            await handleInviteNotification(notification);
-            setShowInviteModal(true);
-            setNotificationDropdownOpen(false);
+            // Kiểm tra và trích xuất inviteId từ targetURL nếu không có sẵn
+            if (!notification.inviteId && notification.targetURL) {
+                const inviteIdMatch = notification.targetURL.match(/\/invite\/(\d+)/);
+                if (inviteIdMatch && inviteIdMatch[1]) {
+                    notification.inviteId = inviteIdMatch[1];
+                } else {
+                    toast.error('Không thể mở lời mời. Vui lòng làm mới trang và thử lại.');
+                    return;
+                }
+            }
         } else if (notification.targetURL && notification.targetURL.startsWith('/post/')) {
             const postId = notification.targetURL.split('/post/')[1];
             setModalPostId(postId);
@@ -273,7 +279,7 @@ export default function Navbar() {
 
     // Cập nhật phần render thông báo trong dropdown desktop
     const renderNotificationsDesktop = () => {
-        if (loading && pageNumber === 1) {
+        if (notificationLoading && pageNumber === 1) {
             return (
                 <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -294,7 +300,7 @@ export default function Navbar() {
 
     // Cập nhật phần render thông báo trong dropdown mobile
     const renderNotificationsMobile = () => {
-        if (loading && pageNumber === 1) {
+        if (notificationLoading && pageNumber === 1) {
             return (
                 <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -373,12 +379,12 @@ export default function Navbar() {
                                     </div>
                                     <div className="max-h-96 overflow-y-auto">
                                         {renderNotificationsMobile()}
-                                        {loading && pageNumber > 1 && (
+                                        {notificationLoading && pageNumber > 1 && (
                                             <div className="flex justify-center items-center py-4">
                                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                             </div>
                                         )}
-                                        {hasMore && !loading && (
+                                        {hasMore && !notificationLoading && (
                                             <div className="text-center py-2">
                                                 <button
                                                     className="text-blue-600 text-sm hover:underline"
@@ -543,12 +549,12 @@ export default function Navbar() {
 
                                         <div className="max-h-96 overflow-y-auto">
                                             {renderNotificationsDesktop()}
-                                            {loading && pageNumber > 1 && (
+                                            {notificationLoading && pageNumber > 1 && (
                                                 <div className="flex justify-center items-center py-4">
                                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                                 </div>
                                             )}
-                                            {hasMore && !loading && (
+                                            {hasMore && !notificationLoading && (
                                                 <div className="text-center py-2">
                                                     <button
                                                         className="text-blue-600 text-sm hover:underline"

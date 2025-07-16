@@ -24,8 +24,12 @@ export const getUnreadNotificationCount = async (accountId) => {
 
 // Đánh dấu thông báo đã đọc
 export const markNotificationAsRead = async (notificationId, accountId) => {
+    console.log('API markNotificationAsRead gọi với:', { notificationId, accountId });
     try {
-        const response = await axiosClient.put(`api/Notification/mark-as-read${notificationId}?accountId=${accountId}`);
+        // Đảm bảo đường dẫn URL chính xác khi notificationId là 0
+        const url = `api/Notification/mark-as-read${notificationId}?accountId=${accountId}`;
+        console.log('URL API gọi:', url);
+        const response = await axiosClient.put(url);
         return response;
     } catch (error) {
         console.error('Error marking notification as read:', error);
