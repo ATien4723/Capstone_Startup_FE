@@ -4,6 +4,7 @@ import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
 import authService from '@/apis/authService';
 import { LikeProvider } from '@/contexts/LikeContext.jsx';
+import ProtectedRoute from './components/Common/ProtectedRoute';
 
 
 function App() {
@@ -23,7 +24,15 @@ function App() {
         {standardRoutes.map((item, index) => (
           <Route
             path={item.path}
-            element={<item.component />}
+            element={
+              item.protected ? (
+                <ProtectedRoute>
+                  <item.component />
+                </ProtectedRoute>
+              ) : (
+                <item.component />
+              )
+            }
             key={`standard-${index}`}
           />
         ))}
@@ -32,7 +41,15 @@ function App() {
         {parentRoutes.map((parentRoute, parentIndex) => (
           <Route
             path={parentRoute.path}
-            element={<parentRoute.component />}
+            element={
+              parentRoute.protected ? (
+                <ProtectedRoute>
+                  <parentRoute.component />
+                </ProtectedRoute>
+              ) : (
+                <parentRoute.component />
+              )
+            }
             key={`parent-${parentIndex}`}
           >
             {childRoutes
@@ -40,7 +57,15 @@ function App() {
               .map((childRoute, childIndex) => (
                 <Route
                   path={childRoute.path.replace(`${parentRoute.path}/`, '')}
-                  element={<childRoute.component />}
+                  element={
+                    childRoute.protected ? (
+                      <ProtectedRoute>
+                        <childRoute.component />
+                      </ProtectedRoute>
+                    ) : (
+                      <childRoute.component />
+                    )
+                  }
                   key={`child-${parentIndex}-${childIndex}`}
                 />
               ))

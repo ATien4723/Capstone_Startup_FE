@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { login, isAuthenticated } from "@/apis/authService";
 import { toast } from 'react-toastify';
@@ -10,13 +10,17 @@ import Cookies from 'js-cookie';
 const Login = () => {
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Lấy địa chỉ từ state nếu có, nếu không thì mặc định là '/home'
+    const from = location.state?.from || '/home';
 
     useEffect(() => {
-        // Check if user is already logged in using isAuthenticated function
+        // Kiểm tra nếu người dùng đã đăng nhập thì chuyển hướng đến trang được yêu cầu hoặc trang chủ
         if (isAuthenticated()) {
-            navigate('/home');
+            navigate(from);
         }
-    }, [navigate]);
+    }, [navigate, from]);
 
     // Validation schema
     const validationSchema = Yup.object({
@@ -39,9 +43,9 @@ const Login = () => {
                 //         sameSite: 'Strict'
                 //     });
                 // }
-
                 toast.success('Đăng nhập thành công!');
-                navigate('/home');
+                // Chuyển hướng người dùng về trang họ đã cố gắng truy cập trước đó
+                navigate(from);
             } else {
                 console.error('Không nhận được token:', response);
                 toast.error('Đăng nhập thất bại, vui lòng thử lại');
@@ -99,6 +103,12 @@ const Login = () => {
 
                         {/* Body */}
                         <div className="p-8 bg-white sm:p-6">
+                            {from !== '/home' && (
+                                <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg">
+                                    Please login to access the page {from}
+                                </div>
+                            )}
+
                             <Formik
                                 initialValues={{
                                     email: '',

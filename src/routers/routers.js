@@ -23,11 +23,14 @@ const MeInternshipPost = lazy(() => import('@/pages/Me/Post/InternshipPost'));
 const MeMember = lazy(() => import('@/pages/Me/Member/Member'));
 const MilestoneBoards = lazy(() => import('@/pages/Me/Milestone/MilestoneBoards'));
 const Milestone = lazy(() => import('@/pages/Me/Milestone/Milestone'));
+const CV = lazy(() => import('@/pages/Me/CV/CV'));
+const nhap = lazy(() => import('@/pages/Test/Nhap'));
 
 const routers = [
     {
         path: "/startup-detail/:id",
-        component: StartupDetail
+        component: StartupDetail,
+        protected: true
     },
     {
         path: "/",
@@ -39,27 +42,33 @@ const routers = [
     },
     {
         path: "/home",
-        component: Home
+        component: Home,
+        protected: true
     },
     {
         path: "/mynetwork",
-        component: MyNetwork
+        component: MyNetwork,
+        protected: true
     },
     {
         path: "/network/following",
-        component: NetworkList
+        component: NetworkList,
+        protected: true
     },
     {
         path: "/network/followers",
-        component: NetworkList
+        component: NetworkList,
+        protected: true
     },
     {
         path: "/profile/:id",
-        component: PublicProfile
+        component: PublicProfile,
+        protected: true
     },
     {
         path: "/startups",
-        component: Startups
+        component: Startups,
+        protected: true
     },
     {
         path: "/register",
@@ -71,7 +80,8 @@ const routers = [
     },
     {
         path: '/settings/:accountId',
-        component: Settings
+        component: Settings,
+        protected: true
     },
     {
         path: '/forget-password',
@@ -79,52 +89,73 @@ const routers = [
     },
     {
         path: '/create-startup',
-        component: CreateStartup
+        component: CreateStartup,
+        protected: true
     },
     // Thêm các đường dẫn mới
     {
         path: '/me',
         component: Me,
-        children: true
+        children: true,
+        protected: true
     },
     {
         path: '/me/dashboard',
         component: MeDashboard,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/chat',
         component: MeChat,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/post',
         component: MePost,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/post/internship',
         component: MeInternshipPost,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/member',
         component: MeMember,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/milestones',
         component: MilestoneBoards,
-        parent: '/me'
+        parent: '/me',
+        protected: true
     },
     {
         path: '/me/milestones/:boardId',
         component: Milestone,
-        parent: '/me'
+        parent: '/me',
+        protected: true
+    },
+    {
+        path: '/me/cv',
+        component: CV,
+        parent: '/me',
+        protected: true
     },
     {
         path: "/internship/:id",
-        component: InternshipDetail
+        component: InternshipDetail,
+        protected: true
+    },
+    {
+        path: "/nhap",
+        component: nhap,
+        protected: true
     },
 ];
 export default routers;

@@ -79,22 +79,7 @@ const MilestoneBoards = () => {
     const getBoardColor = (id) => {
         // Chuyển đổi id thành string để xử lý an toàn
         const boardId = String(id);
-
-        // ID 1 và 2 cùng một màu
-        if (boardId === '1' || boardId === '2') {
-            return 'bg-purple-500';
-        }
-        // ID 3 một màu khác
-        else if (boardId === '3') {
-            return 'bg-amber-500';
-        }
-        else if (boardId === '4') {
-            return 'bg-green-500';
-        }
-        // Các ID khác sẽ dùng màu từ đối tượng board hoặc mặc định
-        else {
-            return 'bg-blue-500';
-        }
+        return 'bg-blue-500';
     };
 
     return (
