@@ -19,7 +19,7 @@ import { getPostLikesByPostId } from '@/apis/postService';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
-import { LikeContext } from '@/contexts/LikeContext.jsx';
+import { InteractionContext } from '@/contexts/InteractionContext.jsx';
 import useFollow from '@/hooks/useFollow';
 
 // Modal component
@@ -160,10 +160,10 @@ const Home = () => {
     //     };
     // }, [openDropdownPostId]);
 
-    const { likeTrigger } = useContext(LikeContext);
+    const { likeTrigger, commentTrigger } = useContext(InteractionContext);
     useEffect(() => {
         fetchPosts(1);
-    }, [likeTrigger]);
+    }, [likeTrigger, commentTrigger]);
 
     // Chuyển đến trang chi tiết bài đăng
     const goToPostDetail = (postId, type) => {
@@ -577,19 +577,23 @@ const Home = () => {
                                                     Internship
                                                 </div>
                                                 <div className="flex items-center mb-4">
-                                                    <img
-                                                        src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                        alt={post.name || post.fullName || post.firstName || "Unknown User"}
-                                                        className="h-12 w-12 rounded-full object-cover mr-3 border-2 border-gray-100"
-                                                        onError={(e) => {
-                                                            e.target.onerror = null;
-                                                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                                                        }}
-                                                    />
+                                                    <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                        <img
+                                                            src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                            alt={post.name || post.fullName || post.firstName || "Unknown User"}
+                                                            className="h-12 w-12 rounded-full object-cover mr-3 border-2 border-gray-100"
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                            }}
+                                                        />
+                                                    </Link>
                                                     <div className="flex-1">
                                                         <div className="flex items-center justify-between">
                                                             <div>
-                                                                <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
+                                                                <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                                    <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
+                                                                </Link>
                                                                 <div className="text-right text-xs text-gray-500 mt-2">
                                                                     {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                                                 </div>
@@ -633,19 +637,23 @@ const Home = () => {
                                                 {/* Post header */}
                                                 <div className="flex justify-between mb-3">
                                                     <div className="flex gap-3">
-                                                        <img
-                                                            src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                            alt="Profile"
-                                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
-                                                            onError={(e) => {
-                                                                e.target.onerror = null;
-                                                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                                                            }}
-                                                        />
+                                                        <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                            <img
+                                                                src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                alt="Profile"
+                                                                className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.onerror = null;
+                                                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                                }}
+                                                            />
+                                                        </Link>
                                                         <div>
-                                                            <h6 className="font-semibold mb-0">
-                                                                {post.name || post.fullName || post.firstName || "Unknown User"}
-                                                            </h6>
+                                                            <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                                <h6 className="font-semibold mb-0 hover:underline">
+                                                                    {post.name || post.fullName || post.firstName || "Unknown User"}
+                                                                </h6>
+                                                            </Link>
                                                             <small className="text-gray-600">
                                                                 {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                                             </small>

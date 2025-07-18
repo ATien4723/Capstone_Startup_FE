@@ -258,6 +258,34 @@ export default function useMemberManagement(startupId) {
         }
     };
 
+    // Thành viên rời khỏi startup
+    const leaveStartup = async () => {
+        if (!startupId) {
+            toast.error("Không tìm thấy ID của startup");
+            return;
+        }
+
+        const accountId = Number(getUserId());
+        if (!accountId) {
+            toast.error("Không tìm thấy ID người dùng");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await startupService.outStartup(accountId);
+            toast.success("Bạn đã rời khỏi startup thành công");
+
+            // Chuyển hướng đến trang chính sau khi rời khỏi startup
+            window.location.href = '/';
+        } catch (err) {
+            toast.error("Không thể rời khỏi startup");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Cập nhật vai trò
     const updateRole = async (roleData) => {
         if (!roleData.roleName?.trim()) {
@@ -339,6 +367,7 @@ export default function useMemberManagement(startupId) {
         removeMember,
         createRole,
         updateRole,
-        deleteRole
+        deleteRole,
+        leaveStartup
     };
 } 

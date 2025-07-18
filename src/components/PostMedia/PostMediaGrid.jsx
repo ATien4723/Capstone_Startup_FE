@@ -27,10 +27,10 @@ const PostMediaGrid = ({ media }) => {
 
   // Class cho từng item ảnh
   const getItemClasses = (index, total) => {
-    let classes = "relative overflow-hidden";
+    let classes = "relative overflow-hidden bg-black";
 
     if (total === 1) {
-      classes += " max-h-[500px]";
+      classes += " max-h-[600px]";
     } else {
       classes += " h-[200px]";
     }

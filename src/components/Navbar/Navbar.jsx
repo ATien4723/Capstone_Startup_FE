@@ -211,8 +211,8 @@ export default function Navbar() {
             };
 
             await respondToInvite(responseData);
-            console.log("✅ Invite response thành công");
-            console.log("accept =", accept);
+            // console.log("✅ Invite response thành công");
+            // console.log("accept =", accept);
 
             // Hiển thị thông báo thành công
             if (accept) {

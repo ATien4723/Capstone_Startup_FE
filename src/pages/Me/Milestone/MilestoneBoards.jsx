@@ -86,12 +86,12 @@ const MilestoneBoards = () => {
         <div className="p-4 bg-gray-50 min-h-screen">
             {/* Tiêu đề và nút thêm bảng */}
             <header className="bg-white shadow-md px-6 py-5 flex justify-between items-center mb-8 rounded-xl">
-                <h1 className="text-2xl font-bold text-gray-800">Quản lý dự án</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Project Management</h1>
                 <button
                     onClick={handleAddBoard}
                     className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
                 >
-                    <FontAwesomeIcon icon={faPlus} /> Thêm bảng mới
+                    <FontAwesomeIcon icon={faPlus} /> Add New Board
                 </button>
             </header>
 
@@ -124,34 +124,34 @@ const MilestoneBoards = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl animate-fadeIn">
                         <h2 className="text-xl font-bold mb-4">
-                            {editingBoard ? 'Chỉnh sửa bảng' : 'Thêm bảng mới'}
+                            {editingBoard ? 'Edit Board' : 'Add New Board'}
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Tên bảng:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Board Name:</label>
                                     <input
                                         type="text"
                                         value={boardFormData.title}
                                         onChange={(e) => setBoardFormData({ ...boardFormData, title: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Nhập tên bảng"
+                                        placeholder="Enter board name"
                                     />
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Mô tả:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Description:</label>
                                     <textarea
                                         value={boardFormData.description}
                                         onChange={(e) => setBoardFormData({ ...boardFormData, description: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Mô tả về bảng"
+                                        placeholder="Board description"
                                         rows="5"
                                     ></textarea>
                                 </div>
                             </div>
                             <div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Ngày bắt đầu:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Start Date:</label>
                                     <input
                                         type="date"
                                         value={boardFormData.startDate || ''}
@@ -160,7 +160,7 @@ const MilestoneBoards = () => {
                                     />
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Ngày kết thúc:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">End Date:</label>
                                     <input
                                         type="date"
                                         value={boardFormData.endDate || ''}
@@ -195,7 +195,7 @@ const MilestoneBoards = () => {
                                 onClick={handleSaveBoard}
                                 disabled={loading}
                             >
-                                {loading ? 'Đang xử lý...' : 'Lưu'}
+                                {loading ? 'Processing...' : 'Save'}
                             </button>
                         </div>
                     </div>
@@ -206,9 +206,9 @@ const MilestoneBoards = () => {
             {showAddMemberForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg animate-fadeIn">
-                        <h2 className="text-xl font-bold mb-4">Thêm thành viên vào dự án</h2>
+                        <h2 className="text-xl font-bold mb-4">Add Members to Project</h2>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-medium">Tìm kiếm người dùng:</label>
+                            <label className="block text-gray-700 mb-2 font-medium">Search Users:</label>
                             <div className="relative flex">
                                 <input
                                     type="text"
@@ -225,7 +225,7 @@ const MilestoneBoards = () => {
                                         }
                                     }}
                                     className="w-full border border-gray-300 rounded-l-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Nhập email hoặc tên người dùng..."
+                                    placeholder="Enter email or username..."
                                 />
                                 {/* <button
                                     onClick={() => searchMembers(memberSearchQuery)}
@@ -240,21 +240,21 @@ const MilestoneBoards = () => {
                         {isSearching && (
                             <div className="my-4 flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-r-2 border-blue-500 mr-2"></div>
-                                <span className="text-gray-600">Đang tìm kiếm...</span>
+                                <span className="text-gray-600">Searching...</span>
                             </div>
                         )}
 
                         {/* Thông báo không có kết quả */}
                         {!isSearching && memberSearchQuery.trim() && searchResults.length === 0 && (
                             <div className="my-4 text-center text-gray-500">
-                                Không tìm thấy thành viên nào phù hợp
+                                No matching members found
                             </div>
                         )}
 
                         {/* Kết quả tìm kiếm */}
                         {searchResults.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="font-medium text-gray-700 mb-2">Kết quả tìm kiếm:</h3>
+                                <h3 className="font-medium text-gray-700 mb-2">Search Results:</h3>
                                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
                                     {searchResults.map((user) => (
                                         <div
@@ -278,7 +278,7 @@ const MilestoneBoards = () => {
                                                     addToSelectedMembers(user);
                                                 }}
                                             >
-                                                Thêm
+                                                Add
                                             </button>
                                         </div>
                                     ))}
@@ -288,7 +288,7 @@ const MilestoneBoards = () => {
 
                         {/* Thành viên đã chọn */}
                         <div className="mb-4">
-                            <h3 className="font-medium text-gray-700 mb-2">Thành viên đã chọn:</h3>
+                            <h3 className="font-medium text-gray-700 mb-2">Selected Members:</h3>
                             {selectedMembers.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
                                     {selectedMembers.map((member) => (
@@ -307,14 +307,14 @@ const MilestoneBoards = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-gray-500 italic">Chưa có thành viên nào được chọn</p>
+                                <p className="text-gray-500 italic">No members selected yet</p>
                             )}
                         </div>
 
                         {/* Danh sách thành viên startup */}
                         {startupMembers.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="font-medium text-gray-700 mb-2">Thành viên startup:</h3>
+                                <h3 className="font-medium text-gray-700 mb-2">Startup Members:</h3>
                                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
                                     {startupMembers.map((member) => (
                                         <div
@@ -338,7 +338,7 @@ const MilestoneBoards = () => {
                                                     addToSelectedMembers(member);
                                                 }}
                                             >
-                                                Thêm
+                                                Add
                                             </button>
                                         </div>
                                     ))}
@@ -351,14 +351,14 @@ const MilestoneBoards = () => {
                                 className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg mr-2 hover:bg-gray-300 transition-colors"
                                 onClick={handleCloseAddMemberForm}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
                                 onClick={handleAddMember}
                                 disabled={loading || selectedMembers.length === 0}
                             >
-                                {loading ? 'Đang xử lý...' : 'Thêm'}
+                                {loading ? 'Processing...' : 'Add'}
                             </button>
                         </div>
                     </div>
@@ -368,14 +368,14 @@ const MilestoneBoards = () => {
             {/* Loading indicator */}
             {loading && (
                 <div className="bg-white p-8 rounded-xl shadow text-center">
-                    <p className="text-gray-500 text-lg">Đang tải dữ liệu...</p>
+                    <p className="text-gray-500 text-lg">Loading data...</p>
                 </div>
             )}
 
             {/* Thông báo nếu không có kết quả tìm kiếm */}
             {!loading && filteredBoards.length === 0 && (
                 <div className="bg-white p-8 rounded-xl shadow text-center">
-                    <p className="text-gray-500 text-lg">Không tìm thấy dự án nào phù hợp với tìm kiếm của bạn</p>
+                    <p className="text-gray-500 text-lg">No projects found matching your search</p>
                 </div>
             )}
 
@@ -398,7 +398,7 @@ const MilestoneBoards = () => {
                                             toggleFavorite(board.milestoneId || board.id);
                                         }}
                                         className="text-lg transition-transform duration-300 hover:scale-110"
-                                        title={board.isFavorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}
+                                        title={board.isFavorite ? "Remove from favorites" : "Add to favorites"}
                                     >
                                         <FontAwesomeIcon
                                             icon={faStar}
@@ -422,19 +422,19 @@ const MilestoneBoards = () => {
                                                 className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                                 onClick={() => handleEditBoard(board)}
                                             >
-                                                <FontAwesomeIcon icon={faPencilAlt} className="mr-2" /> Chỉnh sửa
+                                                <FontAwesomeIcon icon={faPencilAlt} className="mr-2" /> Edit
                                             </button>
                                             <button
                                                 className="block w-full text-left px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
                                                 onClick={() => handleOpenAddMemberForm(board.milestoneId || board.id)}
                                             >
-                                                <FontAwesomeIcon icon={faUserPlus} className="mr-2" /> Thêm thành viên
+                                                <FontAwesomeIcon icon={faUserPlus} className="mr-2" /> Add Members
                                             </button>
                                             <button
                                                 className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                                 onClick={() => handleDeleteBoard(board.milestoneId || board.id)}
                                             >
-                                                <FontAwesomeIcon icon={faTrashAlt} className="mr-2" /> Xóa
+                                                <FontAwesomeIcon icon={faTrashAlt} className="mr-2" /> Delete
                                             </button>
                                         </div>
                                     )}
@@ -486,7 +486,7 @@ const MilestoneBoards = () => {
                                         )}
                                     </div>
                                 ) : (
-                                    <span className="text-sm text-gray-500 italic">Chưa có thành viên</span>
+                                    <span className="text-sm text-gray-500 italic">No members yet</span>
                                 )}
                             </div>
 
@@ -496,7 +496,7 @@ const MilestoneBoards = () => {
                                     className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-md"
                                 >
                                     <FontAwesomeIcon icon={faChartLine} className="mr-2" />
-                                    Xem chi tiết
+                                    View Details
                                 </button>
                             </div>
                         </div>

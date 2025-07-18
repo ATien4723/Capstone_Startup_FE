@@ -378,25 +378,25 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('title', e)}
                             >
-                                <FontAwesomeIcon icon={faEdit} className="mr-3 text-gray-500" /> Chỉnh sửa nhiệm vụ
+                                <FontAwesomeIcon icon={faEdit} className="mr-3 text-gray-500" /> Edit Task
                             </button>
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('note', e)}
                             >
-                                <FontAwesomeIcon icon={faClipboardList} className="mr-3 text-gray-500" /> Chỉnh sửa ghi chú
+                                <FontAwesomeIcon icon={faClipboardList} className="mr-3 text-gray-500" /> Edit Note
                             </button>
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('assignee', e)}
                             >
-                                <FontAwesomeIcon icon={faUserFriends} className="mr-3 text-gray-500" /> Thay đổi người giao
+                                <FontAwesomeIcon icon={faUserFriends} className="mr-3 text-gray-500" /> Change Assignee
                             </button>
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('dueDate', e)}
                             >
-                                <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-gray-500" /> Chỉnh sửa ngày
+                                <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-gray-500" /> Edit Date
                             </button>
                             {/* <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -408,14 +408,14 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('priority', e)}
                             >
-                                <FontAwesomeIcon icon={faCopy} className="mr-3 text-gray-500" /> Đổi độ ưu tiên
+                                <FontAwesomeIcon icon={faCopy} className="mr-3 text-gray-500" /> Change Priority
                             </button>
 
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('coverColor', e)}
                             >
-                                <FontAwesomeIcon icon={faTag} className="mr-3 text-gray-500" /> Thay đổi màu bìa
+                                <FontAwesomeIcon icon={faTag} className="mr-3 text-gray-500" /> Change Cover Color
                             </button>
 
                             {/* <button
@@ -429,7 +429,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
                                 onClick={handleDeleteClick}
                             >
-                                <FontAwesomeIcon icon={faTrashAlt} className="mr-3" /> Xóa
+                                <FontAwesomeIcon icon={faTrashAlt} className="mr-3" /> Delete
                             </button>
                         </div>
                     </div>
@@ -540,7 +540,7 @@ const DroppableMilestone = ({ milestone, onAddTask, onDeleteMilestone, tasks, on
                     onClick={() => onAddTask(milestone.id)}
                     className="mt-2 flex items-center justify-center w-full py-2.5 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors hover:text-blue-600 hover:border-blue-300 group"
                 >
-                    <FontAwesomeIcon icon={faPlus} className="mr-2 group-hover:scale-110 transition-transform" /> Thêm công việc
+                    <FontAwesomeIcon icon={faPlus} className="mr-2 group-hover:scale-110 transition-transform" /> Add Task
                 </button>
             </div>
         </div>
@@ -1133,24 +1133,24 @@ const Milestone = () => {
             {showNewMilestoneForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-7 rounded-xl  shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-6 text-gray-800">Thêm Milestone mới</h2>
+                        <h2 className="text-xl font-bold mb-6 text-gray-800">Add New Milestone</h2>
                         <div className="mb-5">
-                            <label className="block text-gray-700 mb-2 font-medium">Tên milestone:</label>
+                            <label className="block text-gray-700 mb-2 font-medium">Milestone Name:</label>
                             <input
                                 type="text"
                                 value={newMilestoneTitle}
                                 onChange={(e) => setNewMilestoneTitle(e.target.value)}
                                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                placeholder="Ví dụ: Sprint 1 - Thiết kế UI"
+                                placeholder="Example: Sprint 1 - UI Design"
                             />
                         </div>
                         <div className="mb-6">
-                            <label className="block text-gray-700 mb-2 font-medium">Mô tả:</label>
+                            <label className="block text-gray-700 mb-2 font-medium">Description:</label>
                             <textarea
                                 value={newMilestoneDescription}
                                 onChange={(e) => setNewMilestoneDescription(e.target.value)}
                                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                placeholder="Mô tả chi tiết về milestone"
+                                placeholder="Detailed milestone description"
                                 rows="4"
                             ></textarea>
                         </div>
@@ -1159,13 +1159,13 @@ const Milestone = () => {
                                 className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setShowNewMilestoneForm(false)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={handleAddMilestone}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1177,40 +1177,40 @@ const Milestone = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-7 rounded-xl max-h-[90vh] overflow-y-auto shadow-xl w-full max-w-3xl transform transition-all animate-scaleIn">
                         <h2 className="text-xl font-bold mb-6 text-gray-800">
-                            {editingTask.isNew ? 'Thêm công việc mới' : 'Chỉnh sửa công việc'}
+                            {editingTask.isNew ? 'Add New Task' : 'Edit Task'}
                         </h2>
                         <div className="grid grid-cols-2 gap-6">
                             <div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Tiêu đề:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Title:</label>
                                     <input
                                         type="text"
                                         value={taskFormData.title}
                                         onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                        placeholder="Nhập tiêu đề công việc"
+                                        placeholder="Enter task title"
                                     />
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Mô tả:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Description:</label>
                                     <textarea
                                         value={taskFormData.description}
                                         onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                        placeholder="Mô tả chi tiết công việc"
+                                        placeholder="Detailed task description"
                                         rows="5"
                                     ></textarea>
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Độ ưu tiên:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Priority:</label>
                                     <select
                                         value={taskFormData.priority}
                                         onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
                                     >
-                                        <option value="high">Cao</option>
-                                        <option value="medium">Trung bình</option>
-                                        <option value="low">Thấp</option>
+                                        <option value="high">High</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="low">Low</option>
                                     </select>
                                 </div>
 
@@ -1218,24 +1218,24 @@ const Milestone = () => {
 
                             <div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Ghi chú:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Notes:</label>
                                     <textarea
                                         value={taskFormData.note}
                                         onChange={(e) => setTaskFormData({ ...taskFormData, note: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                        placeholder="Ghi chú bổ sung cho công việc"
+                                        placeholder="Additional notes for the task"
                                         rows="3"
                                     ></textarea>
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Người được giao:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Assignee:</label>
                                     <div className="relative">
                                         <select
                                             value={taskFormData.assignee || ''}
                                             onChange={(e) => setTaskFormData({ ...taskFormData, assignee: e.target.value })}
                                             className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white appearance-none"
                                         >
-                                            <option value="">Chọn người được giao</option>
+                                            <option value="">Select assignee</option>
                                             {teamMembers.map(member => (
                                                 <option key={member.id} value={member.id}>
                                                     {member.name}
@@ -1248,7 +1248,7 @@ const Milestone = () => {
                                     </div>
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-medium">Hạn hoàn thành:</label>
+                                    <label className="block text-gray-700 mb-2 font-medium">Due Date:</label>
                                     <input
                                         type="date"
                                         value={taskFormData.dueDate}
@@ -1284,13 +1284,13 @@ const Milestone = () => {
                                 className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTask(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={handleSaveTask}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1301,19 +1301,19 @@ const Milestone = () => {
             {editingTaskField === 'title' && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Chỉnh sửa nhiệm vụ</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Edit Task</h2>
                         <div className="mb-3">
-                            <label className="block text-gray-700 mb-1 font-medium">Tiêu đề:</label>
+                            <label className="block text-gray-700 mb-1 font-medium">Title:</label>
                             <input
                                 type="text"
                                 value={editFieldData.currentValue}
                                 onChange={(e) => setEditFieldData({ ...editFieldData, currentValue: e.target.value })}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                placeholder="Nhập tiêu đề công việc"
+                                placeholder="Enter task title"
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-1 font-medium">Mô tả:</label>
+                            <label className="block text-gray-700 mb-1 font-medium">Description:</label>
                             <textarea
                                 value={
                                     columns[editFieldData.milestoneId]?.tasks.find(
@@ -1336,7 +1336,7 @@ const Milestone = () => {
                                     });
                                 }}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                placeholder="Mô tả chi tiết công việc"
+                                placeholder="Detailed task description"
                                 rows="3"
                             ></textarea>
                         </div>

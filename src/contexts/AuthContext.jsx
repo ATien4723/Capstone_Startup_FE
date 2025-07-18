@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { checkMembership } from '@/apis/startupService';
 import { getUserId, getUserInfoFromToken, isAuthenticated } from '@/apis/authService';
+import * as authService from '@/apis/authService';
 
 // Tạo context
 const AuthContext = createContext();
@@ -19,6 +20,7 @@ export const AuthProvider = ({ children }) => {
                 if (isAuthenticated()) {
                     const userInfo = getUserInfoFromToken();
                     const userId = getUserId();
+                    console.log('userId trong useEffect:', userId);
                     if (userId) {
                         setUser({
                             id: userId,
@@ -65,6 +67,7 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 const result = await checkMembership(userId);
+                console.log('API trả về:', result);
                 setIsMember(result.isMember === true);
             } catch (err) {
                 console.error('Lỗi khi kiểm tra membership:', err);
@@ -96,6 +99,31 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Thêm hàm login vào context
+    const login = async (values) => {
+        try {
+            const response = await authService.login(values);
+            if (response && response.accessToken) {
+                // Lấy thông tin người dùng từ token mới
+                const userInfo = getUserInfoFromToken();
+                const userId = getUserId();
+
+                // Cập nhật user state trong context
+                if (userId) {
+                    setUser({
+                        id: userId,
+                        ...userInfo
+                    });
+                }
+                return response;
+            }
+            return null;
+        } catch (error) {
+            console.error('Lỗi đăng nhập trong context:', error);
+            throw error;
+        }
+    };
+
     // Kiểm tra nếu đã sẵn sàng (cả auth và membership đã được kiểm tra)
     const isReady = authChecked && membershipChecked;
 
@@ -106,7 +134,8 @@ export const AuthProvider = ({ children }) => {
         isMember,
         loading,
         isReady,
-        refreshMembership
+        refreshMembership,
+        login  // Thêm login vào context
     };
 
     return (

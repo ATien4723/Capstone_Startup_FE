@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount, getPostCommentCount } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
-import { getStartupIdByAccountId } from '@/apis/startupService';
+import { getStartupIdByAccountId, getStartupMembers } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
 
@@ -25,13 +25,9 @@ export const useStartupDetail = () => {
     const [refreshCommentTrigger, setRefreshCommentTrigger] = useState(false);
     const [profileData, setProfileData] = useState(null);
 
-    // Dữ liệu thành viên
-    const teamMembers = [
-        { name: 'John Smith', role: 'CEO & Founder', bio: '10+ years experience in tech leadership and startup management.', img: 'https://randomuser.me/api/portraits/men/1.jpg' },
-        { name: 'Sarah Johnson', role: 'CTO', bio: 'Former Google engineer with expertise in AI and machine learning.', img: 'https://randomuser.me/api/portraits/women/1.jpg' },
-        { name: 'Michael Chen', role: 'Head of Product', bio: 'Product strategist with experience at top tech companies.', img: 'https://randomuser.me/api/portraits/men/2.jpg' },
-        { name: 'Emily Davis', role: 'Marketing Director', bio: 'Digital marketing expert with focus on growth strategies.', img: 'https://randomuser.me/api/portraits/women/2.jpg' },
-    ];
+    // State cho danh sách thành viên
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [loadingMembers, setLoadingMembers] = useState(false);
 
     // Lấy startupId từ API dựa trên accountId hiện tại
     useEffect(() => {
@@ -74,6 +70,29 @@ export const useStartupDetail = () => {
 
         fetchProfileData();
     }, []);
+
+    // Lấy danh sách thành viên từ API
+    const fetchTeamMembers = useCallback(async () => {
+        if (!startupId) return;
+
+        setLoadingMembers(true);
+        try {
+            const response = await getStartupMembers(startupId);
+            if (response) {
+                const members = Array.isArray(response) ? response : (response?.data || []);
+                console.log('Đã lấy danh sách thành viên:', members);
+                setTeamMembers(members);
+            } else {
+                console.log('Không có dữ liệu thành viên');
+                setTeamMembers([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách thành viên:', error);
+            setTeamMembers([]);
+        } finally {
+            setLoadingMembers(false);
+        }
+    }, [startupId]);
 
     // Fetch danh sách bài đăng từ startup feed
     const fetchStartupFeed = async (page = 1) => {
@@ -239,8 +258,11 @@ export const useStartupDetail = () => {
             // Reset và fetch lại dữ liệu khi chuyển tab
             setFeedPageNumber(1);
             fetchStartupFeed(1);
+        } else if (activeTab === 'team' && startupId) {
+            // Lấy danh sách thành viên khi chọn tab team
+            fetchTeamMembers();
         }
-    }, [activeTab, startupId]);
+    }, [activeTab, startupId, fetchTeamMembers]);
 
     // Format date using dateUtils
     const formatDate = (dateString) => {
@@ -260,6 +282,7 @@ export const useStartupDetail = () => {
         isLoadingMoreFeed,
         hasMoreFeed,
         teamMembers,
+        loadingMembers,
         postLikes,
         userLikedPosts,
         postCommentCounts,
@@ -275,7 +298,8 @@ export const useStartupDetail = () => {
         toggleCommentSection,
         handleCommentCountChange,
         handleSharePost,
-        fetchStartupFeed
+        fetchStartupFeed,
+        fetchTeamMembers
     };
 };
 

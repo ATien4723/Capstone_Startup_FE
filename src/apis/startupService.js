@@ -154,6 +154,64 @@ export const getStartupIdByAccountId = async (accountId) => {
 //     return response;
 // };
 
+// API: Đăng ký theo dõi startup
+export const subscribeStartup = async (accountId, startupId) => {
+    const response = await axiosClient.post('/api/Startup/subscribe', null, {
+        params: { accountId, startupId }
+    });
+    return response;
+};
+
+// API: Hủy đăng ký theo dõi startup
+export const unsubscribeStartup = async (accountId, startupId) => {
+    const response = await axiosClient.post('/api/Startup/unsubscribe', null, {
+        params: { accountId, startupId }
+    });
+    return response;
+};
+
+// API: Lấy chi tiết startup theo ID
+export const getStartupById = async (startupId) => {
+    const response = await axiosClient.get(`/api/Startup/${startupId}`);
+    return response;
+};
+
+// API: Cập nhật thông tin startup
+export const updateStartup = async (startupId, data) => {
+    const response = await axiosClient.put(`/api/Startup/${startupId}`, data);
+    return response;
+};
+
+// API: Tạo mới startup pitching
+export const createStartupPitching = async (data) => {
+    const response = await axiosClient.post('/api/Startup/startup-pitching', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response;
+};
+
+// API: Lấy danh sách startup pitching theo startup và loại
+export const getPitchingsByStartupAndType = async (startupId, type = null) => {
+    const response = await axiosClient.get(`/api/Startup/startup-pitching-by-startup/${startupId}`, {
+        params: { type }
+    });
+    return response;
+};
+
+// API: Xóa startup pitching
+export const deleteStartupPitching = async (id) => {
+    const response = await axiosClient.delete(`/api/Startup/startup-piching${id}`);
+    return response;
+};
+
+// API: Cập nhật startup pitching
+export const updateStartupPitching = async (data) => {
+    const response = await axiosClient.put('/api/Startup/startup-pitching', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response;
+};
+
 // API: Rời khỏi startup
 export const outStartup = async (accountId) => {
     const response = await axiosClient.post('/api/Startup/out-startup', null, {

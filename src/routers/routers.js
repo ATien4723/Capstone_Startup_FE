@@ -24,6 +24,7 @@ const MeMember = lazy(() => import('@/pages/Me/Member/Member'));
 const MilestoneBoards = lazy(() => import('@/pages/Me/Milestone/MilestoneBoards'));
 const Milestone = lazy(() => import('@/pages/Me/Milestone/Milestone'));
 const CV = lazy(() => import('@/pages/Me/CV/CV'));
+const StartupInfo = lazy(() => import('@/pages/Me/StartupInfo/StartupInfo'));
 const nhap = lazy(() => import('@/pages/Test/Nhap'));
 
 const routers = [
@@ -153,6 +154,13 @@ const routers = [
     {
         path: '/me/cv',
         component: CV,
+        parent: '/me',
+        protected: true,
+        requireStartup: true
+    },
+    {
+        path: '/me/startup-info',
+        component: StartupInfo,
         parent: '/me',
         protected: true,
         requireStartup: true

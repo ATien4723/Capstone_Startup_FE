@@ -11,7 +11,8 @@ import {
     faChevronDown,
     faChevronUp,
     faClipboardList,
-    faFileAlt
+    faFileAlt,
+    faBuilding
 } from '@fortawesome/free-solid-svg-icons';
 
 const meMenu = [
@@ -35,6 +36,7 @@ const meMenu = [
 
     },
     { label: "CV Management", icon: faFileAlt, to: "/me/cv" },
+    { label: "Startup Info", icon: faBuilding, to: "/me/startup-info" },
     { label: "Settings", icon: faCog, to: "/me/settings" },
 ];
 

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Suspense, useEffect } from 'react';
 import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
-import { LikeProvider } from '@/contexts/LikeContext.jsx';
+import { InteractionProvider } from '@/contexts/InteractionContext.jsx';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -75,7 +75,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <LikeProvider>
+      <InteractionProvider>
         <BrowserRouter>
           <Suspense fallback={
             <div className="flex items-center justify-center min-h-screen">
@@ -88,7 +88,7 @@ function App() {
           </Suspense>
           <CustomToastContainer />
         </BrowserRouter>
-      </LikeProvider>
+      </InteractionProvider>
     </AuthProvider>
   )
 }

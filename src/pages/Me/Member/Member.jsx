@@ -54,6 +54,8 @@ const Member = () => {
     }, []);
 
 
+
+
     const {
         members,
         loading,
@@ -88,7 +90,8 @@ const Member = () => {
         updateRole,
         deleteRole,
         selectedUser,
-        setSelectedUser
+        setSelectedUser,
+        leaveStartup
     } = useMemberManagement(startupId);
 
     // Bắt đầu chỉnh sửa vai trò
@@ -232,33 +235,37 @@ const Member = () => {
                     Member Management
                 </h1>
                 <div className="flex space-x-3">
-                    <button
-                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                        onClick={() => setShowAddRoleModal(true)}
-                    >
-                        <img src={roleSvg} alt="Edit role" className="w-5 h-5 mr-2 text-white" />
-                        <span className="font-medium">Add New Role</span>
-                    </button>
-                    <button
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                        onClick={handleOpenAddMemberModal}
-                    >
-                        <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                        <span className="font-medium">Invite Member</span>
-                    </button>
-                    <button
-                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                        onClick={() => {
-                            if (window.confirm('Are you sure you want to leave this startup?')) {
-                                // Xử lý logic rời startup ở đây
-                                toast.info('Leave startup feature is under development');
-                            }
-                        }}
-                    >
-
-                        <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
-                        <span className="font-medium">Leave Startup</span>
-                    </button>
+                    {members.find(m => m.accountId == getUserId())?.roleName === 'Founder' && (
+                        <>
+                            <button
+                                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                onClick={() => setShowAddRoleModal(true)}
+                            >
+                                <img src={roleSvg} alt="Edit role" className="w-5 h-5 mr-2 text-white" />
+                                <span className="font-medium">Add New Role</span>
+                            </button>
+                            <button
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                onClick={handleOpenAddMemberModal}
+                            >
+                                <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                                <span className="font-medium">Invite Member</span>
+                            </button>
+                        </>
+                    )}
+                    {members.find(m => m.accountId == getUserId())?.roleName !== 'Founder' && (
+                        <button
+                            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg flex items-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                            onClick={() => {
+                                if (window.confirm('Bạn có chắc chắn muốn rời khỏi startup này không?')) {
+                                    leaveStartup();
+                                }
+                            }}
+                        >
+                            <FontAwesomeIcon icon={faUserMinus} className="mr-2" />
+                            <span className="font-medium">Leave Startup</span>
+                        </button>
+                    )}
                 </div>
             </div>
 

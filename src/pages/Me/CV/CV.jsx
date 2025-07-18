@@ -277,41 +277,53 @@ const CV = () => {
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
                 </div>
             ) : filteredCVs.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex flex-col space-y-4">
                     {filteredCVs.map(cv => (
                         <div key={cv.candidateCV_ID || cv.id} className="bg-white rounded-lg shadow-md overflow-hidden transition-all hover:shadow-lg">
-                            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-gray-800">{cv.fullName || cv.accountName}</h2>
-                                    <p className="text-gray-500 text-sm">{cv.email || 'Email không có'}</p>
+                            <div className="px-6 py-4 flex flex-wrap md:flex-nowrap items-center border-b border-gray-100">
+                                <div className="w-full md:w-1/3 flex items-center mb-3 md:mb-0">
+                                    <div className="bg-blue-50 rounded-full p-2 mr-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-800">{cv.fullName || cv.accountName}</h2>
+                                        <p className="text-gray-500 text-sm">{cv.email || 'Email không có'}</p>
+                                    </div>
                                 </div>
-                                <span className={`px-3 py-1 text-xs font-semibold rounded-full
-                                    ${cv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                        cv.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                            'bg-red-100 text-red-800'}`}
-                                >
-                                    {cv.status === 'Pending' ? 'Đang chờ' :
-                                        cv.status === 'Approved' ? 'Đã chấp nhận' : 'Đã từ chối'}
-                                </span>
+
+                                <div className="w-full md:w-1/3 flex flex-wrap md:justify-center mb-3 md:mb-0">
+                                    <div className="flex items-center mr-4 mb-2 md:mb-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                                            <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                                        </svg>
+                                        <span className="text-gray-700 font-medium">Vị trí: {cv.positionRequirement || cv.positionName || 'Chưa xác định'}</span>
+                                    </div>
+
+                                    <div className="flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                        </svg>
+                                        <span className="text-gray-500 text-sm">{formatDate(cv.createAt)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="w-full md:w-1/3 flex md:justify-end items-center">
+                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full mr-2
+                                        ${cv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                            cv.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                                'bg-red-100 text-red-800'}`}
+                                    >
+                                        {cv.status === 'Pending' ? 'Đang chờ' :
+                                            cv.status === 'Approved' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                                    </span>
+                                </div>
                             </div>
 
-                            <div className="px-6 py-4">
-                                <div className="flex items-center mb-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                                        <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-                                    </svg>
-                                    <span className="text-gray-700 font-medium">Vị trí: {cv.positionRequirement || cv.positionName || 'Chưa xác định'}</span>
-                                </div>
-
-                                <div className="flex items-center mb-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                    </svg>
-                                    <span className="text-gray-500 text-sm">{formatDate(cv.createAt)}</span>
-                                </div>
-
-                                <div className="flex flex-col space-y-2">
+                            <div className="px-6 py-4 flex flex-wrap md:flex-nowrap justify-between items-center">
+                                <div className="w-full md:w-auto flex space-x-2 mb-3 md:mb-0">
                                     <a
                                         href={cv.cvurl || cv.cvFileUrl}
                                         target="_blank"
@@ -324,34 +336,10 @@ const CV = () => {
                                         Xem CV
                                     </a>
 
-                                    {cv.status === 'Pending' && (
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                            <button
-                                                onClick={() => handleResponse(cv.candidateCV_ID || cv.id, 'Approved')}
-                                                className="flex items-center justify-center px-4 py-2 bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                                Chấp nhận
-                                            </button>
-
-                                            <button
-                                                onClick={() => handleResponse(cv.candidateCV_ID || cv.id, 'Rejected')}
-                                                className="flex items-center justify-center px-4 py-2 bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                                Từ chối
-                                            </button>
-                                        </div>
-                                    )}
-
                                     {cv.cvRequirementEvaluation && (
                                         <button
                                             onClick={() => openEvaluationModal(cv)}
-                                            className="flex items-center justify-center px-4 py-2 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors mt-2"
+                                            className="flex items-center justify-center px-4 py-2 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
@@ -360,6 +348,30 @@ const CV = () => {
                                         </button>
                                     )}
                                 </div>
+
+                                {cv.status === 'Pending' && (
+                                    <div className="w-full md:w-auto flex space-x-2">
+                                        <button
+                                            onClick={() => handleResponse(cv.candidateCV_ID || cv.id, 'Approved')}
+                                            className="flex items-center justify-center px-4 py-2 bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                            Chấp nhận
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleResponse(cv.candidateCV_ID || cv.id, 'Rejected')}
+                                            className="flex items-center justify-center px-4 py-2 bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                            Từ chối
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

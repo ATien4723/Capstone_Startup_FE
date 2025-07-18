@@ -22,6 +22,7 @@ const StartupDetail = () => {
         isLoadingMoreFeed,
         hasMoreFeed,
         teamMembers,
+        loadingMembers,
         postLikes,
         userLikedPosts,
         postCommentCounts,
@@ -220,13 +221,13 @@ const StartupDetail = () => {
                                 <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
                                 Comment
                             </button>
-                            <button
+                            {/* <button
                                 className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
                                 onClick={() => handleSharePost(post)}
                             >
                                 <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
                                 Share
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>
@@ -387,41 +388,51 @@ const StartupDetail = () => {
 
                     {activeTab === 'team' && (
                         <div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                {teamMembers.map((member) => (
-                                    <div key={member.name} className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow duration-300">
-                                        <img src={member.img} className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-white" alt={member.name} />
-                                        <h5 className="text-lg font-semibold">{member.name}</h5>
-                                        <p className="text-gray-600">{member.role}</p>
-                                        <p className="text-gray-500 text-sm mt-2">{member.bio}</p>
-                                        <div className="flex justify-center space-x-2 mt-3">
-                                            <a href="#" className="border border-blue-500 text-blue-500 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
-                                                <FontAwesomeIcon icon={faLinkedin} className="mr-1" /> Connect
-                                            </a>
-                                            <a href="#" className="border border-blue-400 text-blue-400 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
-                                                <FontAwesomeIcon icon={faTwitter} className="mr-1" /> Follow
-                                            </a>
-                                        </div>
+                            {loadingMembers ? (
+                                <div className="text-center py-20">
+                                    <div className="flex justify-center items-center">
+                                        <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
                                     </div>
-                                ))}
-                            </div>
-                            <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-                                <h5 className="text-lg font-semibold mb-4">Team Achievements</h5>
+                                    <p className="mt-4 text-gray-600">Đang tải danh sách thành viên...</p>
+                                </div>
+                            ) : teamMembers.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-50 rounded-lg">
+                                    <p className="text-gray-500">Chưa có thành viên</p>
+                                </div>
+                            ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                    {[
-                                        { icon: faTrophy, value: '15+', label: 'Industry Awards', color: 'text-blue-500' },
-                                        { icon: faUsers, value: '8', label: 'Patents Filed', color: 'text-green-500' },
-                                        { icon: faUsers, value: '50+', label: 'Team Members', color: 'text-teal-500' },
-                                        { icon: faGlobe, value: '12', label: 'Countries', color: 'text-yellow-500' },
-                                    ].map((achievement) => (
-                                        <div key={achievement.label} className="text-center">
-                                            <FontAwesomeIcon icon={achievement.icon} className={`text-4xl ${achievement.color} mb-2`} />
-                                            <h3 className="text-2xl font-bold mb-1">{achievement.value}</h3>
-                                            <p className="text-gray-600">{achievement.label}</p>
+                                    {teamMembers.map((member) => (
+                                        <div key={member.accountId} className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow duration-300">
+                                            <img
+                                                src={member.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-white"
+                                                alt={member.userName || "Member"}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                }}
+                                            />
+                                            <h5 className="text-lg font-semibold">{member.userName || "Unknown"}</h5>
+                                            <p className="text-gray-600">{member.roleName || "Member"}</p>
+                                            {member.title && (
+                                                <p className="text-gray-500 text-sm mt-2">{member.title}</p>
+                                            )}
+                                            <div className="flex justify-center space-x-2 mt-3">
+                                                {member.linkedinUrl && (
+                                                    <a href={member.linkedinUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-500 text-blue-500 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
+                                                        <FontAwesomeIcon icon={faLinkedin} className="mr-1" /> Connect
+                                                    </a>
+                                                )}
+                                                {member.twitterUrl && (
+                                                    <a href={member.twitterUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-400 text-blue-400 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
+                                                        <FontAwesomeIcon icon={faTwitter} className="mr-1" /> Follow
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 

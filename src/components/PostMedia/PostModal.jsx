@@ -6,7 +6,7 @@ import { faHeart as farHeart } from '@fortawesome/free-regular-svg-icons';
 import PostMediaGrid from './PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import { getUserId } from '@/apis/authService';
-import { LikeContext } from '@/contexts/LikeContext.jsx';
+import { InteractionContext } from '@/contexts/InteractionContext.jsx';
 import { formatPostTime } from '@/utils/dateUtils';
 
 const PostModal = ({ postId, onClose }) => {
@@ -17,7 +17,7 @@ const PostModal = ({ postId, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [showComments, setShowComments] = useState(false);
     const currentUserId = getUserId();
-    const { triggerLike } = useContext(LikeContext);
+    const { triggerLike, triggerComment } = useContext(InteractionContext);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -53,6 +53,11 @@ const PostModal = ({ postId, onClose }) => {
             }
             triggerLike();
         } catch (err) { }
+    };
+
+    const handleCommentCountChange = (newCount) => {
+        setCommentCount(newCount);
+        triggerComment();
     };
 
     if (!postId || !post) return null;
@@ -108,7 +113,7 @@ const PostModal = ({ postId, onClose }) => {
                                     commentCount={commentCount}
                                     currentUserAvatar={post.avatarUrl}
                                     refreshTrigger={0}
-                                    onCommentCountChange={setCommentCount}
+                                    onCommentCountChange={handleCommentCountChange}
                                 />
                             </div>
                         )}

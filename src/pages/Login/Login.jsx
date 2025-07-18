@@ -3,14 +3,16 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { login, isAuthenticated } from "@/apis/authService";
+import { isAuthenticated } from "@/apis/authService";
 import { toast } from 'react-toastify';
 import Cookies from 'js-cookie';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
 
     const navigate = useNavigate();
     const location = useLocation();
+    const { login } = useAuth(); // Sử dụng login từ AuthContext
 
     // Lấy địa chỉ từ state nếu có, nếu không thì mặc định là '/home'
     const from = location.state?.from || '/home';
