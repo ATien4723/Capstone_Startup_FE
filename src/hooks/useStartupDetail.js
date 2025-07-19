@@ -1,13 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount, getPostCommentCount } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
-import { getStartupIdByAccountId, getStartupMembers } from '@/apis/startupService';
+import { getStartupIdByAccountId, getStartupMembers, getStartupById, getPitchingsByStartupAndType } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
+import { useParams } from 'react-router-dom';
 
 export const useStartupDetail = () => {
+    const { id } = useParams(); // Lấy ID startup từ URL params
     const [activeTab, setActiveTab] = useState('overview');
     const [startupId, setStartupId] = useState(null);
+
+    // State cho thông tin chi tiết startup
+    const [startupInfo, setStartupInfo] = useState(null);
+    const [loadingStartupInfo, setLoadingStartupInfo] = useState(false);
+    const [errorStartupInfo, setErrorStartupInfo] = useState(null);
+
+    // State cho dữ liệu pitching (PDF, Video)
+    const [pitchingData, setPitchingData] = useState([]);
+    const [loadingPitching, setLoadingPitching] = useState(false);
+    const [errorPitching, setErrorPitching] = useState(null);
 
     // State cho bài đăng từ startup feed
     const [feedPosts, setFeedPosts] = useState([]);
@@ -29,8 +41,16 @@ export const useStartupDetail = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
 
-    // Lấy startupId từ API dựa trên accountId hiện tại
+    // Lấy startupId từ API dựa trên accountId hiện tại hoặc từ URL params
     useEffect(() => {
+        // Nếu có id từ URL, sử dụng nó
+        if (id) {
+            setStartupId(parseInt(id));
+            console.log('Đã lấy startupId từ URL:', id);
+            return;
+        }
+
+        // Nếu không có id từ URL, lấy từ accountId hiện tại
         const fetchStartupIdFromApi = async () => {
             try {
                 const accountId = await getUserId();
@@ -49,7 +69,65 @@ export const useStartupDetail = () => {
         };
 
         fetchStartupIdFromApi();
-    }, []);
+    }, [id]);
+
+    // Lấy thông tin chi tiết của startup
+    const fetchStartupInfo = useCallback(async () => {
+        if (!startupId) return;
+
+        setLoadingStartupInfo(true);
+        setErrorStartupInfo(null);
+
+        try {
+            const response = await getStartupById(startupId);
+            if (response && response.data) {
+                setStartupInfo(response.data);
+                console.log('Đã lấy thông tin startup:', response.data);
+            } else {
+                console.error('Không tìm thấy thông tin startup:', response);
+                setErrorStartupInfo('Không tìm thấy thông tin startup');
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy thông tin startup:', error);
+            setErrorStartupInfo('Lỗi khi lấy thông tin startup');
+        } finally {
+            setLoadingStartupInfo(false);
+        }
+    }, [startupId]);
+
+    // Lấy dữ liệu pitching (PDF và Video)
+    const fetchStartupPitchings = useCallback(async () => {
+        if (!startupId) return;
+
+        setLoadingPitching(true);
+        setErrorPitching(null);
+
+        try {
+            const response = await getPitchingsByStartupAndType(startupId);
+            if (response) {
+                // Đảm bảo dữ liệu trả về là mảng
+                setPitchingData(response);
+                console.log('Đã lấy dữ liệu pitching:', response);
+            } else {
+                console.log('Không có dữ liệu pitching hoặc cấu trúc dữ liệu không đúng');
+                setPitchingData([]);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu pitching:', error);
+            setErrorPitching('Lỗi khi lấy dữ liệu pitching');
+            setPitchingData([]);
+        } finally {
+            setLoadingPitching(false);
+        }
+    }, [startupId]);
+
+    // Gọi API lấy thông tin startup và pitchings khi startupId thay đổi
+    useEffect(() => {
+        if (startupId) {
+            fetchStartupInfo();
+            fetchStartupPitchings();
+        }
+    }, [startupId, fetchStartupInfo, fetchStartupPitchings]);
 
     // Lấy thông tin profile người dùng
     useEffect(() => {
@@ -289,6 +367,12 @@ export const useStartupDetail = () => {
         openCommentPosts,
         refreshCommentTrigger,
         profileData,
+        startupInfo,
+        loadingStartupInfo,
+        errorStartupInfo,
+        pitchingData,
+        loadingPitching,
+        errorPitching,
 
         // Actions/Methods
         setActiveTab,
@@ -299,7 +383,9 @@ export const useStartupDetail = () => {
         handleCommentCountChange,
         handleSharePost,
         fetchStartupFeed,
-        fetchTeamMembers
+        fetchTeamMembers,
+        fetchStartupInfo,
+        fetchStartupPitchings
     };
 };
 

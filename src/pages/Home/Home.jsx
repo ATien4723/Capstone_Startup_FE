@@ -166,9 +166,11 @@ const Home = () => {
     }, [likeTrigger, commentTrigger]);
 
     // Chuyển đến trang chi tiết bài đăng
-    const goToPostDetail = (postId, type) => {
+    const goToPostDetail = (postId, type, startupId) => {
         if (type === 'Internship') {
             navigate(`/internship/${postId}`);
+        } else if (type === 'StartupPost') {
+            navigate(`/startup-detail/${startupId}`);
         } else {
             navigate(`/post/${postId}`);
         }
@@ -571,15 +573,15 @@ const Home = () => {
                                         {post.type === 'Internship' ? (
                                             <div
                                                 className="p-5 cursor-pointer border-2 border-blue-200 hover:border-blue-400 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden"
-                                                onClick={() => goToPostDetail(post.postId, post.type)}
+                                                onClick={() => goToPostDetail(post.postId, post.type, post.startupId)}
                                             >
                                                 <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
                                                     Internship
                                                 </div>
                                                 <div className="flex items-center mb-4">
-                                                    <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                    <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                                         <img
-                                                            src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                            src={post.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                             alt={post.name || post.fullName || post.firstName || "Unknown User"}
                                                             className="h-12 w-12 rounded-full object-cover mr-3 border-2 border-gray-100"
                                                             onError={(e) => {
@@ -591,7 +593,7 @@ const Home = () => {
                                                     <div className="flex-1">
                                                         <div className="flex items-center justify-between">
                                                             <div>
-                                                                <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                                <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                                                     <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
                                                                 </Link>
                                                                 <div className="text-right text-xs text-gray-500 mt-2">
@@ -637,9 +639,9 @@ const Home = () => {
                                                 {/* Post header */}
                                                 <div className="flex justify-between mb-3">
                                                     <div className="flex gap-3">
-                                                        <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                        <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                                             <img
-                                                                src={post.avatarURL || post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                src={post.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                                 alt="Profile"
                                                                 className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
                                                                 onError={(e) => {
@@ -649,7 +651,7 @@ const Home = () => {
                                                             />
                                                         </Link>
                                                         <div>
-                                                            <Link to={`/profile/${post.accountID || post.userId}`}>
+                                                            <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                                                 <h6 className="font-semibold mb-0 hover:underline">
                                                                     {post.name || post.fullName || post.firstName || "Unknown User"}
                                                                 </h6>

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faHandshake, faCalendar, faMapMarkerAlt, faCalendarPlus, faTrophy, faUsers, faGlobe, faFilePdf, faFileAlt, faSpinner, faComment, faShareAlt, faBriefcase, faLocationDot, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faHandshake, faCalendar, faMapMarkerAlt, faCalendarPlus, faTrophy, faUsers, faGlobe, faFilePdf, faFileAlt, faSpinner, faComment, faShareAlt, faBriefcase, faLocationDot, faClock, faUserCheck, faUserPlus, faUserMinus, faPlay } from '@fortawesome/free-solid-svg-icons';
 import { faLinkedin, faTwitter } from '@fortawesome/free-brands-svg-icons';
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -11,6 +11,11 @@ import CommentSection from '@/components/CommentSection/CommentSection';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
+import useFollow from '@/hooks/useFollow';
+import { toast } from 'react-toastify';
+import { getUserId } from '@/apis/authService';
+import PDFViewer from '@/components/Common/PDFViewer';
+import VideoPlayer from '@/components/Common/VideoPlayer';
 
 const StartupDetail = () => {
     const navigate = useNavigate();
@@ -29,6 +34,12 @@ const StartupDetail = () => {
         openCommentPosts,
         refreshCommentTrigger,
         profileData,
+        startupInfo,
+        loadingStartupInfo,
+        errorStartupInfo,
+        pitchingData,
+        loadingPitching,
+        errorPitching,
 
         // Actions/Methods
         setActiveTab,
@@ -40,11 +51,43 @@ const StartupDetail = () => {
         handleSharePost
     } = useStartupDetail();
 
+    // Lấy accountId của user hiện tại
+    const accountId = getUserId();
+
+    // Sử dụng hook useFollow
+    const {
+        handleFollow,
+        handleUnfollow,
+        followLoading,
+        processingId,
+        isFollowing,
+    } = useFollow(accountId);
+
+    // Xử lý hành động follow
+    const handleFollowAction = async (userId) => {
+        const success = await handleFollow(userId);
+        if (success) {
+            // toast.success("Followed successfully!");
+        }
+    };
+
+    // Xử lý hành động unfollow
+    const handleUnfollowAction = async (userId) => {
+        const success = await handleUnfollow(userId);
+        if (success) {
+            // toast.success("Unfollowed successfully!");
+        }
+    };
+
     // State cho modal hiển thị danh sách người đã thích và chia sẻ bài viết
     const [showLikesModal, setShowLikesModal] = useState(false);
     const [currentPostId, setCurrentPostId] = useState(null);
     const [showShareModal, setShowShareModal] = useState(false);
     const [postToShare, setPostToShare] = useState(null);
+
+    // State cho việc hiển thị PDF và Video
+    const [selectedPDF, setSelectedPDF] = useState(null);
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
     // Hàm để lấy và hiển thị danh sách người đã thích bài viết
     const handleShowLikes = (postId) => {
@@ -252,254 +295,409 @@ const StartupDetail = () => {
         <div className="body_startupdetail">
             <Navbar />
             <div className="container mx-auto my-8 px-4">
-                {/* Startup Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start mb-6">
-                    <div className="md:w-2/3">
-                        <div className="text-left">
-                            <nav className="text-sm mb-2">
-                                <ol className="list-none p-0 inline-flex">
-                                    <li>
-                                        <Link to="/startups" className="text-blue-600 hover:underline">Startups</Link>
-                                        <span className="mx-2">/</span>
-                                    </li>
-                                    <li className="text-gray-500">Startup Name</li>
-                                </ol>
-                            </nav>
-                            <h2 className="text-3xl font-bold mb-2">Startup Name</h2>
-                            <p className="text-gray-600">Vision Statement</p>
+                {/* Hiển thị loading khi đang tải thông tin startup */}
+                {loadingStartupInfo ? (
+                    <div className="text-center py-20">
+                        <div className="flex justify-center items-center">
+                            <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
                         </div>
+                        <p className="mt-4 text-gray-600">Đang tải thông tin startup...</p>
                     </div>
-
-                    <div className="md:w-1/3 flex justify-end space-x-2 mt-4 md:mt-0">
-                        <button className="border border-blue-500 text-blue-500 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition">
-                            <FontAwesomeIcon icon={faHeart} className="mr-2" /> Follow
-                        </button>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition">
-                            <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Contact
-                        </button>
+                ) : errorStartupInfo ? (
+                    <div className="text-center py-20 bg-red-50 rounded-lg">
+                        <p className="text-red-500">{errorStartupInfo}</p>
                     </div>
-                </div>
-
-                {/* Tabs Navigation */}
-                <ul className="flex border-b border-gray-200 mb-4">
-                    {['overview', 'posts', 'bmc', 'team', 'events'].map((tab) => (
-                        <li key={tab} className="mr-1">
-                            <button
-                                className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
-                                onClick={() => setActiveTab(tab)}
-                            >
-                                {tab === 'posts' ? 'Post' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-
-                {/* Modal hiển thị danh sách người đã thích */}
-                <LikesModal
-                    postId={currentPostId}
-                    isOpen={showLikesModal}
-                    onClose={() => setShowLikesModal(false)}
-                />
-
-                {/* Modal chia sẻ bài viết */}
-                <SharePostModal
-                    isOpen={showShareModal}
-                    onClose={() => {
-                        setShowShareModal(false);
-                        setPostToShare(null);
-                    }}
-                    post={postToShare}
-                    profileData={profileData}
-                    onShareSuccess={() => fetchStartupFeed(1)}
-                />
-
-                {/* Tab Content - Thêm min-height để giảm layout shift */}
-                <div className="mt-4 min-h-[600px] relative">
-                    {activeTab === 'overview' && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2">
-                                <div className="bg-white p-6 rounded-lg shadow-md mb-4">
-                                    <h5 className="text-lg font-semibold mb-2">Description</h5>
-                                    <p className="text-gray-600">Detailed description of the startup...</p>
-                                </div>
-                                <div className="bg-white p-6 rounded-lg shadow-md">
-                                    <h5 className="text-lg font-semibold mb-2">Pitch Video</h5>
-                                    <div className="relative w-full" style={{ paddingBottom: '40%' }}>
-                                        <iframe
-                                            src="https://www.youtube.com/embed/heMYSOZoT3c?list=RDEMmSFWFZQW1IjCwi6P37MwFw"
-                                            title="AAAA Video"
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                            allowFullScreen
-                                            className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                        ></iframe>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="bg-white p-6 rounded-lg shadow-md mb-4">
-                                    <div className="text-left">
-                                        <h5 className="text-lg font-semibold mb-2">Quick Info</h5>
-                                        <ul className="list-none">
-                                            <li className="mb-2"><strong>Founded:</strong> <span>Tiendz</span></li>
-                                            <li className="mb-2"><strong>Category:</strong> <span>OK</span></li>
-                                            <li className="mb-2"><strong>Status:</strong> <span>OK</span></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div className="bg-white p-6 rounded-lg shadow-md">
-                                    <h5 className="text-lg font-semibold mb-2">Documents</h5>
-                                    <ul className="list-none">
-                                        <li className="mb-2 flex items-center">
-                                            <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-500" />
-                                            <a href="#" className="text-blue-600 hover:underline">Pitch Deck</a>
-                                        </li>
-                                        <li className="mb-2 flex items-center">
-                                            <FontAwesomeIcon icon={faFileAlt} className="mr-2 text-gray-500" />
-                                            <a href="#" className="text-blue-600 hover:underline">Business Plan</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'bmc' && (
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {['Key Partners', 'Key Activities', 'Value Propositions', 'Customer Relationships', 'Customer Segments', 'Key Resources'].map((section) => (
-                                    <div key={section} className="bg-gray-50 p-4 rounded-lg">
-                                        <h6 className="text-md font-semibold mb-2"> {section}</h6>
-                                        <p className="text-gray-600">Content for {section}...</p>
-                                    </div>
-                                ))}
-
-                            </div>
-                            <div className="md:col-span-2 bg-gray-50 mt-2 p-4 gap-4 rounded-lg">
-                                <h6 className="text-md font-semibold mb-2">Cost Structure</h6>
-                                <p className="text-gray-600">Content for Cost Structure...</p>
-                            </div>
-                            <div className="md:col-span-2 bg-gray-50 mt-2 p-4 gap-4 rounded-lg">
-                                <h6 className="text-md font-semibold mb-2">Revenue Streams</h6>
-                                <p className="text-gray-600">Content for Revenue Streams...</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'team' && (
-                        <div>
-                            {loadingMembers ? (
-                                <div className="text-center py-20">
-                                    <div className="flex justify-center items-center">
-                                        <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
-                                    </div>
-                                    <p className="mt-4 text-gray-600">Đang tải danh sách thành viên...</p>
-                                </div>
-                            ) : teamMembers.length === 0 ? (
-                                <div className="text-center py-20 bg-gray-50 rounded-lg">
-                                    <p className="text-gray-500">Chưa có thành viên</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                    {teamMembers.map((member) => (
-                                        <div key={member.accountId} className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow duration-300">
+                ) : (
+                    <>
+                        {/* Startup Header */}
+                        <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+                            <div className="md:w-2/3">
+                                <div className="text-left">
+                                    <nav className="text-sm mb-2">
+                                        <ol className="list-none p-0 inline-flex">
+                                            <li>
+                                                <Link to="/startups" className="text-blue-600 hover:underline">Startups</Link>
+                                                <span className="mx-2">/</span>
+                                            </li>
+                                            <li className="text-gray-500">{startupInfo?.startupName || "Startup"}</li>
+                                        </ol>
+                                    </nav>
+                                    <div className="flex items-center gap-4">
+                                        {startupInfo?.logo && (
                                             <img
-                                                src={member.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                                                className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-white"
-                                                alt={member.userName || "Member"}
-                                                onError={(e) => {
-                                                    e.target.onerror = null;
-                                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                                                }}
+                                                src={startupInfo.logo}
+                                                alt={`${startupInfo?.startupName || 'Startup'} logo`}
+                                                className="w-16 h-16 rounded-full object-cover border-2 border-gray-100"
                                             />
-                                            <h5 className="text-lg font-semibold">{member.userName || "Unknown"}</h5>
-                                            <p className="text-gray-600">{member.roleName || "Member"}</p>
-                                            {member.title && (
-                                                <p className="text-gray-500 text-sm mt-2">{member.title}</p>
+                                        )}
+                                        <div>
+                                            <h2 className="text-3xl font-bold mb-2">{startupInfo?.startupName || startupInfo?.abbreviationName || "Startup"}</h2>
+                                            <p className="text-gray-600">{startupInfo?.vision || "Vision Statement"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="md:w-1/3 flex justify-end space-x-2 mt-4 md:mt-0">
+                                <button className="border border-blue-500 text-blue-500 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition">
+                                    <FontAwesomeIcon icon={faHeart} className="mr-2" /> Theo dõi
+                                </button>
+                                <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition">
+                                    <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Liên hệ
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Background Image */}
+                        {/* {startupInfo?.backgroundURL && (
+                            <div className="w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden mb-6">
+                                <img
+                                    src={startupInfo.backgroundURL}
+                                    alt={`${startupInfo?.startupName || 'Startup'} background`}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )} */}
+
+                        {/* Tabs Navigation */}
+                        <ul className="flex border-b border-gray-200 mb-4">
+                            {['overview', 'posts', 'bmc', 'team', 'events'].map((tab) => (
+                                <li key={tab} className="mr-1">
+                                    <button
+                                        className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
+                                        onClick={() => setActiveTab(tab)}
+                                    >
+                                        {tab === 'posts' ? 'Bài đăng' : tab === 'overview' ? 'Tổng quan' : tab === 'team' ? 'Đội ngũ' : tab === 'events' ? 'Sự kiện' : 'BMC'}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* Modal hiển thị danh sách người đã thích */}
+                        <LikesModal
+                            postId={currentPostId}
+                            isOpen={showLikesModal}
+                            onClose={() => setShowLikesModal(false)}
+                        />
+
+                        {/* Modal chia sẻ bài viết */}
+                        <SharePostModal
+                            isOpen={showShareModal}
+                            onClose={() => {
+                                setShowShareModal(false);
+                                setPostToShare(null);
+                            }}
+                            post={postToShare}
+                            profileData={profileData}
+                            onShareSuccess={() => loadMoreFeed(1)}
+                        />
+
+                        {/* Tab Content - Thêm min-height để giảm layout shift */}
+                        <div className="mt-4 min-h-[600px] relative">
+                            {activeTab === 'overview' && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-2">
+                                        <div className="bg-white p-6 rounded-lg shadow-md mb-4">
+                                            <h5 className="text-lg font-semibold mb-2">Mô tả</h5>
+                                            <p className="text-gray-600">{startupInfo?.description || "Chưa có mô tả chi tiết về startup."}</p>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-lg shadow-md">
+                                            <h5 className="text-lg font-semibold mb-2">Video Pitching</h5>
+                                            {loadingPitching ? (
+                                                <div className="flex justify-center items-center h-40">
+                                                    <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
+                                                </div>
+                                            ) : errorPitching ? (
+                                                <div className="text-red-500 text-center py-4">{errorPitching}</div>
+                                            ) : (
+                                                <div>
+                                                    {pitchingData.find(p => p.type === 'Video') ? (
+                                                        //   <div
+                                                        //   className="relative w-full cursor-pointer group"
+                                                        //   style={{ paddingBottom: '40%' }}
+                                                        //   onClick={() => setSelectedVideo(pitchingData.find(p => p.type === 'Video')?.link)}
+                                                        // >
+                                                        //   <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-all rounded-lg">
+                                                        //       <FontAwesomeIcon icon={faPlay} className="text-white text-4xl" />
+                                                        //   </div>
+                                                        //   <img
+                                                        //       src="https://placehold.co/600x400/png"
+                                                        //       alt="Video thumbnail"
+                                                        //       className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+                                                        //   />
+                                                        <div className="w-full rounded-lg overflow-hidden">
+                                                            <video
+                                                                className="w-full h-auto rounded-lg"
+                                                                controls
+                                                                preload="metadata"
+                                                            >
+                                                                <source src={pitchingData.find(p => p.type === 'Video')?.link} type="video/mp4" />
+                                                                Trình duyệt của bạn không hỗ trợ thẻ video.
+                                                            </video>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-4 text-gray-500">
+                                                            Chưa có video pitching
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
-                                            <div className="flex justify-center space-x-2 mt-3">
-                                                {member.linkedinUrl && (
-                                                    <a href={member.linkedinUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-500 text-blue-500 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
-                                                        <FontAwesomeIcon icon={faLinkedin} className="mr-1" /> Connect
-                                                    </a>
-                                                )}
-                                                {member.twitterUrl && (
-                                                    <a href={member.twitterUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-400 text-blue-400 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
-                                                        <FontAwesomeIcon icon={faTwitter} className="mr-1" /> Follow
-                                                    </a>
-                                                )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="bg-white p-6 rounded-lg shadow-md mb-4">
+                                            <div className="text-left">
+                                                <h5 className="text-lg font-semibold mb-2">Thông tin nhanh</h5>
+                                                <ul className="list-none">
+                                                    <li className="mb-2"><strong>Thành lập:</strong> <span>{startupInfo?.createAt ? formatDate(startupInfo.createAt) : "N/A"}</span></li>
+                                                    <li className="mb-2"><strong>Trạng thái:</strong> <span>{startupInfo?.status || "N/A"}</span></li>
+                                                    <li className="mb-2"><strong>Giai đoạn:</strong> <span>Giai đoạn {startupInfo?.stageId || "N/A"}</span></li>
+                                                    {startupInfo?.email && (
+                                                        <li className="mb-2"><strong>Email:</strong> <span>{startupInfo.email}</span></li>
+                                                    )}
+                                                    {startupInfo?.websiteURL && (
+                                                        <li className="mb-2 flex items-center">
+                                                            <strong className="mr-2">Website:</strong>
+                                                            <a href={startupInfo.websiteURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                                                                <FontAwesomeIcon icon={faGlobe} className="mr-1" />
+                                                                Truy cập
+                                                            </a>
+                                                        </li>
+                                                    )}
+                                                </ul>
                                             </div>
                                         </div>
-                                    ))}
+                                        <div className="bg-white p-6 rounded-lg shadow-md">
+                                            <h5 className="text-lg font-semibold mb-2">Tài liệu</h5>
+                                            {loadingPitching ? (
+                                                <div className="flex justify-center items-center h-20">
+                                                    <FontAwesomeIcon icon={faSpinner} className="text-2xl text-blue-500 animate-spin" />
+                                                </div>
+                                            ) : errorPitching ? (
+                                                <div className="text-red-500 text-center py-2">{errorPitching}</div>
+                                            ) : (
+                                                <ul className="list-none">
+                                                    {pitchingData.find(p => p.type === 'PDF') ? (
+                                                        <>
+                                                            <li className="mb-2 flex items-center">
+                                                                <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-500" />
+                                                                <button
+                                                                    onClick={() => setSelectedPDF(pitchingData.find(p => p.type === 'PDF')?.link)}
+                                                                    className="text-blue-600 hover:underline"
+                                                                >
+                                                                    Pitch Deck
+                                                                </button>
+                                                            </li>
+                                                            <li className="mb-2 flex items-center">
+                                                                <FontAwesomeIcon icon={faFileAlt} className="mr-2 text-gray-500" />
+                                                                <a href="#" className="text-blue-600 hover:underline">Business Plan</a>
+                                                            </li>
+                                                        </>
+
+                                                    ) : (
+                                                        <li className="text-gray-500 text-center py-2">
+                                                            Chưa có tài liệu PDF
+                                                        </li>
+                                                    )}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'bmc' && (
+                                <div className="bg-white p-6 rounded-lg shadow-md">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {['Đối tác chính', 'Hoạt động chính', 'Giá trị cung cấp', 'Quan hệ khách hàng', 'Phân khúc khách hàng', 'Nguồn lực chính'].map((section) => (
+                                            <div key={section} className="bg-gray-50 p-4 rounded-lg">
+                                                <h6 className="text-md font-semibold mb-2"> {section}</h6>
+                                                <p className="text-gray-600">Nội dung cho {section}...</p>
+                                            </div>
+                                        ))}
+
+                                    </div>
+                                    <div className="md:col-span-2 bg-gray-50 mt-2 p-4 gap-4 rounded-lg">
+                                        <h6 className="text-md font-semibold mb-2">Cấu trúc chi phí</h6>
+                                        <p className="text-gray-600">Nội dung cho Cấu trúc chi phí...</p>
+                                    </div>
+                                    <div className="md:col-span-2 bg-gray-50 mt-2 p-4 gap-4 rounded-lg">
+                                        <h6 className="text-md font-semibold mb-2">Nguồn thu</h6>
+                                        <p className="text-gray-600">Nội dung cho Nguồn thu...</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'team' && (
+                                <div>
+                                    {loadingMembers ? (
+                                        <div className="text-center py-20">
+                                            <div className="flex justify-center items-center">
+                                                <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
+                                            </div>
+                                            <p className="mt-4 text-gray-600">Đang tải danh sách thành viên...</p>
+                                        </div>
+                                    ) : teamMembers.length === 0 ? (
+                                        <div className="text-center py-20 bg-gray-50 rounded-lg">
+                                            <p className="text-gray-500">Chưa có thành viên</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                            {teamMembers.map((member) => (
+                                                <div key={member.accountId} className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow duration-300">
+                                                    <img
+                                                        src={member.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        className="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-white"
+                                                        alt={member.userName || "Member"}
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                        }}
+                                                    />
+                                                    <h5 className="text-lg font-semibold">{member.fullName || "Unknown"}</h5>
+                                                    <p className="text-gray-600">{member.roleName || "Member"}</p>
+                                                    {member.email && (
+                                                        <p className="text-gray-500 text-sm mt-2">{member.email}</p>
+                                                    )}
+                                                    <div className="flex justify-center space-x-2 mt-3">
+                                                        {member.accountId != accountId && (
+                                                            <button
+                                                                className={` px-3 py-1 rounded-full text-sm flex items-center transition-colors ${isFollowing(member.accountId)
+                                                                    ? "border border-gray-400 bg-gray-50 hover:bg-gray-100 hover:text-red-600 hover:border-red-600 group"
+                                                                    : "border border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                    }`}
+                                                                onClick={() =>
+                                                                    isFollowing(member.accountId)
+                                                                        ? handleUnfollowAction(member.accountId)
+                                                                        : handleFollowAction(member.accountId)
+                                                                }
+                                                                disabled={processingId === member.accountId}
+                                                            >
+                                                                {isFollowing(member.accountId) ? (
+                                                                    <>
+                                                                        <FontAwesomeIcon
+                                                                            icon={faUserCheck}
+                                                                            className="mr-2 group-hover:hidden"
+                                                                        />
+                                                                        <FontAwesomeIcon
+                                                                            icon={faUserMinus}
+                                                                            className="mr-2 hidden group-hover:inline-block"
+                                                                        />
+                                                                        <span className="group-hover:hidden">
+                                                                            {processingId === member.accountId ? 'Đang xử lý...' : 'Đang theo dõi'}
+                                                                        </span>
+                                                                        <span className="hidden group-hover:inline">
+                                                                            Bỏ theo dõi
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                                                                        {processingId === member.accountId ? 'Đang xử lý...' : 'Theo dõi'}
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                        {member.linkedinUrl && (
+                                                            <a href={member.linkedinUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-500 text-blue-500 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
+                                                                <FontAwesomeIcon icon={faLinkedin} className="mr-1" /> Kết nối
+                                                            </a>
+                                                        )}
+                                                        {member.twitterUrl && (
+                                                            <a href={member.twitterUrl} target="_blank" rel="noopener noreferrer" className="border border-blue-400 text-blue-400 px-3 py-1 rounded-full text-sm hover:bg-blue-50 transition">
+                                                                <FontAwesomeIcon icon={faTwitter} className="mr-1" /> Theo dõi
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'events' && (
+                                <div className="space-y-4">
+                                    <div className="bg-white p-6 rounded-lg shadow-md">
+                                        <h5 className="text-lg font-semibold mb-2">Tên sự kiện</h5>
+                                        <p className="text-gray-600 mb-2 flex items-center">
+                                            <FontAwesomeIcon icon={faCalendar} className="mr-2" /> Ngày
+                                            <FontAwesomeIcon icon={faMapMarkerAlt} className="ml-4 mr-2" /> Địa điểm
+                                        </p>
+                                        <p className="text-gray-600">Mô tả sự kiện...</p>
+                                        <div className="text-right">
+                                            <button className="border border-blue-500 text-blue-500 px-4 py-2 rounded-full text-sm hover:bg-blue-50 transition">
+                                                <FontAwesomeIcon icon={faCalendarPlus} className="mr-2" /> Thêm vào lịch
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'posts' && (
+                                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mx-auto w-[1000px]">
+                                    {/* Feed Posts Section */}
+                                    <div className="bg-white p-6 rounded-lg shadow-md mb-6  " >
+                                        <h5 className="text-xl font-semibold mb-4">Bài đăng gần đây</h5>
+
+                                        {loadingFeed ? (
+                                            <div className="text-center py-20">
+                                                <div className="flex justify-center items-center">
+                                                    <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
+                                                </div>
+                                                <p className="mt-4 text-gray-600">Đang tải bài viết...</p>
+                                            </div>
+                                        ) : feedPosts.length === 0 ? (
+                                            <div className="text-center py-20 bg-gray-50 rounded-lg">
+                                                <p className="text-gray-500">Chưa có bài đăng nào</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                {feedPosts.map(post => renderPost(post))}
+
+                                                {/* Load More Button for Feed */}
+                                                <div className="flex justify-center mt-6">
+                                                    {isLoadingMoreFeed ? (
+                                                        <div className="flex items-center space-x-2">
+                                                            <FontAwesomeIcon icon={faSpinner} className="text-blue-500 animate-spin" />
+                                                            <span className="text-gray-600">Đang tải thêm...</span>
+                                                        </div>
+                                                    ) : hasMoreFeed ? (
+                                                        <button
+                                                            className="px-6 py-2 border border-blue-500 text-blue-500 rounded-full hover:bg-blue-50 transition font-medium"
+                                                            onClick={loadMoreFeed}
+                                                        >
+                                                            Xem thêm bài đăng
+                                                        </button>
+                                                    ) : feedPosts.length > 0 ? (
+                                                        <p className="text-gray-500 text-sm">Đã hiển thị tất cả bài đăng</p>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
-                    )}
-
-                    {activeTab === 'events' && (
-                        <div className="space-y-4">
-                            <div className="bg-white p-6 rounded-lg shadow-md">
-                                <h5 className="text-lg font-semibold mb-2">Event Title</h5>
-                                <p className="text-gray-600 mb-2 flex items-center">
-                                    <FontAwesomeIcon icon={faCalendar} className="mr-2" /> Date
-                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="ml-4 mr-2" /> Location
-                                </p>
-                                <p className="text-gray-600">Event description...</p>
-                                <div className="text-right">
-                                    <button className="border border-blue-500 text-blue-500 px-4 py-2 rounded-full text-sm hover:bg-blue-50 transition">
-                                        <FontAwesomeIcon icon={faCalendarPlus} className="mr-2" /> Add to Calendar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'posts' && (
-                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mx-auto w-[1000px]">
-                            {/* Feed Posts Section */}
-                            <div className="bg-white p-6 rounded-lg shadow-md mb-6  " >
-                                <h5 className="text-xl font-semibold mb-4">Recent Posts</h5>
-
-                                {loadingFeed ? (
-                                    <div className="text-center py-20">
-                                        <div className="flex justify-center items-center">
-                                            <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
-                                        </div>
-                                        <p className="mt-4 text-gray-600">Loading posts...</p>
-                                    </div>
-                                ) : feedPosts.length === 0 ? (
-                                    <div className="text-center py-20 bg-gray-50 rounded-lg">
-                                        <p className="text-gray-500">No posts yet</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {feedPosts.map(post => renderPost(post))}
-
-                                        {/* Load More Button for Feed */}
-                                        <div className="flex justify-center mt-6">
-                                            {isLoadingMoreFeed ? (
-                                                <div className="flex items-center space-x-2">
-                                                    <FontAwesomeIcon icon={faSpinner} className="text-blue-500 animate-spin" />
-                                                    <span className="text-gray-600">Loading more...</span>
-                                                </div>
-                                            ) : hasMoreFeed ? (
-                                                <button
-                                                    className="px-6 py-2 border border-blue-500 text-blue-500 rounded-full hover:bg-blue-50 transition font-medium"
-                                                    onClick={loadMoreFeed}
-                                                >
-                                                    See more posts
-                                                </button>
-                                            ) : feedPosts.length > 0 ? (
-                                                <p className="text-gray-500 text-sm">All posts shown</p>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                    </>
+                )}
             </div>
+
+            {/* PDF Viewer Modal */}
+            {selectedPDF && (
+                <PDFViewer
+                    pdfUrl={selectedPDF}
+                    onClose={() => setSelectedPDF(null)}
+                />
+            )}
+
+            {/* Video Player Modal */}
+            {/* {selectedVideo && (
+                <VideoPlayer
+                    videoUrl={selectedVideo}
+                    onClose={() => setSelectedVideo(null)}
+                />
+            )} */}
         </div>
     );
 };

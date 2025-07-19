@@ -323,7 +323,7 @@ export default function Navbar() {
         <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-blue-900 to-blue-700 text-white shadow-md">
             <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                 {/* Logo */}
-                <Link to="/" className="text-xl font-bold text-white">Simes</Link>
+                <Link to="/home" className="text-xl font-bold text-white">Simes</Link>
 
                 {/* Mobile: Bell + Avatar */}
                 {isAuthenticated && (
