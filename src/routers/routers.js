@@ -25,6 +25,7 @@ const MilestoneBoards = lazy(() => import('@/pages/Me/Milestone/MilestoneBoards'
 const Milestone = lazy(() => import('@/pages/Me/Milestone/Milestone'));
 const CV = lazy(() => import('@/pages/Me/CV/CV'));
 const StartupInfo = lazy(() => import('@/pages/Me/StartupInfo/StartupInfo'));
+const MeAnalytics = lazy(() => import('@/pages/Me/Analytics/Analytics'));
 const nhap = lazy(() => import('@/pages/Test/Nhap'));
 
 const routers = [
@@ -166,8 +167,8 @@ const routers = [
         requireStartup: true
     },
     {
-        path: '/me/settings',
-        component: Settings,
+        path: '/me/analytics',
+        component: MeAnalytics,
         parent: '/me',
         protected: true,
         requireStartup: true

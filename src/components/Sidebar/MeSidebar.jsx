@@ -12,7 +12,8 @@ import {
     faChevronUp,
     faClipboardList,
     faFileAlt,
-    faBuilding
+    faBuilding,
+    faMagnifyingGlassChart
 } from '@fortawesome/free-solid-svg-icons';
 
 const meMenu = [
@@ -37,7 +38,7 @@ const meMenu = [
     },
     { label: "CV Management", icon: faFileAlt, to: "/me/cv" },
     { label: "Startup Info", icon: faBuilding, to: "/me/startup-info" },
-    { label: "Settings", icon: faCog, to: "/me/settings" },
+    { label: "Analytics", icon: faMagnifyingGlassChart, to: "/me/analytics" },
 ];
 
 export default function MeSidebar() {

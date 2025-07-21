@@ -490,6 +490,17 @@ export const getInternshipPostDetail = async (internshipPostId) => {
     }
 };
 
+// Cập nhật  bài đăng tuyển dụng
+export const updateInternshipPost = async (internshipPostId, updateData) => {
+    try {
+        const response = await axiosClient.put(`internshippost/${internshipPostId}`, updateData);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi cập nhật bài đăng tuyển dụng:', error);
+        throw error;
+    }
+};
+
 // Tìm kiếm bài viết theo startupId
 export const searchStartupPosts = async (startupId, keyword = '', pageNumber = 1, pageSize = 10) => {
     try {

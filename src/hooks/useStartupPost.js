@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { createInternshipPost, getAllInternshipPosts, createPost, getPostsByStartupId, searchStartupInternshipPosts, searchStartupPosts } from '@/apis/postService';
+import { createInternshipPost, getAllInternshipPosts, createPost, getPostsByStartupId, searchStartupInternshipPosts, searchStartupPosts, updateInternshipPostStatus, updateInternshipPost, getInternshipPostDetail, updatePost, deletePost } from '@/apis/postService';
 import { getUserId } from '@/apis/authService';
 
 import {
@@ -112,6 +112,19 @@ export const useStartupPost = () => {
     // State cho tìm kiếm bài đăng thông thường
     const [postSearchText, setPostSearchText] = useState('');
     const [isSearchingPosts, setIsSearchingPosts] = useState(false);
+
+    // State cho modal chỉnh sửa bài đăng
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editFormData, setEditFormData] = useState({
+        internshipId: 0,
+        description: '',
+        requirement: '',
+        benefits: '',
+        address: '',
+        salary: '',
+        deadline: ''
+    });
+    const [loadingEdit, setLoadingEdit] = useState(false);
 
     // Fetch startup ID của user hiện tại
     useEffect(() => {
@@ -590,6 +603,168 @@ export const useStartupPost = () => {
         }
     };
 
+    // Xử lý bật/tắt trạng thái bài đăng
+    const handleToggleStatus = async (internshipPostId) => {
+        try {
+            setLoadingPosts(true);
+            await updateInternshipPostStatus(internshipPostId);
+            toast.success('Đã cập nhật trạng thái bài đăng thành công!');
+
+            // Cập nhật lại danh sách bài đăng
+            if (searchKeyword) {
+                await searchInternshipPosts();
+            } else {
+                await fetchInternshipPosts();
+            }
+        } catch (error) {
+            console.error('Lỗi khi cập nhật trạng thái bài đăng:', error);
+            toast.error('Không thể cập nhật trạng thái bài đăng');
+        } finally {
+            setLoadingPosts(false);
+        }
+    };
+
+    // Hàm để mở modal chỉnh sửa và lấy dữ liệu bài đăng
+    const handleOpenEditModal = async (internshipId) => {
+        try {
+            setLoadingEdit(true);
+            const response = await getInternshipPostDetail(internshipId);
+
+            if (response) {
+                // Format lại ngày giờ để hiển thị trong input datetime-local
+                const deadlineDate = response.deadline ? new Date(response.deadline) : new Date();
+                const formattedDeadline = deadlineDate.toISOString().slice(0, 16);
+
+                setEditFormData({
+                    internshipId: internshipId,
+                    description: response.description || '',
+                    requirement: response.requirement || '',
+                    benefits: response.benefits || '',
+                    address: response.address || '',
+                    salary: response.salary || '',
+                    deadline: formattedDeadline
+                });
+                setShowEditModal(true);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy thông tin bài đăng:', error);
+            toast.error('Không thể lấy thông tin bài đăng');
+        } finally {
+            setLoadingEdit(false);
+        }
+    };
+
+    // Hàm xử lý thay đổi input cho form chỉnh sửa
+    const handleEditInputChange = (e) => {
+        const { name, value } = e.target;
+        setEditFormData({
+            ...editFormData,
+            [name]: value
+        });
+    };
+
+    // Hàm xử lý submit form chỉnh sửa
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+
+        // Kiểm tra các trường bắt buộc
+        if (!editFormData.description || !editFormData.requirement ||
+            !editFormData.benefits || !editFormData.deadline || !editFormData.address || !editFormData.salary) {
+            toast.error('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
+
+        try {
+            setLoadingEdit(true);
+
+            // Chuẩn bị dữ liệu để gửi API
+            const updateData = {
+                description: editFormData.description,
+                requirement: editFormData.requirement,
+                benefits: editFormData.benefits,
+                deadline: editFormData.deadline,
+                address: editFormData.address,
+                salary: editFormData.salary
+            };
+
+            // Gọi API cập nhật bài đăng
+            await updateInternshipPost(editFormData.internshipId, updateData);
+
+            // Xử lý kết quả thành công
+            toast.success('Cập nhật bài đăng thành công!');
+
+            // Đóng modal và reset form
+            setShowEditModal(false);
+            resetEditFormData();
+
+            // Fetch lại danh sách bài đăng
+            if (searchKeyword) {
+                await searchInternshipPosts();
+            } else {
+                await fetchInternshipPosts();
+            }
+
+        } catch (error) {
+            console.error('Lỗi khi cập nhật bài đăng:', error);
+            toast.error('Có lỗi xảy ra khi cập nhật bài đăng');
+        } finally {
+            setLoadingEdit(false);
+        }
+    };
+
+    // Reset form chỉnh sửa
+    const resetEditFormData = () => {
+        setEditFormData({
+            internshipId: 0,
+            description: '',
+            requirement: '',
+            benefits: '',
+            address: '',
+            salary: '',
+            deadline: ''
+        });
+    };
+
+    // Xử lý cập nhật bài viết
+    const handleUpdatePost = async (postId, content) => {
+        if (!content.trim()) {
+            toast.error('Nội dung bài viết không được để trống');
+            return false;
+        }
+
+        try {
+            const updatePostDTO = { content };
+            await updatePost(postId, updatePostDTO);
+
+            // Refresh posts sau khi cập nhật
+            fetchStartupPosts(userStartupId);
+
+            toast.success('Bài viết đã được cập nhật thành công');
+            return true;
+        } catch (error) {
+            console.error('Error updating post:', error);
+            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
+            return false;
+        }
+    };
+
+    // Xử lý xóa bài viết
+    const handleDeletePost = async (postId) => {
+        try {
+            await deletePost(postId);
+
+            // Refresh posts sau khi xóa
+            fetchStartupPosts(userStartupId);
+
+            toast.success('Bài viết đã được xóa thành công');
+            return true;
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+            return false;
+        }
+    };
+
     return {
         // State
         internshipPosts,
@@ -622,6 +797,10 @@ export const useStartupPost = () => {
         isSearchingPosts,
         handlePostSearchTextChange,
         handlePostSearch,
+        showEditModal,
+        setShowEditModal,
+        editFormData,
+        loadingEdit,
 
         // Setters
         setShowCreateModal,
@@ -644,6 +823,12 @@ export const useStartupPost = () => {
         handlePostPageChange,
         handleFileUpload,
         handleCreatePost,
+        handleToggleStatus,
+        handleOpenEditModal,
+        handleEditInputChange,
+        handleEditSubmit,
+        handleUpdatePost,
+        handleDeletePost,
     };
 };
 

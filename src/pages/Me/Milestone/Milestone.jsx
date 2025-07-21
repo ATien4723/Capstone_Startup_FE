@@ -1022,10 +1022,10 @@ const Milestone = () => {
     // Hàm hiển thị tên ưu tiên
     const getPriorityName = (priority) => {
         switch (priority) {
-            case 'high': return 'Cao';
-            case 'medium': return 'Trung bình';
-            case 'low': return 'Thấp';
-            default: return 'Không xác định';
+            case 'high': return 'High';
+            case 'medium': return 'Medium';
+            case 'low': return 'Low';
+            default: return 'Undefined';
         }
     };
 
@@ -1051,7 +1051,7 @@ const Milestone = () => {
             <div className="flex items-center justify-center h-96">
                 <div className="flex flex-col items-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
-                    <p className="text-gray-500">Đang tải dữ liệu bảng...</p>
+                    <p className="text-gray-500">Loading board data...</p>
                 </div>
             </div>
         );
@@ -1063,13 +1063,13 @@ const Milestone = () => {
                 <div className="mb-4">
                     <FontAwesomeIcon icon={faExclamationCircle} className="text-4xl text-gray-400" />
                 </div>
-                <h3 className="text-xl font-medium mb-2">Không thể tải dữ liệu bảng</h3>
-                <p className="mb-4">Không thể tải dữ liệu milestone. Vui lòng thử lại sau.</p>
+                <h3 className="text-xl font-medium mb-2">Could not load board data</h3>
+                <p className="mb-4">Unable to load milestone data. Please try again later.</p>
                 <button
                     onClick={handleBackToBoards}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                    Quay lại danh sách bảng
+                    Back to board list
                 </button>
             </div>
         );
@@ -1345,13 +1345,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1377,13 +1377,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1421,13 +1421,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(Number(editFieldData.currentValue))}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1649,13 +1649,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1682,13 +1682,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1734,13 +1734,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1769,13 +1769,13 @@ const Milestone = () => {
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                                 onClick={() => setEditingTaskField(null)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors font-medium"
                                 onClick={() => handleSaveTaskField(editFieldData.currentValue)}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
@@ -1826,17 +1826,17 @@ const Milestone = () => {
                                         <div className="mt-4 flex items-center space-x-2">
                                             {viewingTask.priority === 'high' && (
                                                 <span className="px-3 py-1 text-sm rounded-full font-medium bg-red-50 text-red-700 flex items-center">
-                                                    Ưu tiên cao
+                                                    High Priority
                                                 </span>
                                             )}
                                             {viewingTask.priority === 'medium' && (
                                                 <span className="px-3 py-1 text-sm rounded-full font-medium bg-yellow-50 text-yellow-700 flex items-center">
-                                                    Ưu tiên trung bình
+                                                    Medium Priority
                                                 </span>
                                             )}
                                             {viewingTask.priority === 'low' && (
                                                 <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-50 text-green-700 flex items-center">
-                                                    Ưu tiên thấp
+                                                    Low Priority
                                                 </span>
                                             )}
                                         </div>
@@ -1914,7 +1914,7 @@ const Milestone = () => {
                                                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                                                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
                                                         <div className="flex justify-between items-center mb-4">
-                                                            <h2 className="text-xl font-bold text-gray-800">Thành viên</h2>
+                                                            <h2 className="text-xl font-bold text-gray-800">Members</h2>
                                                             <button
                                                                 onClick={() => setShowMemberDropdown(false)}
                                                                 className="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100"
@@ -1929,12 +1929,12 @@ const Milestone = () => {
                                                                 value={memberSearchQuery}
                                                                 onChange={(e) => setMemberSearchQuery(e.target.value)}
                                                                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                                                placeholder="Tìm kiếm các thành viên"
+                                                                placeholder="Search members..."
                                                             />
                                                         </div>
 
                                                         <div className="mb-4">
-                                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Thành viên của thẻ</h3>
+                                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Card Members</h3>
                                                             {taskMembers && taskMembers.length > 0 ? (
                                                                 <div className="space-y-2">
                                                                     {taskMembers.map((member, idx) => (
@@ -1960,7 +1960,6 @@ const Milestone = () => {
                                                                             <button
                                                                                 onClick={() => {
                                                                                     handleRemoveMember(viewingTask.id, viewingTask.milestoneId, member.id);
-                                                                                    // Cập nhật UI ngay bằng cách xóa thành viên khỏi taskMembers
                                                                                     const updatedMembers = taskMembers.filter(m => m.id !== member.id);
                                                                                     setTaskMembers(updatedMembers);
                                                                                 }}
@@ -1971,86 +1970,27 @@ const Milestone = () => {
                                                                         </div>
                                                                     ))}
                                                                 </div>
-                                                            ) : (viewingTask && viewingTask.asignTo && viewingTask.asignTo.length > 0) ? (
-                                                                <div className="space-y-2">
-                                                                    {viewingTask.asignTo.map((member, idx) => {
-                                                                        const memberId = typeof member === 'object' ? member.id : member;
-                                                                        return (
-                                                                            <div key={`asignto-${idx}-${memberId}`} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md">
-                                                                                <div className="flex items-center">
-                                                                                    {typeof member === 'object' && member !== null && member.avatarURL ? (
-                                                                                        <img
-                                                                                            src={member.avatarURL}
-                                                                                            alt={member.fullname}
-                                                                                            className="w-8 h-8 rounded-full object-cover mr-2"
-                                                                                            onError={(e) => {
-                                                                                                e.target.onerror = null;
-                                                                                                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(member.fullname || 'User') + "&background=random";
-                                                                                            }}
-                                                                                        />
-                                                                                    ) : (typeof member === 'string' && member.includes('http')) ? (
-                                                                                        <img
-                                                                                            src={member}
-                                                                                            alt={""}
-                                                                                            className="w-8 h-8 rounded-full object-cover mr-2"
-                                                                                            onError={(e) => {
-                                                                                                e.target.onerror = null;
-                                                                                                e.target.src = "https://ui-avatars.com/api/?name=User&background=random";
-                                                                                            }}
-                                                                                        />
-                                                                                    ) : (
-                                                                                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium mr-2">
-                                                                                            {typeof member === 'object' ?
-                                                                                                (member.fullname?.charAt(0) || 'U') :
-                                                                                                (typeof member === 'string' ? member.charAt(0).toUpperCase() : 'U')}
-                                                                                        </div>
-                                                                                    )}
-                                                                                    <span>
-                                                                                        {typeof member === 'object' ?
-                                                                                            (member.fullname || "Người dùng") :
-                                                                                            (typeof member === 'string' && !member.includes('http') ? member : "Người dùng")}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        handleRemoveMember(viewingTask.id, viewingTask.milestoneId, memberId);
-                                                                                        // Cập nhật UI ngay bằng cách cập nhật viewingTask
-                                                                                        const updatedAsignTo = viewingTask.asignTo.filter((_, i) => i !== idx);
-                                                                                        setViewingTask({ ...viewingTask, asignTo: updatedAsignTo });
-                                                                                    }}
-                                                                                    className="text-gray-400 hover:text-red-500"
-                                                                                >
-                                                                                    <FontAwesomeIcon icon={faTrashAlt} />
-                                                                                </button>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
                                                             ) : (
-                                                                <div className="text-center py-3 text-gray-500">Chưa có thành viên nào</div>
+                                                                <div className="text-center py-3 text-gray-500">No members yet</div>
                                                             )}
                                                         </div>
 
                                                         <div>
-                                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Thành viên của bảng</h3>
+                                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Board Members</h3>
                                                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                                                 {teamMembersLoading ? (
                                                                     <div className="flex justify-center items-center py-4">
                                                                         <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-                                                                        <span className="ml-2 text-sm text-gray-500">Đang tải...</span>
+                                                                        <span className="ml-2 text-sm text-gray-500">Loading...</span>
                                                                     </div>
                                                                 ) : (
                                                                     teamMembers
                                                                         .filter(member => {
-                                                                            // Lọc theo search query và loại bỏ thành viên đã được gán
                                                                             const alreadyInTask = taskMembers.some(tm => tm.id === member.id);
-
-                                                                            // Nếu không có trong taskMembers, kiểm tra trong asignTo
                                                                             const isInAsignTo = viewingTask?.asignTo?.some(assignee =>
                                                                                 (typeof assignee === 'object' && assignee?.id === member.id) ||
                                                                                 assignee === member.id
                                                                             );
-
                                                                             return !alreadyInTask && !isInAsignTo &&
                                                                                 member.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
                                                                         })
@@ -2060,7 +2000,6 @@ const Milestone = () => {
                                                                                 className="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer"
                                                                                 onClick={() => {
                                                                                     handleAddMember(viewingTask.id, viewingTask.milestoneId, member.id);
-                                                                                    // Cập nhật UI ngay bằng cách thêm thành viên vào taskMembers
                                                                                     setTaskMembers([...taskMembers, member]);
                                                                                 }}
                                                                             >
@@ -2093,7 +2032,7 @@ const Milestone = () => {
                                                                         member.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
                                                                 }).length === 0 && (
                                                                         <div className="text-center py-3 text-gray-500">
-                                                                            {memberSearchQuery ? 'Không tìm thấy thành viên phù hợp' : 'Đã thêm tất cả thành viên'}
+                                                                            {memberSearchQuery ? 'No matching members found' : 'All members have been added'}
                                                                         </div>
                                                                     )}
                                                             </div>
@@ -2200,7 +2139,7 @@ const Milestone = () => {
                                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 transition-colors font-medium btn-hover-effect"
                                         >
                                             <FontAwesomeIcon icon={faCheck} />
-                                            Đánh dấu hoàn thành
+                                            Mark as Complete
                                         </button>
 
                                         <button
@@ -2210,7 +2149,7 @@ const Milestone = () => {
                                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors font-medium btn-hover-effect"
                                         >
                                             <FontAwesomeIcon icon={faUserFriends} />
-                                            Thành viên
+                                            Members
                                         </button>
                                     </div>
                                 </div>
@@ -2218,7 +2157,7 @@ const Milestone = () => {
                                 {/* Phần bình luận - bên phải */}
                                 <div className="w-[40%] border-l border-gray-200 p-6 overflow-y-auto max-h-[90vh] bg-gray-50">
                                     <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                                        <FontAwesomeIcon icon={faComment} className="mr-2 text-indigo-500" /> Bình luận {(viewingTask.comments?.length > 0) && `(${viewingTask.comments.length})`}
+                                        <FontAwesomeIcon icon={faComment} className="mr-2 text-indigo-500" /> Comments {(viewingTask.comments?.length > 0) && `(${viewingTask.comments.length})`}
                                     </h3>
 
                                     {/* Danh sách bình luận */}
@@ -2267,7 +2206,7 @@ const Milestone = () => {
                                                     type="text"
                                                     value={commentText}
                                                     onChange={(e) => setCommentText(e.target.value)}
-                                                    placeholder="Thêm bình luận..."
+                                                    placeholder="Add a comment..."
                                                     className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all bg-white"
                                                     onKeyPress={(e) => {
                                                         if (e.key === 'Enter') {
@@ -2336,13 +2275,13 @@ const Milestone = () => {
                             <div className="mb-4">
                                 <FontAwesomeIcon icon={faClipboardList} className="text-4xl text-gray-400" />
                             </div>
-                            <h3 className="text-xl font-medium mb-2">Chưa có cột nào</h3>
-                            <p className="mb-6">Milestone này chưa có cột nào. Hãy thêm milestone để bắt đầu.</p>
+                            <h3 className="text-xl font-medium mb-2">No columns yet</h3>
+                            <p className="mb-6">This milestone has no columns. Add a milestone to get started.</p>
                             <button
                                 onClick={() => setShowNewMilestoneForm(true)}
                                 className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow flex items-center gap-2 transition-all font-medium"
                             >
-                                <FontAwesomeIcon icon={faPlus} className="text-sm" /> Thêm Milestone
+                                <FontAwesomeIcon icon={faPlus} className="text-sm" /> Add Milestone
                             </button>
                         </div>
                     )}
@@ -2390,7 +2329,7 @@ const Milestone = () => {
                             <div className="flex items-center justify-center h-64">
                                 <div className="flex flex-col items-center">
                                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
-                                    <p className="text-gray-500">Đang tải danh sách task...</p>
+                                    <p className="text-gray-500">Loading task list...</p>
                                 </div>
                             </div>
                         ) : (
@@ -2606,13 +2545,13 @@ const Milestone = () => {
                         <div className="mb-4">
                             <FontAwesomeIcon icon={faClipboardList} className="text-4xl text-gray-400" />
                         </div>
-                        <h3 className="text-xl font-medium mb-2">Chưa có dữ liệu</h3>
-                        <p className="mb-6">Hiện tại không có task nào. Hãy thêm milestone và task để bắt đầu.</p>
+                        <h3 className="text-xl font-medium mb-2">No data</h3>
+                        <p className="mb-6">There are no tasks yet. Add milestones and tasks to get started.</p>
                         <button
                             onClick={() => setShowNewMilestoneForm(true)}
                             className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow flex items-center gap-2 transition-all font-medium"
                         >
-                            <FontAwesomeIcon icon={faPlus} className="text-sm" /> Thêm Milestone
+                            <FontAwesomeIcon icon={faPlus} className="text-sm" /> Add Milestone
                         </button>
                     </div>
                 )
@@ -2624,8 +2563,8 @@ const Milestone = () => {
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl transform transition-all animate-scaleIn">
                         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                             <div className="border-b border-gray-200 px-6 py-4">
-                                <h2 className="font-semibold text-xl text-gray-800">Nhật ký hoạt động</h2>
-                                <p className="text-sm text-gray-500">Lịch sử thao tác trên các công việc</p>
+                                <h2 className="font-semibold text-xl text-gray-800">Activity Log</h2>
+                                <p className="text-sm text-gray-500">History of actions on tasks</p>
                             </div>
                             <button
                                 onClick={() => setShowActivityLogs(false)}
@@ -2643,17 +2582,17 @@ const Milestone = () => {
                             <button
                                 onClick={() => {
                                     fetchActivityLogs();
-                                    toast.info('Đã làm mới nhật ký hoạt động');
+                                    toast.info('Activity log refreshed');
                                 }}
                                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg mr-2 transition-colors"
                             >
-                                Làm mới
+                                Refresh
                             </button>
                             <button
                                 onClick={() => setShowActivityLogs(false)}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                             >
-                                Đóng
+                                Close
                             </button>
                         </div>
                     </div>

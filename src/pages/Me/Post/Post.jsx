@@ -84,7 +84,10 @@ const Post = () => {
         postSearchText,
         isSearchingPosts,
         handlePostSearchTextChange,
-        handlePostSearch
+        handlePostSearch,
+        // Thêm các state và function cho chức năng chỉnh sửa bài viết
+        handleUpdatePost,
+        handleDeletePost
     } = useStartupPost();
 
     // State tạm thời cho bộ lọc
@@ -93,6 +96,17 @@ const Post = () => {
     // State cho modal xem ảnh
     const [selectedMedia, setSelectedMedia] = useState(null);
     const [showMediaModal, setShowMediaModal] = useState(false);
+
+    // State cho chức năng chỉnh sửa bài viết
+    const [editingPost, setEditingPost] = useState(null);
+    const [editedPostContent, setEditedPostContent] = useState(undefined);
+
+    // State cho modal xác nhận xóa bài viết
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [postToDelete, setPostToDelete] = useState(null);
+
+    // State cho dropdown menu của bài viết
+    const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
 
     // Lấy thông tin người dùng hiện tại
     const currentUserId = getUserId();
@@ -103,6 +117,45 @@ const Post = () => {
     const openMediaModal = (media) => {
         setSelectedMedia(media);
         setShowMediaModal(true);
+    };
+
+    // Hàm toggle dropdown menu
+    const toggleDropdown = (postId, isOpen) => {
+        setOpenDropdownPostId(isOpen ? postId : null);
+    };
+
+    // Hàm xác nhận xóa bài viết
+    const confirmDeletePost = (post) => {
+        setPostToDelete(post);
+        setShowDeleteConfirmModal(true);
+    };
+
+    // Hàm xóa bài viết
+    const handleDeletePostConfirm = async (post) => {
+        try {
+            // Gọi API xóa bài viết từ hook
+            const result = await handleDeletePost(post.postId);
+            if (result) {
+                setShowDeleteConfirmModal(false);
+                setPostToDelete(null);
+                toast.success('Bài viết đã được xóa thành công');
+            }
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            toast.error('Không thể xóa bài viết');
+        }
+    };
+
+    // Hàm ẩn bài viết
+    const handleHidePost = async (postId) => {
+        try {
+            // Gọi API ẩn bài viết (nếu có)
+            // await hidePost(postId);
+            toast.success('Bài viết đã được ẩn');
+        } catch (error) {
+            console.error('Error hiding post:', error);
+            toast.error('Không thể ẩn bài viết');
+        }
     };
 
     // Lấy thông tin tài khoản từ API
@@ -237,6 +290,103 @@ const Post = () => {
                                 <><FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Posting...</>
                             ) : 'Post'}
                         </button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modal chỉnh sửa bài viết */}
+            {editingPost && (
+                <Modal onClose={() => {
+                    setEditingPost(null);
+                    setEditedPostContent(undefined);
+                }}>
+                    <div className="flex items-center gap-3 p-6 border-b">
+                        <img
+                            src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                            alt="Avatar"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-blue-100"
+                        />
+                        <div>
+                            <div className="font-semibold text-gray-800">{profileData?.firstName} {profileData?.lastName}</div>
+                            <div className="text-xs text-gray-500">Edit post</div>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        <textarea
+                            className="w-full border border-gray-300 outline-none resize-none text-lg p-3 rounded-lg"
+                            rows={4}
+                            placeholder="Post content..."
+                            value={editedPostContent === undefined ? editingPost.content : editedPostContent}
+                            onChange={(e) => setEditedPostContent(e.target.value)}
+                        />
+                        {editingPost.postMedia && editingPost.postMedia.length > 0 && (
+                            <div className="mt-4">
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">Attached images/videos:</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {editingPost.postMedia.map((media, index) => (
+                                        <div key={index} className="relative">
+                                            <img
+                                                src={media.mediaUrl}
+                                                alt={`Media ${index + 1}`}
+                                                className="w-20 h-20 object-cover rounded"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end p-4 border-t">
+                        <button
+                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium mr-2"
+                            onClick={() => {
+                                setEditingPost(null);
+                                setEditedPostContent(undefined);
+                            }}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
+                            onClick={() => {
+                                handleUpdatePost(editingPost.postId, editedPostContent === undefined ? editingPost.content : editedPostContent);
+                                setEditingPost(null);
+                            }}
+                        >
+                            Lưu thay đổi
+                        </button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modal xác nhận xóa bài viết */}
+            {showDeleteConfirmModal && (
+                <Modal onClose={() => {
+                    setShowDeleteConfirmModal(false);
+                    setPostToDelete(null);
+                }}>
+                    <div className="p-6">
+                        <h3 className="text-xl font-semibold mb-4">Xác nhận xóa bài viết</h3>
+                        <p className="mb-6">Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium"
+                                onClick={() => {
+                                    setShowDeleteConfirmModal(false);
+                                    setPostToDelete(null);
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium"
+                                onClick={() => postToDelete && handleDeletePostConfirm(postToDelete)}
+                            >
+                                Xóa bài viết
+                            </button>
+                        </div>
                     </div>
                 </Modal>
             )}
@@ -379,10 +529,16 @@ const Post = () => {
                                         </button> */}
                                     </div>
                                     <div className="flex space-x-2">
-                                        <button className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 rounded-full hover:bg-blue-50">
+                                        <button
+                                            className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 rounded-full hover:bg-blue-50"
+                                            onClick={() => setEditingPost(post)}
+                                        >
                                             <FontAwesomeIcon icon={faEdit} />
                                         </button>
-                                        <button className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50">
+                                        <button
+                                            className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                                            onClick={() => confirmDeletePost(post)}
+                                        >
                                             <FontAwesomeIcon icon={faTrash} />
                                         </button>
                                     </div>

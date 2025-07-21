@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEye, faEdit, faTrashAlt, faListUl, faCalendarAlt, faMapMarkerAlt, faCoins, faUsers, faFileAlt, faSpinner, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEye, faEdit, faTrashAlt, faListUl, faCalendarAlt, faMapMarkerAlt, faCoins, faUsers, faFileAlt, faSpinner, faSearch, faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons';
 import useStartupPost from '@/hooks/useStartupPost';
 import { getUserId } from '@/apis/authService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
+import { Link } from 'react-router-dom';
 
 const InternshipPost = () => {
     const {
@@ -39,7 +40,15 @@ const InternshipPost = () => {
         fetchInternshipPosts,
         handleInternshipPostSearchKeywordChange,
         handleSearchSubmit,
-        searchInternshipPosts
+        searchInternshipPosts,
+        handleToggleStatus,
+        handleOpenEditModal,
+        showEditModal,
+        setShowEditModal,
+        editFormData,
+        handleEditInputChange,
+        handleEditSubmit,
+        loadingEdit
     } = useStartupPost();
 
     // Format date using dateUtils
@@ -98,7 +107,7 @@ const InternshipPost = () => {
                             </button>
                         </form>
                     </div>
-                    <div className="flex gap-3">
+                    {/* <div className="flex gap-3">
                         <select className="px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white hover:border-gray-300 transition">
                             <option value="">All Fields</option>
                             <option value="frontend">Frontend</option>
@@ -110,7 +119,7 @@ const InternshipPost = () => {
                             <option value="oldest">Oldest</option>
                             <option value="popular">Most Popular</option>
                         </select>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 
@@ -142,12 +151,12 @@ const InternshipPost = () => {
                         <div key={post.id || post.internshipPostId} className="bg-white shadow-md hover:shadow-lg transition-shadow duration-200 rounded-xl overflow-hidden border border-gray-100 hover:border-blue-200">
                             <div className="p-6">
                                 <span className="inline-block px-3 py-1 mb-3 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                    {post.isActive ? 'Active' : 'Closed'}
+                                    {post.status}
                                 </span>
                                 <div className="flex justify-between items-start mb-3">
                                     <h2 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">{post.title}</h2>
                                 </div>
-                                <p className="text-gray-600 mb-5 line-clamp-3">{post.excerpt || post.description}</p>
+                                <p className="text-gray-600 mb-5 line-clamp-3">{post.description}</p>
 
                                 <div className="mb-5">
                                     <div className="flex items-center text-gray-500 mb-2">
@@ -165,9 +174,9 @@ const InternshipPost = () => {
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 mb-5">
-                                    {post.positionRequirement?.title ? (
+                                    {post.requirement ? (
                                         <span className="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full hover:bg-gray-200 transition duration-200 cursor-default">
-                                            {post.positionRequirement.title}
+                                            {post.requirement}
                                         </span>
                                     ) : post.tags ? (
                                         post.tags.map(tag => (
@@ -181,11 +190,30 @@ const InternshipPost = () => {
                                     ) : null}
                                 </div>
                                 <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                                    <button className="text-blue-600 hover:text-blue-800 transition-colors flex items-center text-sm font-medium">
-                                        <FontAwesomeIcon icon={faEye} className="mr-1.5" /> View Details
-                                    </button>
+                                    <Link
+                                        to={`/internship/${post.internshipId}`}
+                                        className="text-blue-600 hover:text-blue-800 transition-colors flex items-center text-sm font-medium"
+                                    >
+                                        <FontAwesomeIcon icon={faEye} className="mr-1.5" /> Xem chi tiết
+                                    </Link>
                                     <div className="flex space-x-2">
-                                        <button className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 rounded-full hover:bg-blue-50">
+                                        <button
+                                            className={`text-gray-500 hover:${post.status === "Active" ? 'text-red-600' : 'text-green-600'} transition-colors p-1.5 rounded-full hover:${post.status === "Active" ? 'bg-red-50' : 'bg-green-50'}`}
+                                            onClick={() => {
+                                                // console.log('Bấm toggle cho bài đăng:', post);
+                                                // console.log('ID bài đăng:', post.internshipId);
+                                                // console.log('Trạng thái hiện tại:', post.status);
+                                                handleToggleStatus(post.internshipId);
+                                            }}
+                                            title={post.status}
+                                        >
+                                            <FontAwesomeIcon icon={post.status === "Active" ? faToggleOn : faToggleOff} />
+                                        </button>
+                                        <button
+                                            className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 rounded-full hover:bg-blue-50"
+                                            onClick={() => handleOpenEditModal(post.internshipId)}
+                                            title="Chỉnh sửa"
+                                        >
                                             <FontAwesomeIcon icon={faEdit} />
                                         </button>
                                         <button className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50">
@@ -593,6 +621,162 @@ const InternshipPost = () => {
                                             onClick={() => setShowCreateModal(false)}
                                         >
                                             Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal chỉnh sửa bài đăng thực tập */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen px-4 pb-10">
+                        {/* Overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={() => setShowEditModal(false)}></div>
+
+                        {/* <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span> */}
+
+                        {/* Modal content */}
+                        <div className="inline-block align-bottom rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-2xl">
+                            <div className="bg-white px-6 pt-6 pb-5">
+                                <div className="flex justify-between items-center mb-5">
+                                    <h3 className="text-xl font-semibold text-gray-900">Chỉnh sửa bài đăng thực tập</h3>
+                                    <button
+                                        onClick={() => setShowEditModal(false)}
+                                        className="text-gray-400 hover:text-gray-600 transition"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleEditSubmit}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Mô tả */}
+                                        <div className="col-span-2">
+                                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Mô tả công việc</label>
+                                            <textarea
+                                                id="description"
+                                                name="description"
+                                                value={editFormData.description}
+                                                onChange={handleEditInputChange}
+                                                rows="3"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                placeholder="Mô tả chi tiết về vị trí thực tập..."
+                                                required
+                                            ></textarea>
+                                        </div>
+
+                                        {/* Yêu cầu */}
+                                        <div className="col-span-2">
+                                            <label htmlFor="requirement" className="block text-sm font-medium text-gray-700 mb-1">Yêu cầu ứng viên</label>
+                                            <textarea
+                                                id="requirement"
+                                                name="requirement"
+                                                value={editFormData.requirement}
+                                                onChange={handleEditInputChange}
+                                                rows="3"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                placeholder="Yêu cầu kỹ năng, kinh nghiệm, bằng cấp..."
+                                                required
+                                            ></textarea>
+                                        </div>
+
+                                        {/* Quyền lợi */}
+                                        <div className="col-span-2">
+                                            <label htmlFor="benefits" className="block text-sm font-medium text-gray-700 mb-1">Quyền lợi</label>
+                                            <textarea
+                                                id="benefits"
+                                                name="benefits"
+                                                value={editFormData.benefits}
+                                                onChange={handleEditInputChange}
+                                                rows="3"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                placeholder="Phúc lợi, đãi ngộ, môi trường làm việc..."
+                                                required
+                                            ></textarea>
+                                        </div>
+
+                                        {/* Địa chỉ */}
+                                        <div className="col-span-2">
+                                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Địa điểm làm việc</label>
+                                            <div className="relative">
+                                                <FontAwesomeIcon icon={faMapMarkerAlt} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    id="address"
+                                                    name="address"
+                                                    value={editFormData.address}
+                                                    onChange={handleEditInputChange}
+                                                    className="w-full pl-10 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                    placeholder="Ví dụ: 123 Đường ABC, Quận 1, TP.HCM"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Lương */}
+                                        <div className="col-span-1">
+                                            <label htmlFor="salary" className="block text-sm font-medium text-gray-700 mb-1">Lương</label>
+                                            <div className="relative">
+                                                <FontAwesomeIcon icon={faCoins} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    id="salary"
+                                                    name="salary"
+                                                    value={editFormData.salary}
+                                                    onChange={handleEditInputChange}
+                                                    placeholder="Ví dụ: 5-7 triệu/tháng"
+                                                    className="w-full pl-10 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Hạn nộp hồ sơ */}
+                                        <div className="col-span-1">
+                                            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">Hạn nộp hồ sơ</label>
+                                            <div className="relative">
+                                                <FontAwesomeIcon icon={faCalendarAlt} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    type="datetime-local"
+                                                    id="deadline"
+                                                    name="deadline"
+                                                    value={editFormData.deadline}
+                                                    onChange={handleEditInputChange}
+                                                    className="w-full pl-10 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 sm:flex sm:flex-row-reverse">
+                                        <button
+                                            type="submit"
+                                            className="w-full sm:w-auto sm:ml-3 mb-3 sm:mb-0 inline-flex justify-center items-center px-5 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition font-medium"
+                                            disabled={loadingEdit}
+                                        >
+                                            {loadingEdit ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Đang xử lý...
+                                                </>
+                                            ) : 'Cập nhật'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="w-full sm:w-auto inline-flex justify-center items-center px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition font-medium"
+                                            onClick={() => setShowEditModal(false)}
+                                        >
+                                            Hủy
                                         </button>
                                     </div>
                                 </form>
