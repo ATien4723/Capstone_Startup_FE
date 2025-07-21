@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCvsByStartup, responseCandidateCV } from '@/apis/cvService';
+import { getStartupIdByAccountId } from '@/apis/startupService';
+import { getUserId } from '@/apis/authService';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 
@@ -36,12 +38,31 @@ const CV = () => {
         }
     };
 
-    // Tải lại danh sách CV khi các yếu tố thay đổi
+    // Lấy startupId từ API
     useEffect(() => {
-        // Giả lập ID startup để demo - trong thực tế sẽ lấy từ context hoặc params
-        setStartupId(1);
+        const fetchStartupId = async () => {
+            try {
+                const accountId = await getUserId();
+                if (accountId) {
+                    const response = await getStartupIdByAccountId(accountId);
+                    if (response) {
+                        setStartupId(response);
+                        // console.log('Đã lấy startupId từ API:', response);
+                    } else {
+                        console.error('Không tìm thấy startup cho tài khoản này');
+                    }
+                } else {
+                    console.error('Không thể xác định người dùng hiện tại');
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy startupId:', error);
+            }
+        };
+
+        fetchStartupId();
     }, []);
 
+    // Tải lại danh sách CV khi các yếu tố thay đổi
     useEffect(() => {
         loadCVs();
     }, [startupId, selectedPosition, page]);
