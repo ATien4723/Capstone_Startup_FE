@@ -47,4 +47,26 @@ export const responseCandidateCV = async (candidateCVId, status) => {
         console.error('Lỗi khi phản hồi CV ứng tuyển:', error);
         throw error;
     }
+};
+
+// Kiểm tra xem account đã nộp CV vào bài internship post chưa
+export const checkSubmittedCV = async (accountId, internshipId) => {
+    try {
+        const response = await axiosClient.get(`api/CV/submitted?accountId=${accountId}&internshipId=${internshipId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi kiểm tra tình trạng nộp CV:', error);
+        throw error;
+    }
+};
+
+// Lấy ra top internship post được nộp CV nhiều nhất
+export const getTopCVSubmittedInternshipPosts = async (top = 5) => {
+    try {
+        const response = await axiosClient.get(`api/CV/top-internship-post-cv-submitted?top=${top}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách top internship post:', error);
+        throw error;
+    }
 }; 

@@ -287,3 +287,16 @@ export const deletePositionRequirement = async (id) => {
     const response = await axiosClient.delete(`/api/Startup/position-requirment/${id}`);
     return response;
 };
+
+// API: Kiểm tra trạng thái theo dõi startup
+export const isFollowingStartup = async (accountId, startupId) => {
+    try {
+        const response = await axiosClient.get('/api/Startup/is-following', {
+            params: { accountId, startupId }
+        });
+        return response?.data === true;
+    } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái theo dõi:", error);
+        return false;
+    }
+};

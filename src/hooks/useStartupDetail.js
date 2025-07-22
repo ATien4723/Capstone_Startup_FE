@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount, getPostCommentCount } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
-import { getStartupIdByAccountId, getStartupMembers, getStartupById, getPitchingsByStartupAndType } from '@/apis/startupService';
+import { getStartupIdByAccountId, getStartupMembers, getStartupById, getPitchingsByStartupAndType, subscribeStartup, unsubscribeStartup, isFollowingStartup } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
 import { useParams } from 'react-router-dom';
@@ -15,6 +15,8 @@ export const useStartupDetail = () => {
     const [startupInfo, setStartupInfo] = useState(null);
     const [loadingStartupInfo, setLoadingStartupInfo] = useState(false);
     const [errorStartupInfo, setErrorStartupInfo] = useState(null);
+    const [isFollowingStartup, setIsFollowingStartup] = useState(false);
+    const [followStartupLoading, setFollowStartupLoading] = useState(false);
 
     // State cho dữ liệu pitching (PDF, Video)
     const [pitchingData, setPitchingData] = useState([]);
@@ -352,6 +354,63 @@ export const useStartupDetail = () => {
         }
     };
 
+    // Xử lý follow startup
+    const handleFollowStartup = async () => {
+        if (!startupId) return false;
+
+        try {
+            setFollowStartupLoading(true);
+            const accountId = await getUserId();
+            await subscribeStartup(accountId, startupId);
+            setIsFollowingStartup(true);
+            return true;
+        } catch (error) {
+            console.error('Lỗi khi đăng ký theo dõi startup:', error);
+            return false;
+        } finally {
+            setFollowStartupLoading(false);
+        }
+    };
+
+    // Xử lý unfollow startup
+    const handleUnfollowStartup = async () => {
+        if (!startupId) return false;
+
+        try {
+            setFollowStartupLoading(true);
+            const accountId = await getUserId();
+            await unsubscribeStartup(accountId, startupId);
+            setIsFollowingStartup(false);
+            return true;
+        } catch (error) {
+            console.error('Lỗi khi hủy đăng ký theo dõi startup:', error);
+            return false;
+        } finally {
+            setFollowStartupLoading(false);
+        }
+    };
+
+    // Kiểm tra xem người dùng đã follow startup chưa
+    const checkFollowStatus = useCallback(async () => {
+        if (!startupId) return;
+
+        try {
+            const accountId = await getUserId();
+            const isFollowing = await isFollowingStartup(accountId, startupId);
+            setIsFollowingStartup(isFollowing);
+        } catch (error) {
+            console.error('Lỗi khi kiểm tra trạng thái theo dõi:', error);
+            setIsFollowingStartup(false);
+        }
+    }, [startupId]);
+
+    // Gọi API kiểm tra trạng thái follow khi startupId thay đổi
+    useEffect(() => {
+        if (startupId) {
+            checkFollowStatus();
+        }
+    }, [startupId, checkFollowStatus]);
+
     return {
         // States
         activeTab,
@@ -373,6 +432,8 @@ export const useStartupDetail = () => {
         pitchingData,
         loadingPitching,
         errorPitching,
+        isFollowingStartup,
+        followStartupLoading,
 
         // Actions/Methods
         setActiveTab,
@@ -385,7 +446,9 @@ export const useStartupDetail = () => {
         fetchStartupFeed,
         fetchTeamMembers,
         fetchStartupInfo,
-        fetchStartupPitchings
+        fetchStartupPitchings,
+        handleFollowStartup,
+        handleUnfollowStartup
     };
 };
 

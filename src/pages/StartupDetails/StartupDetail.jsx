@@ -16,6 +16,8 @@ import { toast } from 'react-toastify';
 import { getUserId } from '@/apis/authService';
 import PDFViewer from '@/components/Common/PDFViewer';
 import VideoPlayer from '@/components/Common/VideoPlayer';
+import { getRelativeTime, formatPostTime, formatDuration } from '@/utils/dateUtils';
+
 
 const StartupDetail = () => {
     const navigate = useNavigate();
@@ -40,6 +42,8 @@ const StartupDetail = () => {
         pitchingData,
         loadingPitching,
         errorPitching,
+        isFollowingStartup,
+        followStartupLoading,
 
         // Actions/Methods
         setActiveTab,
@@ -48,7 +52,9 @@ const StartupDetail = () => {
         handleLikePost,
         toggleCommentSection,
         handleCommentCountChange,
-        handleSharePost
+        handleSharePost,
+        handleFollowStartup,
+        handleUnfollowStartup
     } = useStartupDetail();
 
     // Lấy accountId của user hiện tại
@@ -63,19 +69,19 @@ const StartupDetail = () => {
         isFollowing,
     } = useFollow(accountId);
 
-    // Xử lý hành động follow
-    const handleFollowAction = async (userId) => {
-        const success = await handleFollow(userId);
+    // Xử lý hành động follow startup
+    const handleFollowAction = async () => {
+        const success = await handleFollowStartup();
         if (success) {
-            // toast.success("Followed successfully!");
+            toast.success("Đã theo dõi startup thành công!");
         }
     };
 
-    // Xử lý hành động unfollow
-    const handleUnfollowAction = async (userId) => {
-        const success = await handleUnfollow(userId);
+    // Xử lý hành động unfollow startup
+    const handleUnfollowAction = async () => {
+        const success = await handleUnfollowStartup();
         if (success) {
-            // toast.success("Unfollowed successfully!");
+            toast.success("Đã hủy theo dõi startup thành công!");
         }
     };
 
@@ -119,57 +125,67 @@ const StartupDetail = () => {
         if (post.type === 'Internship') {
             return (
                 <div
-                    key={post.postId}
-                    className="bg-white border border-gray-200 hover:border-blue-200 rounded-lg shadow hover:shadow-md transition-all duration-200 cursor-pointer"
-                    onClick={() => goToPostDetail(post.postId, post.type)}
+                    className="p-5 cursor-pointer border-2 border-blue-200 hover:border-blue-400 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+                    onClick={() => goToPostDetail(post.postId, post.type, post.startupId)}
                 >
-                    <div className="p-5">
-                        <div className="flex items-center mb-4">
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
+                        Internship
+                    </div>
+                    <div className="flex items-center mb-4">
+                        <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                             <img
-                                src={post.avatarURL || "https://via.placeholder.com/40"}
-                                alt={post.name || "User"}
+                                src={post.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                alt={post.name || post.fullName || post.firstName || "Unknown User"}
                                 className="h-12 w-12 rounded-full object-cover mr-3 border-2 border-gray-100"
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                }}
                             />
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h5 className="font-medium">{post.name || "User"}</h5>
-                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                                            <FontAwesomeIcon icon={faBriefcase} className="mr-1" />
-                                            Pro
-                                        </span>
+                        </Link>
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
+                                        <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
+                                    </Link>
+                                    <div className="text-right text-xs text-gray-500 mt-2">
+                                        {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                     </div>
-                                    <div className="text-sm text-green-600 font-medium">
-                                        Negotiable
-                                    </div>
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                        <FontAwesomeIcon icon={faBriefcase} className="mr-1" />
+                                        Pro
+                                    </span>
+
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <h3 className="font-bold text-xl mb-3 text-gray-800">{post.de}</h3>
+                    <h3 className="font-bold text-xl mb-3 text-gray-800 mt-2">{post.title || post.content.substring(0, 50)}</h3>
 
-                        <div className="mb-4 flex flex-wrap gap-2">
-                            <div className="text-gray-600 flex items-center text-sm">
-                                <FontAwesomeIcon icon={faLocationDot} className="mr-1.5 text-gray-500" />
-                                Hanoi
-                            </div>
-                            <div className="text-gray-600 flex items-center text-sm ml-4">
-                                <FontAwesomeIcon icon={faClock} className="mr-1.5 text-gray-500" />
-                                1 year
-                            </div>
+                    <div className="mb-4 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg mt-4">
+                        <div className="text-gray-600 flex items-center text-sm">
+                            <FontAwesomeIcon icon={faLocationDot} className="mr-1.5 text-gray-500" />
+                            {post.address}
                         </div>
-
-                        <div className="mt-4 flex items-center">
-                            <button className="flex items-center text-sm text-blue-600">
-                                <FontAwesomeIcon icon={faComment} className="mr-1.5" />
-                                Why is this job right for you?
-                            </button>
-                        </div>
-
-                        <div className="text-right text-xs text-gray-500 mt-2">
-                            Posted {formatDate(post.createdAt)}
+                        <div className="text-gray-600 flex items-center text-sm ml-4">
+                            <FontAwesomeIcon icon={faClock} className="mr-1.5 text-gray-500" />
+                            {formatDuration(post.dueDate)}
                         </div>
                     </div>
+
+                    <div className="mt-6 flex items-center justify-between">
+                        <button className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                            <FontAwesomeIcon icon={faComment} className="mr-1.5" />
+                            Why is this job right for you?
+                        </button>
+                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                            Apply Now
+                        </button>
+                    </div>
+
+
                 </div>
             );
         }
@@ -198,7 +214,7 @@ const StartupDetail = () => {
                                     {post.name || "Unknown User"}
                                 </h6>
                                 <small className="text-gray-600">
-                                    {formatDate(post.createdAt)}
+                                    {formatPostTime(post.createdAt)}
                                 </small>
                             </div>
                         </div>
@@ -339,8 +355,24 @@ const StartupDetail = () => {
                             </div>
 
                             <div className="md:w-1/3 flex justify-end space-x-2 mt-4 md:mt-0">
-                                <button className="border border-blue-500 text-blue-500 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition">
-                                    <FontAwesomeIcon icon={faHeart} className="mr-2" /> Theo dõi
+                                <button
+                                    className={`${isFollowingStartup
+                                        ? "border border-gray-400 text-gray-600 hover:bg-gray-100 hover:text-red-600 hover:border-red-600 group"
+                                        : "border border-blue-500 text-blue-500 hover:bg-blue-50"
+                                        } px-4 py-2 rounded-full text-sm font-medium transition`}
+                                    onClick={isFollowingStartup ? handleUnfollowAction : handleFollowAction}
+                                    disabled={followStartupLoading}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={isFollowingStartup ? faUserCheck : faHeart}
+                                        className={`mr-2 ${followStartupLoading ? "fa-spin" : ""}`}
+                                    />
+                                    {followStartupLoading
+                                        ? "Đang xử lý..."
+                                        : isFollowingStartup
+                                            ? "Đã theo dõi"
+                                            : "Theo dõi"
+                                    }
                                 </button>
                                 <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition">
                                     <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Liên hệ

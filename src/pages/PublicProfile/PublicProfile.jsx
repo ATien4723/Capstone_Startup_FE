@@ -104,6 +104,17 @@ const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleB
 
 const PublicProfile = () => {
     const { id } = useParams();
+    // Thêm state để theo dõi các bài đăng đã mở rộng nội dung
+    const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Hàm để toggle hiển thị nội dung đầy đủ/rút gọn
+    const togglePostContent = (postId) => {
+        setExpandedPosts(prev => ({
+            ...prev,
+            [postId]: !prev[postId]
+        }));
+    };
+
     // Hook quản lý profile
     const {
         profileData, following, followers, isLoading, followLoading,
@@ -350,7 +361,7 @@ const PublicProfile = () => {
                                     >
                                         All Post
                                     </button>
-                                    <button
+                                    {/* <button
                                         className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'media'
                                             ? 'bg-blue-600 text-white'
                                             : 'border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
@@ -358,7 +369,7 @@ const PublicProfile = () => {
                                         onClick={() => handleTabChange('media')}
                                     >
                                         Media
-                                    </button>
+                                    </button> */}
                                     {currentUserId === id && (
                                         <button
                                             className={`px-6 py-2 font-semibold rounded-full shadow-sm focus:outline-none ${activeButton === 'bio'
@@ -417,14 +428,14 @@ const PublicProfile = () => {
                                 {currentUserId === id && editBio && (
                                     <Modal onClose={handleCloseBioModal}>
                                         <h2 className="text-xl font-bold mb-4">Update Bio</h2>
-                                        <input value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded" />
-                                        <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded" />
-                                        <input value={formData.workplace} onChange={e => setFormData(f => ({ ...f, workplace: e.target.value }))} placeholder="Workplace" className="input mb-2 w-full border p-2 rounded" />
+                                        <textarea value={formData.introTitle} onChange={e => setFormData(f => ({ ...f, introTitle: e.target.value }))} placeholder="Intro Title" className="input mb-2 w-full border p-2 rounded resize-y" rows={3} />
+                                        <input value={formData.position} onChange={e => setFormData(f => ({ ...f, position: e.target.value }))} placeholder="Position" className="input mb-2 w-full border p-2 rounded resize-y" rows={2} />
+                                        <textarea value={formData.workplace} onChange={e => setFormData(f => ({ ...f, workplace: e.target.value }))} placeholder="Workplace" className="input mb-2 w-full border p-2 rounded resize-y" rows={2} />
                                         <input value={formData.facebookUrl} onChange={e => setFormData(f => ({ ...f, facebookUrl: e.target.value }))} placeholder="Facebook URL" className="input mb-2 w-full border p-2 rounded" />
                                         <input value={formData.linkedinUrl} onChange={e => setFormData(f => ({ ...f, linkedinUrl: e.target.value }))} placeholder="LinkedIn URL" className="input mb-2 w-full border p-2 rounded" />
                                         <input value={formData.githubUrl} onChange={e => setFormData(f => ({ ...f, githubUrl: e.target.value }))} placeholder="GitHub URL" className="input mb-2 w-full border p-2 rounded" />
                                         <input value={formData.portfolioUrl} onChange={e => setFormData(f => ({ ...f, portfolioUrl: e.target.value }))} placeholder="Portfolio URL" className="input mb-2 w-full border p-2 rounded" />
-                                        <input value={formData.country} onChange={e => setFormData(f => ({ ...f, country: e.target.value }))} placeholder="Country" className="input mb-2 w-full border p-2 rounded" />
+                                        <input value={formData.country} onChange={e => setFormData(f => ({ ...f, country: e.target.value }))} placeholder="Country" className="input mb-2 w-full border p-2 rounded resize-y" rows={2} />
                                         <div className="flex gap-2 mt-4">
                                             <button
                                                 className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
@@ -476,7 +487,8 @@ const PublicProfile = () => {
                                                     >
                                                         <FontAwesomeIcon icon={faImage} className="mr-1" /> Photo/Video
                                                     </button>
-                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all">
+                                                    <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                        onClick={() => setShowPostModal(true)}>
                                                         <FontAwesomeIcon icon={faPaperclip} className="mr-1" /> Attachment
                                                     </button>
                                                 </div>
@@ -539,7 +551,6 @@ const PublicProfile = () => {
                         {showPostModal && (
                             <Modal onClose={() => {
                                 setShowPostModal(false);
-                                setPostError(''); // Reset lỗi khi đóng modal
                                 setNewPost({ content: '', files: [] }); // Reset form
                             }}>
                                 <div className="flex items-center gap-3 p-6 border-b">
@@ -690,80 +701,94 @@ const PublicProfile = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-gray-800 ml-5">{post.content}</p>
+                                                <div>
+                                                    {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
+                                                    <p className={`text-gray-800 whitespace-pre-wrap break-words mb-3 ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>{post.content}</p>
+                                                    {post.content && post.content.length > 100 && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                                                                togglePostContent(post.postId);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-800 text-sm mb-3 font-medium"
+                                                        >
+                                                            {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                                        </button>
+                                                    )}
 
-                                                {/* Hiển thị bài viết được chia sẻ nếu có */}
-                                                {post.postShareId && (
-                                                    <SharedPost postShareId={post.postShareId} />
+                                                    {/* Hiển thị bài viết được chia sẻ nếu có */}
+                                                    {post.postShareId && (
+                                                        <SharedPost postShareId={post.postShareId} />
+                                                    )}
+
+                                                    {post.postMedia && post.postMedia.length > 0 && (
+                                                        <PostMediaGrid media={post.postMedia} />
+                                                    )}
+                                                </div>
+
+                                                {/* Hiển thị số lượng like và comment ở trên */}
+                                                {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
+                                                    <div className="flex justify-between items-center mt-3 mb-2 px-3">
+                                                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                            <LikeCounter
+                                                                postId={post.postId}
+                                                                count={postLikes[post.postId]}
+                                                                onClick={handleShowLikes}
+                                                            />
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            {postCommentCounts[post.postId] > 0 && (
+                                                                <span>{postCommentCounts[post.postId]} comments</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
 
-                                                {post.postMedia && post.postMedia.length > 0 && (
-                                                    <PostMediaGrid media={post.postMedia} />
-                                                )}
-                                            </div>
+                                                {/* Đường kẻ phân cách */}
+                                                <hr className="my-2" />
 
-                                            {/* Hiển thị số lượng like và comment ở trên */}
-                                            {(postLikes[post.postId] > 0 || postCommentCounts[post.postId] > 0) && (
-                                                <div className="flex justify-between items-center mt-3 mb-2 px-3">
-                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                        <LikeCounter
-                                                            postId={post.postId}
-                                                            count={postLikes[post.postId]}
-                                                            onClick={handleShowLikes}
-                                                        />
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {postCommentCounts[post.postId] > 0 && (
-                                                            <span>{postCommentCounts[post.postId]} comments</span>
-                                                        )}
+                                                <div className="flex justify-between items-center mt-3">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                            onClick={() => handleLikePost(post.postId)}
+                                                        >
+                                                            <FontAwesomeIcon
+                                                                icon={userLikedPosts[post.postId] ? faHeart : farHeart}
+                                                                className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
+                                                            />
+                                                            Like
+                                                        </button>
+                                                        <button
+                                                            className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
+                                                            onClick={() => toggleCommentSection(post.postId)}
+                                                        >
+                                                            <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
+                                                            Comment
+                                                        </button>
+                                                        <button
+                                                            className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
+                                                            onClick={() => handleSharePost(post)}
+                                                        >
+                                                            <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
+                                                            Share
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            )}
-
-                                            {/* Đường kẻ phân cách */}
-                                            <hr className="my-2" />
-
-                                            <div className="flex justify-between items-center mt-3">
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => handleLikePost(post.postId)}
-                                                    >
-                                                        <FontAwesomeIcon
-                                                            icon={userLikedPosts[post.postId] ? faHeart : farHeart}
-                                                            className={`mr-1 ${userLikedPosts[post.postId] ? 'text-red-500' : ''}`}
-                                                        />
-                                                        Like
-                                                    </button>
-                                                    <button
-                                                        className={`px-3 py-1 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all ${openCommentPosts.includes(post.postId) ? 'bg-blue-100' : 'bg-gray-100'}`}
-                                                        onClick={() => toggleCommentSection(post.postId)}
-                                                    >
-                                                        <FontAwesomeIcon icon={openCommentPosts.includes(post.postId) ? faComment : farComment} className="mr-1" />
-                                                        Comment
-                                                    </button>
-                                                    <button
-                                                        className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                                                        onClick={() => handleSharePost(post)}
-                                                    >
-                                                        <FontAwesomeIcon icon={farShareSquare} className="mr-1" />
-                                                        Share
-                                                    </button>
-                                                </div>
                                             </div>
-                                        </div>
 
-                                        {/* Comment Section - Thay thế bằng component CommentSection */}
-                                        <div className="px-6 pb-4">
-                                            <CommentSection
-                                                postId={post.postId}
-                                                isOpen={openCommentPosts.includes(post.postId)}
-                                                onToggle={() => toggleCommentSection(post.postId)}
-                                                commentCount={postCommentCounts[post.postId] || 0}
-                                                currentUserAvatar={currentUserData?.avatarUrl}
-                                                refreshTrigger={refreshCommentTrigger}
-                                                onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
-                                            />
+                                            {/* Comment Section - Thay thế bằng component CommentSection */}
+                                            <div className="px-6 pb-4">
+                                                <CommentSection
+                                                    postId={post.postId}
+                                                    isOpen={openCommentPosts.includes(post.postId)}
+                                                    onToggle={() => toggleCommentSection(post.postId)}
+                                                    commentCount={postCommentCounts[post.postId] || 0}
+                                                    currentUserAvatar={currentUserData?.avatarUrl}
+                                                    refreshTrigger={refreshCommentTrigger}
+                                                    onCommentCountChange={(newCount) => handleCommentCountChange(post.postId, newCount)}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 ))

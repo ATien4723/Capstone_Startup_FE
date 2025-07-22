@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUserPlus, faUserEdit, faUserMinus,
     faSearch, faTimes, faCheck, faSpinner, faEllipsisV,
-    faPlus, faTags, faFilter
+    faPlus, faTags, faFilter, faCog
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import Dropdownstartup from '@/components/Dropdown/Dropdownstartup';
@@ -91,7 +91,13 @@ const Member = () => {
         deleteRole,
         selectedUser,
         setSelectedUser,
-        leaveStartup
+        leaveStartup,
+        showPermissionsModal,
+        openPermissionsModal,
+        selectedRolePermissions,
+        setSelectedRolePermissions,
+        setShowPermissionsModal,
+        updatePermissions
     } = useMemberManagement(startupId);
 
     // Bắt đầu chỉnh sửa vai trò
@@ -792,6 +798,12 @@ const Member = () => {
                                                                                         <img src={updateSvg} alt="Edit role" className="w-5 h-5" />
                                                                                     </button>
                                                                                     <button
+                                                                                        className="text-green-600 hover:text-green-800"
+                                                                                        onClick={() => openPermissionsModal(role.roleId)}
+                                                                                    >
+                                                                                        <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
+                                                                                    </button>
+                                                                                    <button
                                                                                         className="text-red-600 hover:text-red-800"
                                                                                         onClick={() => deleteRole(role.roleId)}
                                                                                     >
@@ -823,6 +835,129 @@ const Member = () => {
                                     onClick={() => setShowAddRoleModal(false)}
                                 >
                                     Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal quản lý quyền */}
+            {showPermissionsModal && selectedRolePermissions && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="flex justify-between items-center pb-3 border-b">
+                                    <h3 className="text-lg font-medium text-gray-900" id="modal-title">
+                                        Permission Management
+                                    </h3>
+                                    <button
+                                        className="text-gray-400 hover:text-gray-500"
+                                        onClick={() => setShowPermissionsModal(false)}
+                                    >
+                                        <FontAwesomeIcon icon={faTimes} />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Posts</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManagePost ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManagePost: !selectedRolePermissions.canManagePost
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManagePost ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Candidates</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManageCandidate ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManageCandidate: !selectedRolePermissions.canManageCandidate
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageCandidate ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Chat Rooms</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManageChatRoom ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManageChatRoom: !selectedRolePermissions.canManageChatRoom
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageChatRoom ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Members</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManageMember ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManageMember: !selectedRolePermissions.canManageMember
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageMember ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Milestones</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManageMilestone ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManageMilestone: !selectedRolePermissions.canManageMilestone
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageMilestone ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => updatePermissions(selectedRolePermissions)}
+                                >
+                                    Save changes
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => setShowPermissionsModal(false)}
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         </div>

@@ -4,6 +4,7 @@ import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
 import { InteractionProvider } from '@/contexts/InteractionContext.jsx';
 import ProtectedRoute from './components/Common/ProtectedRoute';
+import PermissionRoute from './components/Common/PermissionRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
@@ -56,9 +57,20 @@ function App() {
                   path={childRoute.path.replace(`${parentRoute.path}/`, '')}
                   element={
                     childRoute.protected ? (
-                      <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
-                        <childRoute.component />
-                      </ProtectedRoute>
+                      childRoute.requirePostPermission || childRoute.requireMemberManagement ? (
+                        <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
+                          <PermissionRoute
+                            requirePostPermission={childRoute.requirePostPermission}
+                            requireMemberManagement={childRoute.requireMemberManagement}
+                          >
+                            <childRoute.component />
+                          </PermissionRoute>
+                        </ProtectedRoute>
+                      ) : (
+                        <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
+                          <childRoute.component />
+                        </ProtectedRoute>
+                      )
                     ) : (
                       <childRoute.component />
                     )

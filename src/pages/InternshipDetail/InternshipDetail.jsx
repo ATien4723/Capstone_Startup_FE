@@ -5,12 +5,12 @@ import {
     faBriefcase, faLocationDot, faClock, faCalendarAlt, faMoneyBillWave,
     faBuilding, faGraduationCap, faLanguage, faCheckCircle, faUserPlus,
     faBookmark, faShareAlt, faArrowLeft, faSpinner, faClock as faClockSolid, faInfoCircle,
-    faStar, faUserTie, faChevronRight, faFileUpload, faTimes
+    faStar, faUserTie, faChevronRight, faFileUpload, faTimes, faCheck
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getInternshipPostDetail } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
-import { applyCv } from '@/apis/cvService';
+import { applyCv, checkSubmittedCV, getTopCVSubmittedInternshipPosts } from '@/apis/cvService';
 import { toast } from 'react-toastify';
 import { getUserId } from '@/apis/authService';
 
@@ -24,6 +24,9 @@ const InternshipDetail = () => {
     const [cvFile, setCvFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [fileName, setFileName] = useState('');
+    const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [similarJobs, setSimilarJobs] = useState([]);
+    const [loadingSimilarJobs, setLoadingSimilarJobs] = useState(false);
 
     useEffect(() => {
         const fetchPostDetail = async () => {
@@ -39,9 +42,37 @@ const InternshipDetail = () => {
             }
         };
 
+        const fetchSubmissionStatus = async () => {
+            try {
+                const accountId = getUserId();
+                if (accountId && id) {
+                    const response = await checkSubmittedCV(accountId, id);
+                    setHasSubmitted(response);
+                }
+            } catch (error) {
+                console.error('Lỗi khi kiểm tra trạng thái nộp CV:', error);
+            }
+        };
+
+        const fetchSimilarJobs = async () => {
+            try {
+                setLoadingSimilarJobs(true);
+                const response = await getTopCVSubmittedInternshipPosts(3);
+                setSimilarJobs(response);
+            } catch (error) {
+                console.error('Lỗi khi lấy danh sách việc làm tương tự:', error);
+                setSimilarJobs([]);
+            } finally {
+                setLoadingSimilarJobs(false);
+            }
+        };
+
         if (id) {
             fetchPostDetail();
+            fetchSubmissionStatus();
         }
+
+        fetchSimilarJobs();
     }, [id]);
 
     const formatDate = (dateString) => {
@@ -54,6 +85,18 @@ const InternshipDetail = () => {
     };
 
     const handleApply = () => {
+        // const accountId = getUserId();
+        // if (!accountId) {
+        //     toast.error('Vui lòng đăng nhập để nộp CV');
+        //     navigate('/login');
+        //     return;
+        // }
+
+        // if (hasSubmitted) {
+        //     toast.info('Bạn đã nộp CV cho vị trí này');
+        //     return;
+        // }
+
         setShowModal(true);
     };
 
@@ -95,6 +138,7 @@ const InternshipDetail = () => {
             setShowModal(false);
             setCvFile(null);
             setFileName('');
+            setHasSubmitted(true); // Cập nhật trạng thái đã nộp
         } catch (error) {
             console.error('Lỗi khi nộp CV:', error);
             toast.error('Có lỗi xảy ra khi nộp CV. Vui lòng thử lại sau.');
@@ -300,13 +344,20 @@ const InternshipDetail = () => {
                                 </div>
 
                                 <div className="mt-6 md:mt-0 flex flex-col gap-3">
-                                    <button
-                                        onClick={handleApply}
-                                        className="bg-gradient-to-r from-green-600 to-yellow-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-                                    >
-                                        <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                                        Ứng tuyển ngay
-                                    </button>
+                                    {hasSubmitted ? (
+                                        <div className="bg-green-50 text-green-700 px-6 py-3 rounded-lg flex items-center justify-center font-medium border border-green-200">
+                                            <FontAwesomeIcon icon={faCheck} className="mr-2" />
+                                            Đã nộp CV
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={handleApply}
+                                            className="bg-gradient-to-r from-green-600 to-yellow-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                        >
+                                            <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                                            Ứng tuyển ngay
+                                        </button>
+                                    )}
                                     {/* <button
                                         onClick={handleSave}
                                         className="border border-gray-300 hover:border-blue-500 hover:bg-blue-50 text-gray-700 px-3 py-2.5 rounded-lg transition flex items-center justify-center"
@@ -435,20 +486,31 @@ const InternshipDetail = () => {
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-shadow duration-300 hover:shadow-md">
                             <h2 className="text-xl font-bold mb-4 text-gray-800">Việc làm tương tự</h2>
                             <div className="space-y-4">
-                                {[1, 2, 3].map((item) => (
-                                    <Link key={item} to={`/internship/${item}`} className="block">
-                                        <div className="border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-300 hover:shadow-sm bg-white hover:bg-blue-50">
-                                            <h3 className="font-medium text-gray-800 mb-1 line-clamp-2 hover:text-blue-600">
-                                                Kỹ sư phần mềm {item}
-                                            </h3>
-                                            <div className="flex items-center text-sm text-gray-500">
-                                                <span>Công ty {item}</span>
-                                                <span className="mx-2">•</span>
-                                                <span>Hà Nội</span>
+                                {loadingSimilarJobs ? (
+                                    <div className="text-center py-4">
+                                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-blue-500 text-xl" />
+                                        <p className="text-sm text-gray-500 mt-2">Đang tải...</p>
+                                    </div>
+                                ) : similarJobs && similarJobs.length > 0 ? (
+                                    similarJobs.map((job) => (
+                                        <Link key={job.internshipId} to={`/internship/${job.internshipId}`} className="block">
+                                            <div className="border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-300 hover:shadow-sm bg-white hover:bg-blue-50">
+                                                <h3 className="font-medium text-gray-800 mb-1 line-clamp-2 hover:text-blue-600">
+                                                    {job.positionTitle}
+                                                </h3>
+                                                <div className="flex items-center text-sm text-gray-500">
+                                                    <span>{job.startupName}</span>
+                                                    <span className="mx-2">•</span>
+                                                    <span>{job.address}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </Link>
-                                ))}
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-4 text-gray-500">
+                                        Không có việc làm tương tự
+                                    </div>
+                                )}
                                 <div className="text-center pt-2">
                                     <Link to="/startups" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center">
                                         Xem tất cả

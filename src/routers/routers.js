@@ -13,6 +13,7 @@ const FortgetPassword = lazy(() => import('@/components/ForgetPassword/ForgetPas
 const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
 const CreateStartup = lazy(() => import('@/pages/Startups/CreateStartup'));
+const AccessDenied = lazy(() => import('@/pages/AccessDenied/AccessDenied'));
 
 // Thêm các component mới
 const Me = lazy(() => import('@/pages/Me/Me'));
@@ -95,6 +96,11 @@ const routers = [
         protected: true,
         preventIfMember: true
     },
+    {
+        path: '/access-denied',
+        component: AccessDenied,
+        protected: true
+    },
     // Thêm các đường dẫn mới
     {
         path: '/me',
@@ -122,21 +128,24 @@ const routers = [
         component: MePost,
         parent: '/me',
         protected: true,
-        requireStartup: true
+        requireStartup: true,
+        requirePostPermission: true
     },
     {
         path: '/me/post/internship',
         component: MeInternshipPost,
         parent: '/me',
         protected: true,
-        requireStartup: true
+        requireStartup: true,
+        requirePostPermission: true
     },
     {
         path: '/me/member',
         component: MeMember,
         parent: '/me',
         protected: true,
-        requireStartup: true
+        requireStartup: true,
+        requireMemberManagement: true
     },
     {
         path: '/me/milestones',

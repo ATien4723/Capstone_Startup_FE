@@ -608,7 +608,7 @@ const CommentSection = ({
                                         <div className="text-gray-800 mb-2">{comment.content}</div>
                                         <div className="flex gap-4 text-xs text-gray-500">
                                             <span>{getRelativeTime(comment.commentAt)}</span>
-                                            <button
+                                            {/* <button
                                                 className="hover:underline flex items-center gap-1"
                                                 onClick={() => handleLikeComment(comment.postcommentId)}
                                             >
@@ -617,7 +617,7 @@ const CommentSection = ({
                                                     className={commentLikes[comment.postcommentId] ? 'text-red-500' : ''}
                                                 />
                                                 {commentLikes[comment.postcommentId] || 0}
-                                            </button>
+                                            </button> */}
                                             <button
                                                 className="hover:underline"
                                                 onClick={() => {

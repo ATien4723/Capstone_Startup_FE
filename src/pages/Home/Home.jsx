@@ -13,7 +13,7 @@ import Navbar from '@components/Navbar/Navbar';
 import { getUserId, getUserInfoFromToken } from '@/apis/authService';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
-import { getRelativeTime, formatPostTime } from '@/utils/dateUtils';
+import { getRelativeTime, formatPostTime, formatDuration } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { getPostLikesByPostId } from '@/apis/postService';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
@@ -37,40 +37,20 @@ const Modal = ({ children, onClose }) => (
     </div>
 );
 
-// Function to format duration from dueDate to current date
-const formatDuration = (dueDate) => {
-    if (!dueDate) return "Không xác định";
-
-    const due = new Date(dueDate);
-    const now = new Date();
-
-    // Nếu dueDate không hợp lệ
-    if (isNaN(due.getTime())) return "Không xác định";
-
-    // Tính số năm
-    const yearDiff = due.getFullYear() - now.getFullYear();
-
-    // Tính số tháng
-    let monthDiff = (due.getMonth() + 12 * yearDiff) - now.getMonth();
-
-    // Điều chỉnh tháng nếu ngày trong tháng không đủ
-    if (due.getDate() < now.getDate()) {
-        monthDiff -= 1;
-    }
-
-    if (monthDiff >= 12) {
-        const years = Math.floor(monthDiff / 12);
-        return `${years} năm`;
-    } else if (monthDiff > 0) {
-        return `${monthDiff} tháng`;
-    } else {
-        return "Hết hạn";
-    }
-};
-
 const Home = () => {
     const navigate = useNavigate();
     const currentUserId = getUserId();
+    // Thêm state để theo dõi các bài đăng đã mở rộng nội dung
+    const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Hàm để toggle hiển thị nội dung đầy đủ/rút gọn
+    const togglePostContent = (postId) => {
+        setExpandedPosts(prev => ({
+            ...prev,
+            [postId]: !prev[postId]
+        }));
+    };
+
     const {
         profileData, following, followers, isLoading: isLoadingProfile
     } = useProfileData(currentUserId);
@@ -611,6 +591,22 @@ const Home = () => {
 
                                                 <h3 className="font-bold text-xl mb-3 text-gray-800 mt-2">{post.title || post.content.substring(0, 50)}</h3>
 
+                                                <div className={`mb-4 ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>
+                                                    {post.content}
+                                                </div>
+
+                                                {post.content && post.content.length > 100 && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                                                            togglePostContent(post.postId);
+                                                        }}
+                                                        className="text-blue-600 hover:text-blue-800 text-sm mb-4 font-medium"
+                                                    >
+                                                        {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                                    </button>
+                                                )}
+
                                                 <div className="mb-4 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg mt-4">
                                                     <div className="text-gray-600 flex items-center text-sm">
                                                         <FontAwesomeIcon icon={faLocationDot} className="mr-1.5 text-gray-500" />
@@ -632,7 +628,15 @@ const Home = () => {
                                                     </button>
                                                 </div>
 
+                                                {/* Hiển thị bài viết được chia sẻ nếu có */}
+                                                {post.postShareId && (
+                                                    <SharedPost postShareId={post.postShareId} />
+                                                )}
 
+                                                {/* Hiển thị media */}
+                                                {post.postMedia && post.postMedia.length > 0 && (
+                                                    <PostMediaGrid media={post.postMedia} />
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="p-4">
@@ -675,7 +679,18 @@ const Home = () => {
                                                 </div>
                                                 <div>
                                                     {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
-                                                    <p className="text-gray-800 whitespace-pre-wrap break-words mb-3">{post.content}</p>
+                                                    <p className={`text-gray-800 whitespace-pre-wrap break-words mb-3 ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>{post.content}</p>
+                                                    {post.content && post.content.length > 100 && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                                                                togglePostContent(post.postId);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-800 text-sm mb-3 font-medium"
+                                                        >
+                                                            {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                                        </button>
+                                                    )}
 
                                                     {/* Hiển thị bài viết được chia sẻ nếu có */}
                                                     {post.postShareId && (

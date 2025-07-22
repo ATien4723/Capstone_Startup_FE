@@ -8,18 +8,13 @@ import { format } from 'date-fns';
 const CV = () => {
     const [cvs, setCvs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedPosition, setSelectedPosition] = useState(0);
+    const [selectedPosition, setSelectedPosition] = useState('all');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [startupId, setStartupId] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
     const [modalData, setModalData] = useState(null);
-    const [positions, setPositions] = useState([
-        { id: 0, name: 'Tất cả vị trí' },
-        { id: 1, name: 'Lập trình viên' },
-        { id: 2, name: 'Nhà thiết kế' },
-        { id: 3, name: 'Quản lý dự án' }
-    ]);
+    const [positions, setPositions] = useState(['all']);
 
     // Hàm để load danh sách CV
     const loadCVs = async () => {
@@ -27,9 +22,18 @@ const CV = () => {
 
         setLoading(true);
         try {
-            const response = await getCvsByStartup(startupId, selectedPosition, page, 5);
+            const response = await getCvsByStartup(startupId, 0, page, 5);
             setCvs(response.items || []);
             setTotalPages(response.totalPages || 1);
+
+            // Lấy danh sách các positionRequirement duy nhất
+            const uniquePositions = ['all'];
+            response.items?.forEach(cv => {
+                if (cv.positionRequirement && !uniquePositions.includes(cv.positionRequirement)) {
+                    uniquePositions.push(cv.positionRequirement);
+                }
+            });
+            setPositions(uniquePositions);
         } catch (error) {
             console.error('Lỗi khi tải danh sách CV:', error);
             toast.error('Không thể tải danh sách CV');
@@ -65,7 +69,7 @@ const CV = () => {
     // Tải lại danh sách CV khi các yếu tố thay đổi
     useEffect(() => {
         loadCVs();
-    }, [startupId, selectedPosition, page]);
+    }, [startupId, page]);
 
     // Xử lý khi phản hồi CV
     const handleResponse = async (candidateCVId, status) => {
@@ -101,10 +105,10 @@ const CV = () => {
         }
     };
 
-    // Lọc CV theo tab
-    const filteredCVs = activeTab === 'all'
-        ? cvs
-        : cvs.filter(cv => cv.status.toLowerCase() === activeTab);
+    // Lọc CV theo tab và positionRequirement
+    const filteredCVs = cvs
+        .filter(cv => activeTab === 'all' || cv.status.toLowerCase() === activeTab)
+        .filter(cv => selectedPosition === 'all' || cv.positionRequirement === selectedPosition);
 
     // Hàm tạo biểu đồ đánh giá
     const renderEvaluationBar = (score) => {
@@ -253,11 +257,11 @@ const CV = () => {
                     <select
                         className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
                         value={selectedPosition}
-                        onChange={(e) => setSelectedPosition(Number(e.target.value))}
+                        onChange={(e) => setSelectedPosition(e.target.value)}
                     >
-                        {positions.map(pos => (
-                            <option key={pos.id} value={pos.id}>
-                                {pos.name}
+                        {positions.map((pos, index) => (
+                            <option key={index} value={pos}>
+                                {pos === 'all' ? 'Tất cả vị trí' : pos}
                             </option>
                         ))}
                     </select>

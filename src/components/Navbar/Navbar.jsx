@@ -209,16 +209,14 @@ export default function Navbar() {
                 inviteId: inviteDetails.inviteId,
                 response: accept ? "Approved" : "Rejected"
             };
-
             await respondToInvite(responseData);
             // console.log("✅ Invite response thành công");
             // console.log("accept =", accept);
-
             // Hiển thị thông báo thành công
             if (accept) {
                 toast.success('Bạn đã chấp nhận lời mời tham gia startup');
                 // Chuyển hướng đến trang dashboard của startup
-                navigate('/me/dashboard');
+                window.location.href = '/me/dashboard';
             } else {
                 toast.info('Bạn đã từ chối lời mời tham gia startup');
             }

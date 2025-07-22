@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as startupService from '@/apis/startupService';
+import * as permissionService from '@/apis/permissionService';
 import { toast } from 'react-toastify';
 import { getUserId } from '@/apis/authService';
 
@@ -13,6 +14,9 @@ export default function useMemberManagement(startupId) {
     const [showAddRoleModal, setShowAddRoleModal] = useState(false);
     const [roles, setRoles] = useState([]);
     const [newRole, setNewRole] = useState({ roleName: '' }); // Chỉ cần roleName, không cần description
+    const [selectedRolePermissions, setSelectedRolePermissions] = useState(null);
+    const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+    const [editingRoleId, setEditingRoleId] = useState(null);
 
     // State cho phần mời thành viên
     const [searchEmail, setSearchEmail] = useState('');
@@ -51,6 +55,66 @@ export default function useMemberManagement(startupId) {
             setLoading(false);
         }
     }, [startupId]);
+
+    // Lấy quyền của vai trò
+    const fetchPermissionsByRoleId = useCallback(async (roleId) => {
+        setLoading(true);
+        try {
+            const response = await permissionService.getPermissionByRoleId(roleId);
+            console.log("API response:", response);
+
+            const permissions = response || {};
+            setSelectedRolePermissions(permissions);
+            return permissions;
+        } catch (err) {
+            console.error("Không thể tải quyền của vai trò:", err);
+            toast.error("Không thể tải quyền của vai trò");
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Mở modal quản lý quyền của vai trò
+    const openPermissionsModal = async (roleId) => {
+        setEditingRoleId(roleId);
+        await fetchPermissionsByRoleId(roleId);
+        setShowPermissionsModal(true);
+    };
+
+    // Cập nhật quyền cho vai trò
+    const updatePermissions = async (permissions) => {
+        if (!editingRoleId) {
+            toast.error("Không tìm thấy ID của vai trò");
+            return;
+        }
+        if (!permissions || !permissions.permissionId) {
+            toast.error("Thiếu permissionId!");
+            return;
+        }
+
+
+        setLoading(true);
+        try {
+            await permissionService.updatePermission({
+                permissionId: permissions.permissionId,
+                canManagePost: permissions.canManagePost || false,
+                canManageCandidate: permissions.canManageCandidate || false,
+                canManageChatRoom: permissions.canManageChatRoom || false,
+                canManageMember: permissions.canManageMember || false,
+                canManageMilestone: permissions.canManageMilestone || false
+            });
+
+            toast.success("Đã cập nhật quyền thành công");
+            setShowPermissionsModal(false);
+            fetchRoles(); // Refresh danh sách vai trò
+        } catch (err) {
+            toast.error("Không thể cập nhật quyền");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Tạo vai trò mới
     const createRole = async () => {
@@ -312,9 +376,9 @@ export default function useMemberManagement(startupId) {
 
     // Xóa vai trò
     const deleteRole = async (roleId) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xóa vai trò này không?")) {
-            return;
-        }
+        // if (!window.confirm("Bạn có chắc chắn muốn xóa vai trò này không?")) {
+        //     return;
+        // }
 
         setLoading(true);
         try {
@@ -346,6 +410,8 @@ export default function useMemberManagement(startupId) {
         newMemberRole,
         roles,
         newRole,
+        selectedRolePermissions,
+        showPermissionsModal,
 
         // Actions
         setSelectedMember,
@@ -356,6 +422,8 @@ export default function useMemberManagement(startupId) {
         setNewMemberRole,
         setNewRole,
         setSelectedUser,
+        setShowPermissionsModal,
+        setSelectedRolePermissions,
 
         // Methods
         fetchMembers,
@@ -368,6 +436,9 @@ export default function useMemberManagement(startupId) {
         createRole,
         updateRole,
         deleteRole,
-        leaveStartup
+        leaveStartup,
+        openPermissionsModal,
+        updatePermissions,
+        fetchPermissionsByRoleId
     };
 } 

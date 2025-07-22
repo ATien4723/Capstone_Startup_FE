@@ -744,7 +744,8 @@ const useMilestone = () => {
                         priority: response.priority || taskFormData.priority || 'medium',
                         dueDate: response.dueDate || taskFormData.dueDate || null,
                         note: response.note || taskFormData.note || '',
-                        assignees: taskFormData.assignee ? [taskFormData.assignee] : []
+                        assignees: taskFormData.assignee ? [taskFormData.assignee] : [],
+                        assignto: response.assignto || [] // Thêm trường này
                     };
 
                     // Cập nhật UI

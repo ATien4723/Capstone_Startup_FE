@@ -6,7 +6,7 @@ import { changePassword, getAccountInfo, updateProfile, verifyCCCD, setStatusVer
 import { getUserId } from "@/apis/authService";
 import Navbar from '@components/Navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faCamera, faIdCard, faUser, faCheck, faTimes, faRedo, faCheckCircle, faEye } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import Webcam from 'react-webcam';
 
@@ -69,6 +69,11 @@ const Setting = () => {
     const [showCCCDVerify, setShowCCCDVerify] = useState(false);
     // Tự động lấy accountId từ localStorage
     const accountId = getUserId();
+
+    // Thêm state cho hiển thị mật khẩu
+    const [showOldPassword, setShowOldPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
     // Thêm state cho xác thực CCCD
     const [cccdFrontFile, setCccdFrontFile] = useState(null);
@@ -160,7 +165,7 @@ const Setting = () => {
     // Hàm xử lý xác thực CCCD
     const handleVerifyCCCD = async () => {
         if (!cccdFrontFile || !cccdBackFile || !selfieFile) {
-            toast.error('Vui lòng tải lên đầy đủ ảnh CCCD mặt trước, mặt sau và ảnh selfie');
+            toast.error('Please upload both front and back CCCD images and a selfie.');
             return;
         }
 
@@ -192,26 +197,26 @@ const Setting = () => {
             }
 
             if (response.isMatch) {
-                toast.success('Xác thực CCCD thành công!');
+                toast.success('CCCD verification successful!');
 
-                // Nếu xác thực thành công, gọi API để cập nhật trạng thái tài khoản
+                // If verification is successful, call API to update account status
                 try {
                     await setStatusVerified(accountId);
-                    toast.success('Tài khoản đã được xác thực thành công!');
+                    toast.success('Account verified successfully!');
 
-                    // Cập nhật lại thông tin profile
+                    // Refresh profile data
                     const updatedProfile = await getAccountInfo(accountId);
                     setProfile(updatedProfile);
                 } catch (verifyError) {
-                    console.error('Lỗi cập nhật trạng thái tài khoản:', verifyError);
-                    toast.error('Không thể cập nhật trạng thái tài khoản. Vui lòng thử lại sau.');
+                    console.error('Error updating account status:', verifyError);
+                    toast.error('Could not update account status. Please try again later.');
                 }
             } else {
-                toast.warning('Xác thực CCCD không thành công. Vui lòng kiểm tra lại ảnh.');
+                toast.warning('CCCD verification failed. Please check the images.');
             }
         } catch (error) {
-            console.error('Lỗi xác thực CCCD:', error);
-            toast.error(error.response?.data?.error || 'Lỗi xác thực CCCD. Vui lòng thử lại sau.');
+            console.error('CCCD verification error:', error);
+            toast.error(error.response?.data?.error || 'CCCD verification failed. Please try again later.');
         } finally {
             setVerifyLoading(false);
         }
@@ -223,7 +228,7 @@ const Setting = () => {
             setProfileLoading(true);
             getAccountInfo(accountId)
                 .then(res => setProfile(res))
-                .catch(() => setProfileMsg('Không thể tải thông tin tài khoản'))
+                .catch(() => setProfileMsg('Could not load account information'))
                 .finally(() => setProfileLoading(false));
         }
     }, [activeTab, accountId]);
@@ -232,22 +237,65 @@ const Setting = () => {
         e.preventDefault();
         setLoading(true);
         setMessage("");
+
+        // Kiểm tra yêu cầu mật khẩu
+        const passwordRequirements = checkPasswordRequirements(newPassword);
+        if (!passwordRequirements.minLength || !passwordRequirements.uppercase ||
+            !passwordRequirements.lowercase || !passwordRequirements.number ||
+            !passwordRequirements.special) {
+            setMessage("New password does not meet security requirements!");
+            setLoading(false);
+            return;
+        }
+
+        // Kiểm tra mật khẩu xác nhận
+        if (newPassword !== confirmPassword) {
+            setMessage("Confirm password does not match!");
+            setLoading(false);
+            return;
+        }
+
         try {
             await changePassword(accountId, {
                 oldPassword,
                 newPassword,
                 confirmPassword,
             });
-            setMessage("Đổi mật khẩu thành công!");
+            setMessage("Password changed successfully!");
             setOldPassword("");
             setNewPassword("");
             setConfirmPassword("");
         } catch (error) {
-            setMessage(error?.response?.data || "Đổi mật khẩu thất bại!");
+            setMessage(error?.response?.data || "Password change failed!");
         } finally {
             setLoading(false);
         }
     };
+
+    // Thêm hàm kiểm tra yêu cầu mật khẩu
+    const checkPasswordRequirements = (password) => {
+        return {
+            minLength: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+        };
+    };
+
+    // Tính toán kiểm tra các yêu cầu mật khẩu khi người dùng nhập
+    const newPasswordRequirements = checkPasswordRequirements(newPassword);
+
+    // Thêm component hiển thị yêu cầu mật khẩu
+    const PasswordRequirement = ({ met, text }) => (
+        <div className="flex items-center space-x-2 text-sm">
+            <FontAwesomeIcon
+                icon={met ? faCheck : faTimes}
+                className={met ? "text-green-500" : "text-red-500"}
+            />
+            <span className={met ? "text-green-500" : "text-red-500"}>{text}</span>
+        </div>
+    );
 
     const fetchBlockedAccounts = async () => {
         setBlockedLoading(true);
@@ -255,7 +303,7 @@ const Setting = () => {
             const res = await getBlockedAccounts(accountId);
             setBlockedAccounts(res || []);
         } catch (err) {
-            toast.error("Không thể tải danh sách block");
+            toast.error("Could not load blocked accounts list");
         }
         setBlockedLoading(false);
     };
@@ -263,10 +311,10 @@ const Setting = () => {
     const handleUnblock = async (blockedId) => {
         try {
             await unblockAccount(accountId, blockedId);
-            toast.success("Đã bỏ chặn tài khoản!");
+            toast.success("Unblocked account!");
             setBlockedAccounts(prev => prev.filter(acc => acc.blockedAccountId !== blockedId));
         } catch (err) {
-            toast.error("Bỏ chặn thất bại!");
+            toast.error("Unblock failed!");
         }
     };
 
@@ -333,14 +381,14 @@ const Setting = () => {
                                             if (file) {
                                                 // Kiểm tra kích thước file (giới hạn 5MB)
                                                 if (file.size > 5 * 1024 * 1024) {
-                                                    setFileError("File không được vượt quá 5MB");
+                                                    setFileError("File cannot exceed 5MB");
                                                     return;
                                                 }
 
                                                 // Kiểm tra định dạng file
                                                 const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
                                                 if (!validTypes.includes(file.type)) {
-                                                    setFileError("Chỉ chấp nhận file ảnh (JPEG, PNG, GIF)");
+                                                    setFileError("Only image files (JPEG, PNG, GIF) are accepted");
                                                     return;
                                                 }
 
@@ -368,9 +416,9 @@ const Setting = () => {
                                                         // Gọi API với formData, không phải object chứa preview
                                                         await updateProfile(accountId, formData);
 
-                                                        toast.success('Cập nhật ảnh đại diện thành công!');
+                                                        toast.success('Profile picture updated successfully!');
                                                     } catch (err) {
-                                                        toast.error('Cập nhật ảnh đại diện thất bại!');
+                                                        toast.error('Failed to update profile picture!');
                                                     }
                                                 }
                                             };
@@ -395,7 +443,7 @@ const Setting = () => {
                                 {/* Right: Formik Form */}
                                 <div className="flex-1">
                                     {profileLoading ? (
-                                        <div className="text-center text-gray-500">Đang tải...</div>
+                                        <div className="text-center text-gray-500">Loading...</div>
                                     ) : profile ? (
                                         <Formik
                                             initialValues={{
@@ -497,7 +545,7 @@ const Setting = () => {
                                             )}
                                         </Formik>
                                     ) : (
-                                        <div className="text-center text-red-500">{profileMsg || 'Không có dữ liệu'}</div>
+                                        <div className="text-center text-red-500">{profileMsg || 'No data'}</div>
                                     )}
                                 </div>
                             </div>
@@ -565,18 +613,18 @@ const Setting = () => {
                                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                                             <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-3xl" />
                                         </div>
-                                        <h3 className="text-xl font-semibold text-green-700 mb-2">Tài khoản đã được xác thực</h3>
+                                        <h3 className="text-xl font-semibold text-green-700 mb-2">Account verified</h3>
                                         <p className="text-center text-gray-600">
-                                            {/* Tài khoản của bạn đã được xác thực danh tính thành công.
-                                            Bạn có thể sử dụng đầy đủ các tính năng của hệ thống. */}
-                                            xác thực thành công
+                                            {/* Your account has been verified.
+                                            You can now use all the features of the system. */}
+                                            verification successful
                                         </p>
                                     </div>
                                 ) : (
                                     <>
                                         <p className="text-gray-600 mb-6 text-center max-w-2xl">
-                                            {/* Để xác thực danh tính, vui lòng tải lên ảnh CCCD/CMND mặt trước, mặt sau và chụp ảnh selfie của bạn.
-                                            Hệ thống sẽ tự động trích xuất thông tin từ ảnh CCCD và xác thực danh tính của bạn. */}
+                                            {/* To verify your identity, please upload your CCCD/ID card front, back, and a selfie.
+                                            The system will automatically extract information from the CCCD image and verify your identity. */}
                                             kkkkk
                                         </p>
 
@@ -591,7 +639,7 @@ const Setting = () => {
                                                     <div className="relative w-full h-48 mb-2">
                                                         <img
                                                             src={cccdFrontPreview}
-                                                            alt="CCCD mặt trước"
+                                                            alt="CCCD front"
                                                             className="w-full h-full object-cover rounded-lg"
                                                         />
                                                         <button
@@ -608,10 +656,10 @@ const Setting = () => {
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
-                                                        <span className="font-semibold text-center mb-1">CCCD mặt trước</span>
+                                                        <span className="font-semibold text-center mb-1">CCCD front</span>
                                                     </>
                                                 )}
-                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, under 10MB)</span>
                                                 <input
                                                     type="file"
                                                     ref={cccdFrontRef}
@@ -630,7 +678,7 @@ const Setting = () => {
                                                     <div className="relative w-full h-48 mb-2">
                                                         <img
                                                             src={cccdBackPreview}
-                                                            alt="CCCD mặt sau"
+                                                            alt="CCCD back"
                                                             className="w-full h-full object-cover rounded-lg"
                                                         />
                                                         <button
@@ -647,10 +695,10 @@ const Setting = () => {
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faIdCard} className="text-4xl text-blue-400 mb-4" />
-                                                        <span className="font-semibold text-center mb-1">CCCD mặt sau</span>
+                                                        <span className="font-semibold text-center mb-1">CCCD back</span>
                                                     </>
                                                 )}
-                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, dưới 10MB)</span>
+                                                <span className="text-xs text-gray-500 text-center">(JPG, PNG, under 10MB)</span>
                                                 <input
                                                     type="file"
                                                     ref={cccdBackRef}
@@ -697,7 +745,7 @@ const Setting = () => {
                                                     <div className="relative w-full h-48 mb-2">
                                                         <img
                                                             src={selfiePreview}
-                                                            alt="Ảnh selfie"
+                                                            alt="Selfie"
                                                             className="w-full h-full object-cover rounded-lg"
                                                         />
                                                         <div className="absolute top-2 right-2 flex space-x-2">
@@ -725,8 +773,8 @@ const Setting = () => {
                                                 ) : (
                                                     <div className="flex flex-col items-center w-full">
                                                         <FontAwesomeIcon icon={faUser} className="text-4xl text-blue-400 mb-4" />
-                                                        <span className="font-semibold text-center mb-1">Ảnh selfie</span>
-                                                        <span className="text-xs text-gray-500 text-center mb-4">(Chụp ảnh hoặc tải lên)</span>
+                                                        <span className="font-semibold text-center mb-1">Selfie</span>
+                                                        <span className="text-xs text-gray-500 text-center mb-4">(Take a photo or upload)</span>
 
                                                         <div className="flex space-x-4 mt-2">
                                                             <button
@@ -734,11 +782,11 @@ const Setting = () => {
                                                                 className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center"
                                                                 onClick={openCamera}
                                                             >
-                                                                <FontAwesomeIcon icon={faCamera} className="mr-1" /> Chụp ảnh
+                                                                <FontAwesomeIcon icon={faCamera} className="mr-1" /> Take Photo
                                                             </button>
 
                                                             {/* <label className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors flex items-center cursor-pointer">
-                                                                <FontAwesomeIcon icon={faUser} className="mr-1" /> Tải lên
+                                                                <FontAwesomeIcon icon={faUser} className="mr-1" /> Upload
                                                                 <input
                                                                     type="file"
                                                                     ref={selfieRef}
@@ -763,14 +811,14 @@ const Setting = () => {
                                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                                     }`}
                                             >
-                                                {verifyLoading ? 'Đang xác thực...' : 'Xác thực danh tính'}
+                                                {verifyLoading ? 'Verifying...' : 'Verify Identity'}
                                             </button>
                                         </div>
 
                                         {/* Hiển thị kết quả xác thực */}
                                         {verifyResult && (
                                             <div className="w-full max-w-4xl mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                                                <h3 className="text-lg font-semibold mb-4">Kết quả xác thực</h3>
+                                                <h3 className="text-lg font-semibold mb-4">Verification Result</h3>
 
                                                 <div className="space-y-4">
                                                     <div className="flex items-center">
@@ -778,11 +826,11 @@ const Setting = () => {
                                                             <FontAwesomeIcon icon={verifyResult.isFaceMatched ? faCheck : faTimes} />
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium">Xác thực khuôn mặt</p>
+                                                            <p className="font-medium">Face Verification</p>
                                                             <p className="text-sm text-gray-600">
                                                                 {verifyResult.isFaceMatched
-                                                                    ? 'Khuôn mặt trong ảnh selfie khớp với ảnh trên CCCD'
-                                                                    : 'Khuôn mặt trong ảnh selfie không khớp với ảnh trên CCCD'}
+                                                                    ? 'Face in selfie matches CCCD image'
+                                                                    : 'Face in selfie does not match CCCD image'}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -847,21 +895,89 @@ const Setting = () => {
                                 </div>
                                 <form className="space-y-4" onSubmit={handleChangePassword}>
                                     <div>
-                                        <label className="block">Old Password</label>
-                                        <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={oldPassword} onChange={e => setOldPassword(e.target.value)} required />
+                                        <label className="block">Current Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showOldPassword ? "text" : "password"}
+                                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                                value={oldPassword}
+                                                onChange={e => setOldPassword(e.target.value)}
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowOldPassword(!showOldPassword)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                <FontAwesomeIcon icon={faEye} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block">New Password</label>
-                                        <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+                                        <div className="relative">
+                                            <input
+                                                type={showNewPassword ? "text" : "password"}
+                                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                                value={newPassword}
+                                                onChange={e => setNewPassword(e.target.value)}
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                <FontAwesomeIcon icon={faEye} />
+                                            </button>
+                                        </div>
+                                        {/* Hiển thị yêu cầu mật khẩu */}
+                                        {newPassword && (
+                                            <div className="mt-2 space-y-1">
+                                                <PasswordRequirement met={newPasswordRequirements.minLength} text="Minimum 8 characters" />
+                                                <PasswordRequirement met={newPasswordRequirements.uppercase} text="Contains at least one uppercase letter" />
+                                                <PasswordRequirement met={newPasswordRequirements.lowercase} text="Contains at least one lowercase letter" />
+                                                <PasswordRequirement met={newPasswordRequirements.number} text="Contains at least one number" />
+                                                <PasswordRequirement met={newPasswordRequirements.special} text="Contains at least one special character" />
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block">Confirm New Password</label>
-                                        <input type="password" className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                                        <div className="relative">
+                                            <input
+                                                type={showConfirmNewPassword ? "text" : "password"}
+                                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                                value={confirmPassword}
+                                                onChange={e => setConfirmPassword(e.target.value)}
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                <FontAwesomeIcon icon={faEye} />
+                                            </button>
+                                        </div>
+                                        {/* Kiểm tra mật khẩu xác nhận */}
+                                        {confirmPassword && newPassword !== confirmPassword && (
+                                            <div className="text-red-500 text-sm mt-1">Confirm password does not match</div>
+                                        )}
                                     </div>
                                     <div className="flex gap-2 items-center">
-                                        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto" disabled={loading}>{loading ? "Changing..." : "Change Password"}</button>
+                                        <button
+                                            type="submit"
+                                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
+                                            disabled={loading || !oldPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword ||
+                                                !newPasswordRequirements.minLength || !newPasswordRequirements.uppercase ||
+                                                !newPasswordRequirements.lowercase || !newPasswordRequirements.number ||
+                                                !newPasswordRequirements.special}
+                                        >
+                                            {loading ? "Changing..." : "Change Password"}
+                                        </button>
                                     </div>
-                                    {message && <div className="text-sm mt-2 text-red-500">{message}</div>}
+                                    {message && <div className={`text-sm mt-2 ${message.includes("success") ? "text-green-500" : "text-red-500"}`}>{message}</div>}
                                 </form>
                             </>
                         )}
