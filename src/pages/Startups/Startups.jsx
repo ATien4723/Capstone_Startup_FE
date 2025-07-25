@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faFilter, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faFilter, faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
-import { getAllStartups } from '@/apis/startupService';
+import { getAllStartups, getStage } from '@/apis/startupService';
+import { getAllCategories } from '@/apis/categoryService';
 
 const Startups = () => {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -12,33 +13,50 @@ const Startups = () => {
     const [startups, setStartups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [fundingStages, setFundingStages] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
 
     useEffect(() => {
-        const fetchStartups = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const response = await getAllStartups();
-                // API trả về cấu trúc { items: [...], totalCount, pageNumber, ... }
-                const data = response?.items;
-                console.log("Startups data:", data);
-                setStartups(data);
+
+                // Fetch startups
+                const startupResponse = await getAllStartups();
+                const startupData = startupResponse?.items;
+                // console.log("Startups data:", startupData);
+                setStartups(startupData);
+
+                const categoryResponse = await getAllCategories();
+                // console.log("Categories data:", categoryResponse);
+                if (Array.isArray(categoryResponse) && categoryResponse.length > 0) {
+                    setCategories([
+                        { category_ID: 0, category_Name: "All" },
+                        ...categoryResponse
+                    ]);
+                }
+
+                const stageResponse = await getStage();
+                // console.log("Stages data:", stageResponse);
+                if (Array.isArray(stageResponse) && stageResponse.length > 0) {
+                    setFundingStages(stageResponse);
+                }
+
                 setLoading(false);
             } catch (err) {
-                console.error('Error loading startups data:', err);
+                console.error('Error loading data:', err);
                 setError('Unable to load startups data. Please try again later.');
                 setLoading(false);
                 setStartups([]);
             }
         };
 
-        fetchStartups();
+        fetchData();
     }, []);
 
     const toggleFilters = () => setIsFiltersOpen(!isFiltersOpen);
-
-    // Danh sách danh mục và giai đoạn
-    const categories = ['All', 'Technology', 'Healthcare', 'E-commerce', 'FinTech', 'Education', 'Sustainability', 'AI'];
-    const fundingStages = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C+'];
 
     const categoryColors = {
         Technology: 'bg-blue-600',
@@ -50,18 +68,67 @@ const Startups = () => {
         AI: 'bg-purple-500',
     };
 
-    // Đảm bảo startups là một mảng trước khi lọc
+    // Lọc startups dựa trên danh mục và giai đoạn được chọn
     const filteredStartups = Array.isArray(startups) ? startups.filter(startup => {
         if (!startup) return false;
+
+        // Lọc theo danh mục
         const categoryMatch = activeCategory === 'All' ||
             (startup.categories && Array.isArray(startup.categories) && startup.categories.includes(activeCategory));
+
+        // Lọc theo giai đoạn
         const stageMatch = activeFundingStage === '' || startup.stage === activeFundingStage;
-        return categoryMatch && stageMatch;
+
+        // Lọc theo từ khóa tìm kiếm
+        const searchMatch = searchTerm === '' ||
+            (startup.startup_Name && startup.startup_Name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (startup.description && startup.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (startup.location && startup.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (startup.categories && Array.isArray(startup.categories) &&
+                startup.categories.some(cat => cat.toLowerCase().includes(searchTerm.toLowerCase())));
+
+        return categoryMatch && stageMatch && searchMatch;
     }) : [];
+
+    // Xử lý khi thay đổi từ khóa tìm kiếm
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value);
+    };
+
+    // Xử lý khi nhấn nút tìm kiếm
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        // Tìm kiếm đã được thực hiện trong filteredStartups
+    };
+
+    // Xóa từ khóa tìm kiếm
+    const clearSearch = () => {
+        setSearchTerm('');
+    };
 
     // Chia startups thành featured và all (sử dụng status verified làm tiêu chí)
     const featuredStartups = filteredStartups.filter(startup => startup && startup.status === "verified");
     const allStartups = filteredStartups.filter(startup => startup && startup.status == "verified");
+
+    // Xử lý khi chọn danh mục
+    const handleCategoryClick = (categoryName) => {
+        // Nếu đã chọn thì bỏ chọn và quay về 'All'
+        if (activeCategory === categoryName) {
+            setActiveCategory('All');
+        } else {
+            setActiveCategory(categoryName);
+        }
+    };
+
+    // Xử lý khi chọn giai đoạn
+    const handleStageClick = (stage) => {
+        // Nếu đã chọn thì bỏ chọn và quay về trống
+        if (activeFundingStage === stage.stageName) {
+            setActiveFundingStage('');
+        } else {
+            setActiveFundingStage(stage.stageName);
+        }
+    };
 
     // Hiển thị loading hoặc error message
     if (loading) {
@@ -111,24 +178,38 @@ const Startups = () => {
 
                 {/* Search and Filters Section */}
                 <div className="bg-white rounded-xl shadow-md p-5 mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex col-span-2">
                             <input
                                 type="text"
                                 className="w-full px-4 py-2 border border-gray-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 placeholder="Search startups by name, category, or location..."
+                                value={searchTerm}
+                                onChange={handleSearch}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
                             />
-                            <button className="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 transition-all">
+                            <button
+                                className="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 transition-all"
+                                onClick={handleSearchSubmit}
+                            >
                                 <FontAwesomeIcon icon={faSearch} />
                             </button>
                         </div>
                         <div className="flex gap-3">
-                            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            {searchTerm && (
+                                <button
+                                    onClick={clearSearch}
+                                    className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition-all flex items-center"
+                                >
+                                    Clear Search <FontAwesomeIcon icon={faTimesCircle} className="ml-2" />
+                                </button>
+                            )}
+                            {/* <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                 <option>Sort By</option>
                                 <option>Newest</option>
                                 <option>Most Funded</option>
                                 <option>Most Popular</option>
-                            </select>
+                            </select> */}
                             <button
                                 onClick={toggleFilters}
                                 className="bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-all flex items-center"
@@ -145,14 +226,14 @@ const Startups = () => {
                                 <div className="flex flex-wrap gap-2">
                                     {categories.map((category) => (
                                         <button
-                                            key={category}
-                                            onClick={() => setActiveCategory(category)}
-                                            className={`px-4 py-1 rounded-full text-sm transition-all ${activeCategory === category
+                                            key={category.category_ID}
+                                            onClick={() => handleCategoryClick(category.category_Name)}
+                                            className={`px-4 py-1 rounded-full text-sm transition-all ${activeCategory === category.category_Name
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white'
                                                 }`}
                                         >
-                                            {category}
+                                            {category.category_Name}
                                         </button>
                                     ))}
                                 </div>
@@ -161,14 +242,14 @@ const Startups = () => {
                                 <div className="flex flex-wrap gap-2">
                                     {fundingStages.map((stage) => (
                                         <button
-                                            key={stage}
-                                            onClick={() => setActiveFundingStage(stage)}
-                                            className={`px-4 py-1 rounded-full text-sm transition-all ${activeFundingStage === stage
+                                            key={stage.stageId}
+                                            onClick={() => handleStageClick(stage)}
+                                            className={`px-4 py-1 rounded-full text-sm transition-all ${activeFundingStage === stage.stageName
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white'
                                                 }`}
                                         >
-                                            {stage}
+                                            {stage.stageName}
                                         </button>
                                     ))}
                                 </div>
@@ -197,7 +278,7 @@ const Startups = () => {
                                         )}
                                         <img
                                             src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
-                                            alt={`${startup.startup_Name}`}
+                                            alt={startup.startup_Name || "Startup"}
                                             className="w-full h-full object-cover rounded-t-xl"
                                         />
                                         {startup.status === "verified" && (
@@ -227,7 +308,7 @@ const Startups = () => {
                                             <div className="flex items-center">
                                                 <img
                                                     src={startup.logo || 'https://via.placeholder.com/30x30?text=Logo'}
-                                                    alt={startup.startup_Name}
+                                                    alt={startup.startup_Name || "Logo"}
                                                     className="w-8 h-8 rounded-full mr-2"
                                                 />
                                                 <div>
@@ -272,7 +353,7 @@ const Startups = () => {
                                     )}
                                     <img
                                         src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
-                                        alt={`${startup.startup_Name}`}
+                                        alt={startup.startup_Name || "Startup"}
                                         className="w-full h-full object-cover rounded-t-xl"
                                     />
                                     {startup.status === "verified" && (

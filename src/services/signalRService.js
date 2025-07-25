@@ -130,6 +130,12 @@ class SignalRService {
             .build();
 
         this.chatConnection.on('ReceiveMessage', (message) => {
+            console.log('Nhận tin nhắn từ sự kiện ReceiveMessage:', message);
+            if (onReceiveMessage) onReceiveMessage(message);
+        });
+
+        this.chatConnection.on('NewMessage', (message) => {
+            console.log('Nhận tin nhắn từ sự kiện NewMessage:', message);
             if (onReceiveMessage) onReceiveMessage(message);
         });
 

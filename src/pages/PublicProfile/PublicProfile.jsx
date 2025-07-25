@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faEdit, faCamera, faMapMarkerAlt,
@@ -7,6 +7,7 @@ import {
     faHeart, faComment, faShareSquare, faSmile, faTrash,
     faUserPlus, faUserCheck, faEyeSlash, faSearch, faBan, faUnlock, faEllipsisV
 } from '@fortawesome/free-solid-svg-icons';
+import useMessage from '@/hooks/useMessage';
 import { faLinkedin, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faHeart as farHeart, faComment as farComment, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -17,6 +18,7 @@ import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
 import { blockAccount, unblockAccount, getBlockedAccounts } from '@/apis/accountService';
+import { getUserId } from '@/apis/authService';
 import { toast } from 'react-toastify';
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
@@ -104,8 +106,33 @@ const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleB
 
 const PublicProfile = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     // Thêm state để theo dõi các bài đăng đã mở rộng nội dung
     const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Lấy ID người dùng hiện tại
+    const currentUserIdForChat = getUserId();
+
+    // Hook để sử dụng chức năng nhắn tin
+    const { ensureChatRoom } = useMessage(currentUserIdForChat);
+
+    // Hàm xử lý khi bấm nút nhắn tin
+    const handleStartChat = async () => {
+        try {
+            const result = await ensureChatRoom(id);
+            // console.log("Kết quả tạo phòng chat:", result);
+
+            if (result) {
+                localStorage.setItem('selectedChatRoomId', result);
+                navigate('/messages');
+            } else {
+                toast.error('Không thể tạo phòng chat. Vui lòng thử lại sau!');
+            }
+        } catch (error) {
+            console.error('Lỗi khi tạo phòng chat:', error);
+            toast.error('Không thể tạo phòng chat. Vui lòng thử lại sau!');
+        }
+    };
 
     // Hàm để toggle hiển thị nội dung đầy đủ/rút gọn
     const togglePostContent = (postId) => {
@@ -273,17 +300,26 @@ const PublicProfile = () => {
 
                     {/* Follow Button - Hiển thị khi xem profile người khác */}
                     {currentUserId != id && (
-                        <button
-                            className={`px-4 py-2 rounded-lg font-medium shadow flex items-center gap-2 transition-colors ${isFollowing
-                                ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                            onClick={handleFollowToggleWithRefresh}
-                            disabled={followLoading || isCheckingFollow}
-                        >
-                            <FontAwesomeIcon icon={isFollowing ? faUserCheck : faUserPlus} />
-                            {followLoading || isCheckingFollow ? 'Processing...' : isFollowing ? 'Following' : 'Follow'}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                className={`px-4 py-2 rounded-lg font-medium shadow flex items-center gap-2 transition-colors ${isFollowing
+                                    ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                onClick={handleFollowToggleWithRefresh}
+                                disabled={followLoading || isCheckingFollow}
+                            >
+                                <FontAwesomeIcon icon={isFollowing ? faUserCheck : faUserPlus} />
+                                {followLoading || isCheckingFollow ? 'Processing...' : isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button
+                                className="px-4 py-2 rounded-lg font-medium shadow flex items-center gap-2 transition-colors bg-green-600 text-white hover:bg-green-700"
+                                onClick={handleStartChat}
+                            >
+                                <FontAwesomeIcon icon={faComment} />
+                                <span>Message</span>
+                            </button>
+                        </div>
                     )}
 
                     {/* Edit Cover Button - Chỉ hiển thị khi xem profile của chính mình */}

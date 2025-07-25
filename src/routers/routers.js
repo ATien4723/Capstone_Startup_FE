@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import InternshipDetail from "@pages/InternshipDetail/InternshipDetail";
+import Messages from '@/pages/Messages/Messages';
 
 const StartupDetail = lazy(() => import('@/pages/StartupDetails/StartupDetail'));
 const Login = lazy(() => import('@/pages/Login/Login'));
@@ -181,6 +182,11 @@ const routers = [
         parent: '/me',
         protected: true,
         requireStartup: true
+    },
+    {
+        path: '/messages',
+        component: Messages,
+        protected: true
     },
     {
         path: "/internship/:id",

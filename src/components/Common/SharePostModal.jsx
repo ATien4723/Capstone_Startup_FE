@@ -9,8 +9,13 @@ import SharedPost from '@/components/PostMedia/SharedPost';
 const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) => {
     const [shareContent, setShareContent] = useState('');
     const [isSharing, setIsSharing] = useState(false);
+    const [expandedContent, setExpandedContent] = useState(false);
 
     if (!isOpen || !post) return null;
+
+    const toggleContent = () => {
+        setExpandedContent(!expandedContent);
+    };
 
     const handleSharePost = async () => {
         try {
@@ -102,7 +107,19 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
 
                         <div className="mt-2">
                             {post.title && <div className="font-semibold">{post.title}</div>}
-                            <p className="text-sm text-gray-700 line-clamp-2">{post.content}</p>
+                            <p className={`text-sm text-gray-700 ${!expandedContent ? 'line-clamp-2' : ''}`}>{post.content}</p>
+
+                            {post.content && post.content.length > 100 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleContent();
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 text-sm mt-1 font-medium"
+                                >
+                                    {expandedContent ? 'Thu gọn' : 'Xem thêm'}
+                                </button>
+                            )}
 
                             {post.postMedia && post.postMedia.length > 0 && (
                                 // <div className="mt-1 h-30 bg-gray-200 rounded overflow-hidden">

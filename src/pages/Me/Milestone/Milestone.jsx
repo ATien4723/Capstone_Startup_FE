@@ -196,7 +196,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
         // Nếu không có cả hai
         return {
             type: 'notAssigned',
-            content: 'Chưa giao'
+            content: 'Unassigned'
         };
 
         // Nếu có assignees (mảng các id), ưu tiên sử dụng
@@ -410,13 +410,13 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                             >
                                 <FontAwesomeIcon icon={faCopy} className="mr-3 text-gray-500" /> Change Priority
                             </button>
-
+                            {/* 
                             <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 onClick={(e) => handleEditFieldClick('coverColor', e)}
                             >
                                 <FontAwesomeIcon icon={faTag} className="mr-3 text-gray-500" /> Change Cover Color
-                            </button>
+                            </button> */}
 
                             {/* <button
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -464,7 +464,7 @@ const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTask
                 </div>
                 <div className="flex items-center text-gray-500">
                     <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
-                    <span className="truncate max-w-[100px]">{task.dueDate ? formatVietnameseDate(task.dueDate) : "Chưa đặt hạn"}</span>
+                    <span className="truncate max-w-[100px]">{task.dueDate ? formatVietnameseDate(task.dueDate) : "No due date"}</span>
                 </div>
             </div>
         </div>

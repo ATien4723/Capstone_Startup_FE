@@ -144,7 +144,7 @@ export default function Navbar() {
         { label: 'Home', to: '/home' },
         { label: 'My Network', to: '/mynetwork' },
         { label: 'Startups', to: '/startups' },
-        { label: 'InvestmentEvents', to: '/investment-events' },
+        { label: 'Messages', to: '/messages' },
         { label: 'Policy', to: '/policy' },
     ];
 

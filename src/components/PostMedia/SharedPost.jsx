@@ -11,6 +11,12 @@ const SharedPost = ({ postShareId }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const [expandedContent, setExpandedContent] = useState(false);
+
+    const toggleContent = () => {
+        setExpandedContent(!expandedContent);
+    };
+
     useEffect(() => {
         const fetchSharedPost = async () => {
             if (!postShareId) return;
@@ -82,7 +88,19 @@ const SharedPost = ({ postShareId }) => {
 
             <div className="mt-2">
                 {sharedPost.title && <h6 className="font-semibold mb-1">{sharedPost.title}</h6>}
-                <p className="text-gray-800 text-sm">{sharedPost.content}</p>
+                <p className={`text-sm text-gray-700 ${!expandedContent ? 'line-clamp-2' : ''}`}>{sharedPost.content}</p>
+
+                {sharedPost.content && sharedPost.content.length > 100 && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleContent();
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-sm mt-1 font-medium"
+                    >
+                        {expandedContent ? 'Thu gọn' : 'Xem thêm'}
+                    </button>
+                )}
 
                 {sharedPost.postMedia && sharedPost.postMedia.length > 0 && (
                     <div className="mt-2">
