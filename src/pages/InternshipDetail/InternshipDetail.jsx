@@ -5,7 +5,7 @@ import {
     faBriefcase, faLocationDot, faClock, faCalendarAlt, faMoneyBillWave,
     faBuilding, faGraduationCap, faLanguage, faCheckCircle, faUserPlus,
     faBookmark, faShareAlt, faArrowLeft, faSpinner, faClock as faClockSolid, faInfoCircle,
-    faStar, faUserTie, faChevronRight, faFileUpload, faTimes, faCheck
+    faStar, faUserTie, faChevronRight, faFileUpload, faTimes, faCheck, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import { getInternshipPostDetail } from '@/apis/postService';
@@ -85,6 +85,12 @@ const InternshipDetail = () => {
     };
 
     const handleApply = () => {
+        // Kiểm tra nếu đã hết hạn
+        if (isDeadlinePassed(post?.deadline)) {
+            toast.error('Đã hết hạn nộp CV cho vị trí này');
+            return;
+        }
+
         // const accountId = getUserId();
         // if (!accountId) {
         //     toast.error('Vui lòng đăng nhập để nộp CV');
@@ -161,6 +167,14 @@ const InternshipDetail = () => {
     const handleShare = () => {
         // Xử lý khi người dùng chia sẻ bài đăng
         alert('Chức năng chia sẻ đang được phát triển');
+    };
+
+    // Kiểm tra nếu đã hết hạn nộp
+    const isDeadlinePassed = (deadlineDate) => {
+        if (!deadlineDate) return false;
+        const deadline = new Date(deadlineDate);
+        const today = new Date();
+        return deadline < today;
     };
 
     if (loading) {
@@ -348,6 +362,11 @@ const InternshipDetail = () => {
                                         <div className="bg-green-50 text-green-700 px-6 py-3 rounded-lg flex items-center justify-center font-medium border border-green-200">
                                             <FontAwesomeIcon icon={faCheck} className="mr-2" />
                                             Đã nộp CV
+                                        </div>
+                                    ) : isDeadlinePassed(post?.deadline) ? (
+                                        <div className="bg-red-50 text-red-700 px-6 py-3 rounded-lg flex items-center justify-center font-medium border border-red-200">
+                                            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                                            Đã hết hạn
                                         </div>
                                     ) : (
                                         <button

@@ -34,12 +34,58 @@ export default function Messages() {
     const [searchQuery, setSearchQuery] = useState('');
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null); // Thêm ref cho container tin nhắn
+    const [loadingMore, setLoadingMore] = useState(false); // Thêm state để theo dõi trạng thái tải thêm tin nhắn
 
     // State cho modal xem ảnh phóng to
     const [imagePreview, setImagePreview] = useState({
         show: false,
         url: ''
     });
+
+    // Hàm xử lý khi cuộn xuống để tải thêm tin nhắn cũ
+    const handleScroll = () => {
+        if (!messagesContainerRef.current || loadingMore || !hasMoreMessages) return;
+
+        // Với flex-col-reverse, chúng ta cần theo dõi khoảng cách từ dưới cùng
+        const { scrollHeight, scrollTop, clientHeight } = messagesContainerRef.current;
+        const scrolledToBottom = scrollHeight - scrollTop - clientHeight;
+
+        // Nếu người dùng đã cuộn xuống gần cuối khung chat (trong khoảng 200px từ cuối)
+        if (scrolledToBottom < 200) {
+            setLoadingMore(true);
+
+            // Lưu vị trí cuộn và chiều cao hiện tại
+            const oldScrollHeight = messagesContainerRef.current.scrollHeight;
+            const oldScrollTop = messagesContainerRef.current.scrollTop;
+
+            // Tải thêm tin nhắn
+            loadMoreMessages().then(() => {
+                setLoadingMore(false);
+
+                // Sau khi tải thêm tin nhắn, giữ nguyên vị trí cuộn tương đối
+                setTimeout(() => {
+                    if (messagesContainerRef.current) {
+                        const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                        const heightDifference = newScrollHeight - oldScrollHeight;
+                        messagesContainerRef.current.scrollTop = oldScrollTop + heightDifference;
+                    }
+                }, 100);
+            }).catch(() => {
+                setLoadingMore(false);
+            });
+        }
+    };
+
+    // Thêm sự kiện lắng nghe cuộn cho container tin nhắn
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll);
+            return () => {
+                container.removeEventListener('scroll', handleScroll);
+            };
+        }
+    }, [loadingMore, hasMoreMessages, selectedChatRoom]);
 
     // Hàm mở modal xem ảnh
     const openImagePreview = (url) => {
@@ -57,12 +103,11 @@ export default function Messages() {
         });
     };
 
-    // Cuộn xuống cuối cùng khi có tin nhắn mới
+    // Không cần cuộn xuống khi có tin nhắn mới nữa vì đã dùng flex-col-reverse
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         // Chia sẻ ref với window để có thể truy cập từ useMessage.js
         window.messagesEndRef = messagesEndRef;
-    }, [messages]);
+    }, [messages, selectedChatRoom]);
 
     // Khi component unmount, xóa ref khỏi window
     useEffect(() => {
@@ -93,12 +138,13 @@ export default function Messages() {
     const handleSendMessage = (e) => {
         e.preventDefault();
         if (!messageInput.trim() && attachments.length === 0) return;
-        sendNewMessage(messageInput);
+        sendNewMessage(e);
     };
 
     // Xử lý khi chọn phòng chat
     const handleSelectChatRoom = (chatRoomId) => {
         setSelectedChatRoom(chatRoomId);
+        // Không cần cuộn nữa vì đã dùng flex-col-reverse
     };
 
     // Lọc phòng chat theo từ khóa tìm kiếm
@@ -108,11 +154,23 @@ export default function Messages() {
 
     // Hiển thị nội dung tin nhắn dựa trên loại
     const renderMessageContent = (msg) => {
+        const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
+
+        // Kiểm tra nếu tin nhắn là hình ảnh
+        if (msg.type === "File" && msg.content && (
+            msg.content.toLowerCase().endsWith('.jpg') ||
+            msg.content.toLowerCase().endsWith('.jpeg') ||
+            msg.content.toLowerCase().endsWith('.png') ||
+            msg.content.toLowerCase().endsWith('.gif') ||
+            msg.content.toLowerCase().endsWith('.webp')
+        )) {
+            return null; // Hình ảnh sẽ được xử lý riêng ở nơi khác
+        }
+
         switch (msg.type) {
             case "Link":
                 return (
                     <div className="leading-relaxed">
-                        <div>{msg.content}</div>
                         {/* Tách và hiển thị các link */}
                         {msg.content.match(/(https?:\/\/[^\s]+)/g)?.map((url, index) => (
                             <a
@@ -128,45 +186,42 @@ export default function Messages() {
                     </div>
                 );
             case "File":
-                return (
-                    <div className="leading-relaxed">
-                        {/* Đối với loại File, content chính là URL của file */}
-                        {msg.content && (
-                            <div>
-                                {/* Kiểm tra loại file để hiển thị phù hợp */}
-                                {msg.content.match(/\.(jpeg|jpg|gif|png)$/i) ? (
-                                    // Hiển thị ảnh
-                                    <img
-                                        src={msg.content}
-                                        alt="Hình ảnh"
-                                        className="max-w-full rounded-lg max-h-60 object-contain cursor-pointer hover:opacity-90"
-                                        onClick={() => openImagePreview(msg.content)}
-                                    />
-                                ) : msg.content.match(/\.(mp4|webm|ogg)$/i) ? (
-                                    // Hiển thị video
-                                    <video
-                                        controls
-                                        className="max-w-full rounded-lg max-h-60"
-                                    >
-                                        <source src={msg.content} />
-                                        Trình duyệt của bạn không hỗ trợ video này.
-                                    </video>
-                                ) : (
-                                    // Hiển thị link tải xuống cho các loại file khác
-                                    <a
-                                        href={msg.content}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center bg-gray-100 rounded-md p-2 hover:bg-gray-200 transition-colors"
-                                    >
-                                        <i className="fas fa-file-download mr-2 text-blue-500"></i>
-                                        <span className="text-sm text-blue-600">Tải xuống tệp đính kèm</span>
-                                    </a>
-                                )}
+                if (!msg.content) return null;
+
+                // Kiểm tra loại file để hiển thị phù hợp
+                if (msg.content.toLowerCase().endsWith('.mp4') ||
+                    msg.content.toLowerCase().endsWith('.webm') ||
+                    msg.content.toLowerCase().endsWith('.mov') ||
+                    msg.content.toLowerCase().endsWith('.avi')) {
+                    return (
+                        <div className="flex flex-col">
+                            <div className="overflow-hidden shadow-md rounded-lg">
+                                <video
+                                    controls
+                                    className="max-w-full"
+                                >
+                                    <source src={msg.content} />
+                                    Trình duyệt của bạn không hỗ trợ video này.
+                                </video>
                             </div>
-                        )}
-                    </div>
-                );
+                        </div>
+                    );
+                } else {
+                    // Hiển thị link tải xuống cho các loại file khác
+                    return (
+                        <div className="flex items-center bg-gray-50 p-3 text-gray-700 rounded-lg">
+                            <i className="fas fa-file-download mr-2 text-blue-500"></i>
+                            <a
+                                href={msg.content}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline hover:text-blue-500 transition-colors"
+                            >
+                                Tệp đính kèm
+                            </a>
+                        </div>
+                    );
+                }
             case "Text":
             default:
                 return <div className="leading-relaxed">{msg.content}</div>;
@@ -231,6 +286,7 @@ export default function Messages() {
                             </div>
                         </div>
 
+                        {/* Danh sách phòng chat */}
                         <div className="overflow-y-auto flex-1">
                             {loading && chatRooms.length === 0 ? (
                                 <div className="flex justify-center items-center h-32">
@@ -255,7 +311,15 @@ export default function Messages() {
                                                     {room.latestMessageTime ? getRelativeTime(room.latestMessageTime) : ''}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-500 truncate max-w-[200px]">{room.latestMessageContent}</p>
+                                            <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                                                {room.latestMessageContent && (
+                                                    room.latestMessageContent.toLowerCase().endsWith('.jpg') ||
+                                                    room.latestMessageContent.toLowerCase().endsWith('.jpeg') ||
+                                                    room.latestMessageContent.toLowerCase().endsWith('.png') ||
+                                                    room.latestMessageContent.toLowerCase().endsWith('.gif') ||
+                                                    room.latestMessageContent.toLowerCase().endsWith('.webp')
+                                                ) ? '🖼️ Hình ảnh' : room.latestMessageContent}
+                                            </p>
                                         </div>
                                         {room.unreadCount > 0 && (
                                             <span className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -281,7 +345,7 @@ export default function Messages() {
                             <>
                                 {/* Header cuộc trò chuyện */}
                                 <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white shadow-sm">
-                                    {loading ? (
+                                    {!chatRooms.find(r => r.chatRoomId === selectedChatRoom) ? (
                                         <div className="flex items-center">
                                             <CircularProgress size={20} />
                                             <div className="ml-3">
@@ -313,9 +377,17 @@ export default function Messages() {
                                 </div>
 
                                 {/* Tin nhắn */}
-                                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50"
+                                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50 flex flex-col-reverse"
                                     ref={messagesContainerRef} // Thêm ref cho container tin nhắn
                                 >
+                                    <div ref={messagesEndRef} />
+                                    {/* Hiển thị trạng thái đang tải thêm tin nhắn */}
+                                    {loadingMore && (
+                                        <div className="flex justify-center py-2">
+                                            <CircularProgress size={20} />
+                                        </div>
+                                    )}
+
                                     {loading && messages.length === 0 ? (
                                         <div className="flex justify-center items-center h-32">
                                             <CircularProgress size={24} />
@@ -324,10 +396,17 @@ export default function Messages() {
                                         <>
                                             {/* Hiển thị tin nhắn theo thứ tự thời gian, tin nhắn cũ nhất ở trên cùng */}
                                             {messages
-                                                .sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt))
+                                                .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
                                                 .map(msg => {
                                                     const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
                                                     const senderInfo = chatMembers[msg.senderId || msg.senderAccountId];
+                                                    const isImageMessage = msg.type === "File" && msg.content && (
+                                                        msg.content.toLowerCase().endsWith('.jpg') ||
+                                                        msg.content.toLowerCase().endsWith('.jpeg') ||
+                                                        msg.content.toLowerCase().endsWith('.png') ||
+                                                        msg.content.toLowerCase().endsWith('.gif') ||
+                                                        msg.content.toLowerCase().endsWith('.webp')
+                                                    );
 
                                                     return (
                                                         <div
@@ -341,27 +420,51 @@ export default function Messages() {
                                                                     className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
                                                                 />
                                                             )}
-                                                            <div
-                                                                className={`max-w-sm px-4 py-3 rounded-lg shadow-sm ${isMe
-                                                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none'
-                                                                    : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
-                                                                    }`}
-                                                                style={{ wordBreak: 'break-word' }}
-                                                            >
-                                                                {!isMe && (
-                                                                    <div className="font-semibold text-sm mb-1">
-                                                                        {senderInfo?.fullName || msg.name || 'User'}
+
+                                                            {isImageMessage ? (
+                                                                <div className="max-w-sm">
+                                                                    {!isMe && (
+                                                                        <div className="font-semibold text-sm mb-1 ml-1">
+                                                                            {senderInfo?.fullName || msg.name || 'User'}
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="rounded-lg overflow-hidden shadow-sm">
+                                                                        <img
+                                                                            src={msg.content}
+                                                                            alt="Hình ảnh"
+                                                                            className="max-w-full object-contain cursor-pointer hover:opacity-90"
+                                                                            onClick={() => openImagePreview(msg.content)}
+                                                                        />
                                                                     </div>
-                                                                )}
-                                                                {renderMessageContent(msg)}
-                                                                <div className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
-                                                                    {getRelativeTime(msg.sentAt || msg.createdAt)}
+
+                                                                    <div className={`text-xs mt-1 ml-1 ${isMe ? 'text-right text-gray-600' : 'text-gray-500'}`}>
+                                                                        {getRelativeTime(msg.sentAt || msg.createdAt)}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            ) : (
+                                                                <div
+                                                                    className={`max-w-sm px-4 py-3 rounded-lg shadow-sm ${isMe
+                                                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none'
+                                                                        : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                                                                        }`}
+                                                                    style={{ wordBreak: 'break-word' }}
+                                                                >
+                                                                    {!isMe && (
+                                                                        <div className="font-semibold text-sm mb-1">
+                                                                            {senderInfo?.fullName || msg.name || 'User'}
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Không hiển thị content trực tiếp, mà dùng renderMessageContent */}
+                                                                    {renderMessageContent(msg)}
+                                                                    <div className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                                                                        {getRelativeTime(msg.sentAt || msg.createdAt)}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}
-                                            <div ref={messagesEndRef} />
                                         </>
                                     )}
                                 </div>

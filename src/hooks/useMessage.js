@@ -4,11 +4,12 @@ import { toast } from 'react-toastify';
 import signalRService from '@/services/signalRService';
 import { getAccountInfo } from '@/apis/accountService';
 
-// Hằng số cho các loại tin nhắn
+// Định nghĩa các loại tin nhắn
 const MESSAGE_TYPES = {
-    TEXT: "Text",
-    LINK: "Link",
-    FILE: "File"
+    TEXT: 'Text',
+    FILE: 'File',
+    IMAGE: 'Image',
+    VIDEO: 'Video'
 };
 
 export default function useMessage(currentUserId, initialChatRoomId = null) {
@@ -24,6 +25,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     const [attachments, setAttachments] = useState([]);
     const [messagePage, setMessagePage] = useState(1);
     const [hasMoreMessages, setHasMoreMessages] = useState(true);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     // State quản lý thành viên chat
     const [chatMembers, setChatMembers] = useState({});
@@ -58,7 +60,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     }, [currentUserId, selectedChatRoom]); // Phụ thuộc vào currentUserId và selectedChatRoom
 
     // Lấy tin nhắn của phòng chat
-    const fetchMessages = useCallback(async (chatRoomId, page = 1, pageSize = 10) => {
+    const fetchMessages = useCallback(async (chatRoomId, page = 1, pageSize = 20) => {
         if (!chatRoomId) return Promise.resolve();
 
         setLoading(true);
@@ -70,21 +72,38 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 Array.isArray(response) ? response : [];
 
             // Chuẩn hóa dữ liệu tin nhắn
-            const normalizedMessages = messageList.map(msg => ({
-                id: msg.messageId,
-                chatRoomId: msg.chatRoomId,
-                senderId: msg.senderAccountId,
-                content: msg.content,
-                sentAt: msg.sentAt,
-                isRead: msg.isRead,
-                type: msg.type || MESSAGE_TYPES.TEXT, // Thêm loại tin nhắn, mặc định là TEXT
-                name: msg.name,
-                avatarUrl: msg.avatarUrl
-            }));
+            const normalizedMessages = messageList.map(msg => {
+                // Xác định loại tin nhắn dựa trên nội dung
+                let messageType = msg.type || MESSAGE_TYPES.TEXT;
+
+                // Kiểm tra nội dung để xác định loại tin nhắn chính xác hơn
+                if (msg.content) {
+                    const contentLower = msg.content.toLowerCase();
+                    if (contentLower.endsWith('.jpg') || contentLower.endsWith('.jpeg') ||
+                        contentLower.endsWith('.png') || contentLower.endsWith('.gif') ||
+                        contentLower.endsWith('.webp')) {
+                        messageType = MESSAGE_TYPES.FILE;
+                    }
+                }
+
+                return {
+                    id: msg.messageId,
+                    chatRoomId: msg.chatRoomId,
+                    senderId: msg.senderAccountId,
+                    content: msg.content,
+                    sentAt: msg.sentAt,
+                    isRead: msg.isRead,
+                    type: messageType, // Sử dụng loại tin nhắn đã xác định
+                    name: msg.name,
+                    avatarUrl: msg.avatarUrl
+                };
+            });
 
             if (page === 1) {
+                // Sắp xếp tin nhắn từ mới đến cũ để phù hợp với flex-col-reverse
                 setMessages(normalizedMessages);
             } else {
+                // Khi tải thêm tin nhắn cũ, thêm vào cuối mảng
                 setMessages(prev => [...prev, ...normalizedMessages]);
             }
 
@@ -175,102 +194,18 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         }
     };
 
-    // Gửi tin nhắn mới
-    const sendNewMessage = async (content) => {
-        if (!selectedChatRoom || (!content.trim() && attachments.length === 0)) return;
-
-        // Xác định loại tin nhắn
-        let messageType = MESSAGE_TYPES.TEXT;
-        let messageContent = content;
-
-        // Kiểm tra nếu là link
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        if (urlRegex.test(content)) {
-            messageType = MESSAGE_TYPES.LINK;
-        }
-
-        // Nếu có file đính kèm thì là loại FILE
-        if (attachments.length > 0) {
-            messageType = MESSAGE_TYPES.FILE;
-            // Khi gửi file, không gửi kèm nội dung văn bản
-            messageContent = "";
-        }
-
-        // Reset input trước khi gửi
-        setMessageInput('');
-
-        // Chỉ tạo tin nhắn tạm thời nếu không phải loại FILE
-        // Vì tin nhắn FILE cần URL từ server sau khi upload
-        if (messageType !== MESSAGE_TYPES.FILE) {
-            // Tạo tin nhắn tạm thời để hiển thị ngay lập tức
-            const tempMessage = {
-                id: `temp-${Date.now()}`,
-                chatRoomId: selectedChatRoom,
-                senderId: currentUserId,
-                content: messageContent,
-                sentAt: new Date().toISOString(),
-                isTemp: true, // Đánh dấu là tin nhắn tạm thời
-                type: messageType // Thêm loại tin nhắn
-            };
-
-            // Thêm tin nhắn tạm thời vào đầu danh sách
-            setMessages(prev => [tempMessage, ...prev]);
-
-            // Cuộn xuống cuối cùng
-            setTimeout(() => {
-                if (window.messagesEndRef && window.messagesEndRef.current) {
-                    window.messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 100);
-        } else {
-            // Hiển thị loading khi đang upload file
-            setLoading(true);
-        }
-
+    // Gửi tin nhắn
+    const sendMessage = async (data) => {
+        setLoading(true);
+        setError(null);
         try {
-            // Chuẩn bị FormData
-            const formData = new FormData();
-            formData.append('ChatRoomId', selectedChatRoom);
-            formData.append('SenderAccountId', currentUserId);
-
-            // SenderStartupId có thể null
-            if (window.currentStartupId) {
-                formData.append('SenderStartupId', window.currentStartupId);
-            }
-
-            // Nếu là loại File, chỉ gửi file mà không gửi nội dung văn bản
-            if (messageType !== MESSAGE_TYPES.FILE) {
-                formData.append('Content', messageContent);
-            }
-
-            formData.append('Type', messageType); // Thêm loại tin nhắn
-
-            // Thêm file đính kèm
-            if (attachments.length > 0) {
-                attachments.forEach(file => {
-                    formData.append('File', file);
-                });
-            }
-
-            // Gửi tin nhắn
-            await chatService.sendMessage(formData);
-
-            // Reset attachments
-            setAttachments([]);
-
-            // Tắt loading nếu đang upload file
-            if (messageType === MESSAGE_TYPES.FILE) {
-                setLoading(false);
-            }
+            const res = await chatService.sendMessage(data);
+            return res;
         } catch (err) {
-            console.error('Lỗi khi gửi tin nhắn:', err);
-            toast.error('Không thể gửi tin nhắn. Vui lòng thử lại sau!');
+            setError(err);
+            throw err;
+        } finally {
             setLoading(false);
-
-            // Xóa tin nhắn tạm thời nếu gửi thất bại và không phải loại FILE
-            if (messageType !== MESSAGE_TYPES.FILE) {
-                setMessages(prev => prev.filter(msg => !msg.isTemp));
-            }
         }
     };
 
@@ -300,6 +235,21 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     const handleNewMessage = useCallback((message) => {
         if (!message || message.chatRoomId !== selectedChatRoom) return;
 
+        console.log("Nhận tin nhắn mới từ SignalR:", message);
+
+        // Xác định loại tin nhắn dựa trên nội dung
+        let messageType = message.type || MESSAGE_TYPES.TEXT;
+
+        // Kiểm tra nội dung để xác định loại tin nhắn chính xác hơn
+        if (message.content) {
+            const contentLower = message.content.toLowerCase();
+            if (contentLower.endsWith('.jpg') || contentLower.endsWith('.jpeg') ||
+                contentLower.endsWith('.png') || contentLower.endsWith('.gif') ||
+                contentLower.endsWith('.webp')) {
+                messageType = MESSAGE_TYPES.FILE;  // Đánh dấu là file để hiển thị đúng
+            }
+        }
+
         // Chuẩn hóa dữ liệu tin nhắn từ SignalR nếu cần
         const normalizedMessage = {
             id: message.messageId || message.id,
@@ -308,7 +258,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             content: message.content,
             sentAt: message.sentAt,
             isRead: message.isRead,
-            type: message.type || MESSAGE_TYPES.TEXT, // Thêm loại tin nhắn, mặc định là TEXT
+            type: messageType,
             name: message.name, // Thêm tên người gửi
             avatarUrl: message.avatarUrl // Thêm avatar người gửi
         };
@@ -319,19 +269,18 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
 
             // Kiểm tra xem tin nhắn đã có trong danh sách chưa
             const exists = filtered.some(msg =>
-            (msg.id == normalizedMessage.messageId ||
+            (msg.id == normalizedMessage.id ||
                 (msg.content == normalizedMessage.content &&
                     msg.senderId == normalizedMessage.senderId &&
                     Math.abs(new Date(msg.sentAt) - new Date(normalizedMessage.sentAt)) < 5000))
             );
 
             if (!exists) {
-                // Thêm tin nhắn mới và cuộn xuống cuối cùng
-                setTimeout(() => {
-                    if (window.messagesEndRef && window.messagesEndRef.current) {
-                        window.messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                    }
-                }, 100);
+                // Với flex-col-reverse, thêm tin nhắn mới vào đầu mảng
+                // Không cần cuộn xuống vì tin nhắn mới sẽ tự hiển thị ở dưới cùng
+
+                // Cập nhật thông tin tin nhắn mới nhất trong danh sách phòng chat
+                updateChatRoomLatestMessage(normalizedMessage);
 
                 return [normalizedMessage, ...filtered];
             }
@@ -354,6 +303,91 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             fetchChatMembersInfo([normalizedMessage]);
         }
     }, [selectedChatRoom, chatMembers]);
+
+    // Cập nhật thông tin tin nhắn mới nhất của phòng chat
+    const updateChatRoomLatestMessage = (message) => {
+        if (!message || !message.chatRoomId) return;
+
+        setChatRooms(prev => {
+            return prev.map(room => {
+                if (room.chatRoomId === message.chatRoomId) {
+                    // Xác định nội dung hiển thị cho tin nhắn mới nhất
+                    let displayContent = message.content;
+
+                    // Nếu là hình ảnh, hiển thị "🖼️ Hình ảnh" thay vì URL
+                    if (message.type === MESSAGE_TYPES.FILE && message.content) {
+                        const contentLower = message.content.toLowerCase();
+                        if (contentLower.endsWith('.jpg') || contentLower.endsWith('.jpeg') ||
+                            contentLower.endsWith('.png') || contentLower.endsWith('.gif') ||
+                            contentLower.endsWith('.webp')) {
+                            displayContent = '🖼️ Hình ảnh';
+                        } else if (contentLower.endsWith('.mp4') || contentLower.endsWith('.webm') ||
+                            contentLower.endsWith('.mov') || contentLower.endsWith('.avi')) {
+                            displayContent = '🎬 Video';
+                        } else {
+                            displayContent = '📎 Tệp đính kèm';
+                        }
+                    }
+
+                    // Cập nhật thông tin tin nhắn mới nhất
+                    return {
+                        ...room,
+                        latestMessageContent: displayContent,
+                        latestMessageTime: message.sentAt
+                    };
+                }
+                return room;
+            });
+        });
+    };
+
+    // Xử lý gửi tin nhắn
+    const sendNewMessage = async (e) => {
+        e.preventDefault();
+        if (!messageInput.trim() && !selectedFile && attachments.length === 0) return;
+
+        try {
+            const messageContent = messageInput;
+            setMessageInput('');
+
+            // Xác định loại tin nhắn dựa vào file được chọn
+            let typeMessage = MESSAGE_TYPES.TEXT;
+            if (selectedFile) {
+                typeMessage = MESSAGE_TYPES.FILE;  // Tất cả các loại file đều là FILE
+            }
+
+            const messageData = {
+                content: messageContent,
+                chatRoomId: selectedChatRoom,
+                senderAccountId: currentUserId,
+                type: typeMessage,
+                file: selectedFile,
+                attachments: attachments
+            };
+
+            // Tạo một đối tượng tin nhắn tạm thời để cập nhật UI ngay lập tức
+            const tempMessage = {
+                id: `temp-${Date.now()}`,
+                chatRoomId: selectedChatRoom,
+                senderId: currentUserId,
+                content: messageContent,
+                sentAt: new Date().toISOString(),
+                isRead: false,
+                type: typeMessage
+            };
+
+            // Cập nhật tin nhắn mới nhất trong phòng chat ngay lập tức
+            updateChatRoomLatestMessage(tempMessage);
+
+            await sendMessage(messageData);
+
+            setSelectedFile(null);
+            setAttachments([]);
+        } catch (err) {
+            console.error("Lỗi khi gửi tin nhắn:", err);
+            toast.error('Gửi tin nhắn thất bại!');
+        }
+    };
 
     // Xử lý khi thay đổi phòng chat
     useEffect(() => {
@@ -402,7 +436,10 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
 
     // Xử lý thêm file đính kèm
     const handleAddAttachment = (files) => {
-        setAttachments(prev => [...prev, ...files]);
+        if (files && files.length > 0) {
+            setSelectedFile(files[0]); // Lưu file đầu tiên vào selectedFile
+            setAttachments(prev => [...prev, ...Array.from(files)]); // Lưu tất cả các file vào attachments
+        }
     };
 
     // Xử lý xóa file đính kèm
@@ -421,10 +458,12 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         attachments,
         chatMembers,
         hasMoreMessages,
+        selectedFile,
 
         // Setters
         setSelectedChatRoom,
         setMessageInput,
+        setSelectedFile,
 
         // Actions
         fetchChatRooms,

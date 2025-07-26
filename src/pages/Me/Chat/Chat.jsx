@@ -200,7 +200,7 @@ export default function Chat() {
                                 <li className="px-4 py-3 text-center text-gray-500">
                                     <div className="flex flex-col items-center justify-center py-4">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16l2.879-2.879m0 0a3 3 0 11-4.243-4.242 3 3 0 014.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         <p className="text-sm">Không tìm thấy kênh nào</p>
                                     </div>
@@ -297,7 +297,7 @@ export default function Chat() {
                                         )}
 
                                         {/* Nội dung tin nhắn */}
-                                        {msg.messageType === 'Image' ? (
+                                        {msg.messageType === "File" ? (
                                             <div className="flex flex-col max-w-sm">
                                                 {!isMe && (
                                                     <div className="font-semibold mb-1 ml-1 text-sm">
@@ -305,35 +305,78 @@ export default function Chat() {
                                                     </div>
                                                 )}
                                                 <div className={`${isMe ? 'rounded-l-lg rounded-br-lg' : 'rounded-r-lg rounded-bl-lg'} overflow-hidden shadow-md`}>
-                                                    <img
-                                                        src={msg.messageContent}
-                                                        alt="Image"
-                                                        className="w-full cursor-pointer hover:opacity-90 transition-opacity"
-                                                        onClick={() => window.open(msg.messageContent, '_blank')}
-                                                    />
+                                                    {msg.messageContent.toLowerCase().endsWith('.jpg') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.jpeg') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.png') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.gif') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.webp') ? (
+                                                        <img
+                                                            src={msg.messageContent}
+                                                            alt="Image"
+                                                            className="w-full cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => window.open(msg.messageContent, '_blank')}
+                                                        />
+                                                    ) : msg.messageContent.toLowerCase().endsWith('.mp4') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.webm') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.mov') ||
+                                                        msg.messageContent.toLowerCase().endsWith('.avi') ? (
+                                                        <video
+                                                            src={msg.messageContent}
+                                                            controls
+                                                            className="w-full"
+                                                        >
+                                                            Video not supported
+                                                        </video>
+                                                    ) : (
+                                                        <div className="flex items-center bg-gray-50 p-3 text-gray-700">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                            </svg>
+                                                            <a
+                                                                href={msg.messageContent}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="underline hover:text-blue-500 transition-colors"
+                                                            >
+                                                                Tệp đính kèm
+                                                            </a>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-1 ml-1">
                                                     {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
                                                 </div>
                                             </div>
-                                        ) : msg.messageType === 'Video' ? (
+                                        ) : msg.messageType === "Link" ? (
                                             <div className="flex flex-col max-w-sm">
                                                 {!isMe && (
                                                     <div className="font-semibold mb-1 ml-1 text-sm">
                                                         {msg.memberTitle || msg.accountId}
                                                     </div>
                                                 )}
-                                                <div className={`${isMe ? 'rounded-l-lg rounded-br-lg' : 'rounded-r-lg rounded-bl-lg'} overflow-hidden shadow-md`}>
-                                                    <video
-                                                        src={msg.messageContent}
-                                                        controls
-                                                        className="w-full"
-                                                    >
-                                                        Video not supported
-                                                    </video>
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1 ml-1">
-                                                    {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
+                                                <div
+                                                    className={`max-w-sm px-4 py-3 rounded-lg shadow-sm
+                                                        ${isMe
+                                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none'
+                                                            : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                                        </svg>
+                                                        <a
+                                                            href={msg.messageContent}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`underline ${isMe ? 'text-white' : 'hover:text-blue-500'} transition-colors`}
+                                                        >
+                                                            {msg.messageContent}
+                                                        </a>
+                                                    </div>
+                                                    <div className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                                                        {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : (
@@ -350,25 +393,7 @@ export default function Chat() {
                                                         {msg.memberTitle || msg.accountId}
                                                     </div>
                                                 )}
-                                                <div>
-                                                    {msg.messageType === "File" ? (
-                                                        <div className="flex items-center">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                                            </svg>
-                                                            <a
-                                                                href={msg.messageContent}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="underline hover:text-blue-500 transition-colors"
-                                                            >
-                                                                Attached file
-                                                            </a>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="leading-relaxed">{msg.messageContent}</div>
-                                                    )}
-                                                </div>
+                                                <div className="leading-relaxed">{msg.messageContent}</div>
                                                 <div className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
                                                     {msg.sentAt ? getRelativeTime(msg.sentAt) : ''}
                                                 </div>
@@ -719,7 +744,7 @@ export default function Chat() {
                         <div className="text-center mb-6">
                             <div className="bg-blue-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                             </div>
                             <h3 className="text-xl font-bold text-gray-800">Create New Chat Group</h3>

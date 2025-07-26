@@ -15,6 +15,8 @@ const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
 const CreateStartup = lazy(() => import('@/pages/Startups/CreateStartup'));
 const AccessDenied = lazy(() => import('@/pages/AccessDenied/AccessDenied'));
+const Policy = lazy(() => import('@/pages/Policy/Policy'));
+const PolicyDetail = lazy(() => import('@/pages/Policy/PolicyDetail'));
 
 // Thêm các component mới
 const Me = lazy(() => import('@/pages/Me/Me'));
@@ -100,6 +102,16 @@ const routers = [
     {
         path: '/access-denied',
         component: AccessDenied,
+        protected: true
+    },
+    {
+        path: '/policy',
+        component: Policy,
+        protected: true
+    },
+    {
+        path: '/policy/:id',
+        component: PolicyDetail,
         protected: true
     },
     // Thêm các đường dẫn mới

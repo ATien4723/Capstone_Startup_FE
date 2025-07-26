@@ -26,7 +26,8 @@ export const getRelativeTime = (dateTime, addSuffix = false) => {
     return `${diffHour} hours${suffix}`;
   } else if (diffDay < 7) {
     return `${diffDay} days${suffix}`;
-  } else if (diffWeek < 4) {
+  } else if (diffMonth < 1) {
+    // Nếu chưa đủ 1 tháng, hiển thị theo tuần
     return `${diffWeek} weeks${suffix}`;
   } else if (diffMonth < 12) {
     return `${diffMonth} months${suffix}`;

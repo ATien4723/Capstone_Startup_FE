@@ -57,6 +57,17 @@ const StartupDetail = () => {
         handleUnfollowStartup
     } = useStartupDetail();
 
+    // Thêm state để theo dõi các bài viết đã mở rộng nội dung
+    const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Hàm để toggle hiển thị nội dung đầy đủ/rút gọn
+    const togglePostContent = (postId) => {
+        setExpandedPosts(prev => ({
+            ...prev,
+            [postId]: !prev[postId]
+        }));
+    };
+
     // Lấy accountId của user hiện tại
     const accountId = getUserId();
 
@@ -227,7 +238,18 @@ const StartupDetail = () => {
                     </div>
                     <div>
                         {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
-                        <p className="text-gray-800 whitespace-pre-wrap break-words mb-3">{post.content}</p>
+                        <p className={`text-gray-800 whitespace-pre-wrap break-words mb-3 ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>{post.content}</p>
+                        {post.content && post.content.length > 100 && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePostContent(post.postId);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 text-sm mb-3 font-medium"
+                            >
+                                {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                            </button>
+                        )}
 
                         {/* Hiển thị bài viết được chia sẻ nếu có */}
                         {post.postShareId && (

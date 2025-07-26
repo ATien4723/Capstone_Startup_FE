@@ -418,14 +418,7 @@ export default function useChat(currentUserId) {
             // Xác định loại tin nhắn dựa vào file được chọn
             let typeMessage = "Text";
             if (selectedFile) {
-                const fileType = selectedFile.type.split('/')[0];
-                if (fileType === 'image') {
-                    typeMessage = "Image";
-                } else if (fileType === 'video') {
-                    typeMessage = "Video";
-                } else {
-                    typeMessage = "File";
-                }
+                typeMessage = "File";  // Tất cả các loại file (kể cả hình ảnh và video) đều là FILE
             }
 
             await sendMessage({
