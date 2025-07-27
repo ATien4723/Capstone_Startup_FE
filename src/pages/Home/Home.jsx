@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faEllipsisH, faImage, faPaperclip, faSmile, faPlus, faMapMarkerAlt, faEdit, faTrash, faShareSquare, faComment, faHeart, faEyeSlash,
-    faBriefcase, faLocationDot, faClock, faUserPlus, faUserCheck
+    faBriefcase, faLocationDot, faClock, faUserPlus, faUserCheck, faCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -21,6 +21,7 @@ import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
 import { InteractionContext } from '@/contexts/InteractionContext.jsx';
 import useFollow from '@/hooks/useFollow';
+import useMessage from '@/hooks/useMessage';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -49,6 +50,28 @@ const Home = () => {
             ...prev,
             [postId]: !prev[postId]
         }));
+    };
+
+    // Sử dụng hook useMessage để lấy danh sách phòng chat
+    const {
+        chatRooms,
+        loading: loadingChatRooms,
+        fetchChatRooms
+    } = useMessage(currentUserId);
+
+    // Gọi API lấy danh sách phòng chat khi component mount
+    useEffect(() => {
+        if (currentUserId) {
+            fetchChatRooms(false);
+        }
+    }, [currentUserId, fetchChatRooms]);
+
+    // Hàm chuyển đến trang tin nhắn với phòng chat đã chọn
+    const goToChat = (chatRoomId) => {
+        // Lưu chatRoomId vào localStorage để Messages.jsx có thể sử dụng sau khi chuyển trang
+        localStorage.setItem('selectedChatRoomId', chatRoomId);
+        // Chuyển trực tiếp đến URL của phòng chat
+        navigate(`/messages/u/${chatRoomId}`);
     };
 
     const {
@@ -836,45 +859,66 @@ const Home = () => {
 
                         {/* Messages Card */}
                         <div className="bg-white rounded-lg shadow-md">
-                            <div className="p-4 border-b">
-                                <h5 className="font-bold">Messages</h5>
+                            <div className="p-4 border-b flex justify-between items-center">
+                                <h5 className="font-bold">Tin nhắn</h5>
+                                <Link to="/messages" className="text-blue-600 text-sm hover:underline">
+                                    Xem tất cả
+                                </Link>
                             </div>
                             <div className="p-4">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <img
-                                            src="/api/placeholder/40/40"
-                                            alt="Avatar"
-                                            className="w-10 h-10 rounded-full"
-                                        />
-                                        <div className="flex-1">
-                                            <h6 className="font-semibold text-sm">Sarah Johnson</h6>
-                                            <p className="text-xs text-gray-500 truncate">Hey, how's your project going?</p>
-                                        </div>
-                                        <div className="text-xs text-gray-500">2m</div>
+                                {loadingChatRooms ? (
+                                    <div className="flex justify-center py-4">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <img
-                                            src="/api/placeholder/40/40"
-                                            alt="Avatar"
-                                            className="w-10 h-10 rounded-full"
-                                        />
-                                        <div className="flex-1">
-                                            <h6 className="font-semibold text-sm">Michael Chen</h6>
-                                            <p className="text-xs text-gray-500 truncate">Let's meet tomorrow to discuss...</p>
-                                        </div>
-                                        <div className="text-xs text-gray-500">1h</div>
+                                ) : chatRooms && chatRooms.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {chatRooms.slice(0, 3).map((room) => (
+                                            <div
+                                                key={room.chatRoomId}
+                                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                                                onClick={() => goToChat(room.chatRoomId)}
+                                            >
+                                                <div className="relative">
+                                                    <img
+                                                        src={room.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        alt={room.name || "Chat"}
+                                                        className="w-10 h-10 rounded-full object-cover"
+                                                    />
+                                                    {room.hasUnread && (
+                                                        <FontAwesomeIcon
+                                                            icon={faCircle}
+                                                            className="absolute bottom-0 right-0 text-green-500 text-xs bg-white rounded-full p-0.5"
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h6 className="font-semibold text-sm truncate">{room.name || "Người dùng"}</h6>
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                        {room.latestMessageContent || "Chưa có tin nhắn"}
+                                                    </p>
+                                                </div>
+                                                {room.latestMessageTime && (
+                                                    <div className="text-xs text-gray-500 whitespace-nowrap">
+                                                        {room.latestMessageTime ? getRelativeTime(room.latestMessageTime) : ''}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
-                                <button className="w-full mt-4 text-blue-600 text-sm font-medium">
-                                    View all messages
-                                </button>
+                                ) : (
+                                    <div className="text-center py-3 text-sm text-gray-500">
+                                        Bạn chưa có tin nhắn nào
+                                    </div>
+                                )}
+                                <Link to="/messages" className="block w-full mt-4 text-center text-blue-600 text-sm font-medium hover:underline">
+                                    Tất cả tin nhắn
+                                </Link>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

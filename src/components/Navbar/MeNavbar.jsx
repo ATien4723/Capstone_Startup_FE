@@ -337,7 +337,7 @@ export default function Navbar() {
                             >
                                 <FontAwesomeIcon icon={faBell} className="text-lg hover:text-white/80" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full px-1.5 py-0.5 border-2 border-blue-900">{unreadCount}</span>
+                                    <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full border-2 border-blue-900">{unreadCount}</span>
                                 )}
                             </button>
                             {/* Dropdown thông báo cho mobile */}
@@ -504,7 +504,7 @@ export default function Navbar() {
                                 >
                                     <FontAwesomeIcon icon={faBell} className="text-lg hover:text-white/80" />
                                     {unreadCount > 0 && (
-                                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full px-1.5 py-0.5 border-2 border-blue-900">{unreadCount}</span>
+                                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-semibold rounded-full border-2 border-blue-900">{unreadCount}</span>
                                     )}
                                 </button>
 

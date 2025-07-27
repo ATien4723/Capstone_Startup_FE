@@ -22,6 +22,7 @@ const PolicyDetail = lazy(() => import('@/pages/Policy/PolicyDetail'));
 const Me = lazy(() => import('@/pages/Me/Me'));
 const MeDashboard = lazy(() => import('@/pages/Me/Dashboard/Dashboard'));
 const MeChat = lazy(() => import('@/pages/Me/Chat/Chat'));
+const MeUserChat = lazy(() => import('@/pages/Me/Chat/UserChat'));
 const MePost = lazy(() => import('@/pages/Me/Post/Post'));
 const MeInternshipPost = lazy(() => import('@/pages/Me/Post/InternshipPost'));
 const MeMember = lazy(() => import('@/pages/Me/Member/Member'));
@@ -137,6 +138,13 @@ const routers = [
         requireStartup: true
     },
     {
+        path: '/me/chat/user',
+        component: MeUserChat,
+        parent: '/me',
+        protected: true,
+        requireStartup: true
+    },
+    {
         path: '/me/post',
         component: MePost,
         parent: '/me',
@@ -197,6 +205,11 @@ const routers = [
     },
     {
         path: '/messages',
+        component: Messages,
+        protected: true
+    },
+    {
+        path: '/messages/u/:chatRoomId',
         component: Messages,
         protected: true
     },

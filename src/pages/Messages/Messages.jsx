@@ -5,9 +5,16 @@ import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import Navbar from '@/components/Navbar/Navbar';
 import useMessage from '@/hooks/useMessage';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function Messages() {
+    const { chatRoomId } = useParams();
+    const navigate = useNavigate();
     const currentUserId = getUserId();
+    const isInitializing = useRef(false); // Tham chiếu để kiểm soát quá trình khởi tạo
+    const hasInitialized = useRef(false); // Tham chiếu để đánh dấu đã khởi tạo xong
+
     const {
         chatRooms,
         selectedChatRoom,
@@ -20,6 +27,7 @@ export default function Messages() {
 
         setSelectedChatRoom,
         setMessageInput,
+        setMessages,
 
         fetchChatRooms,
         fetchMessages,
@@ -35,6 +43,8 @@ export default function Messages() {
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null); // Thêm ref cho container tin nhắn
     const [loadingMore, setLoadingMore] = useState(false); // Thêm state để theo dõi trạng thái tải thêm tin nhắn
+    const [switchingRoom, setSwitchingRoom] = useState(false); // Thêm state để theo dõi trạng thái chuyển phòng
+    const [sendingMessage, setSendingMessage] = useState(false); // Thêm state riêng để theo dõi việc gửi tin nhắn
 
     // State cho modal xem ảnh phóng to
     const [imagePreview, setImagePreview] = useState({
@@ -116,35 +126,134 @@ export default function Messages() {
         };
     }, []);
 
-    // Lấy danh sách phòng chat khi component mount
+    // Lấy danh sách phòng chat và tự động chọn phòng đầu tiên nếu không có chatRoomId
     useEffect(() => {
-        fetchChatRooms();
+        // Nếu đang trong quá trình khởi tạo, bỏ qua
+        if (isInitializing.current) return;
 
-        // Kiểm tra xem có chatRoomId được lưu trong localStorage không
-        const savedChatRoomId = localStorage.getItem('selectedChatRoomId');
-        if (savedChatRoomId) {
-            console.log("Đã tìm thấy chatRoomId trong localStorage:", savedChatRoomId);
-            // Đặt timeout nhỏ để đảm bảo danh sách phòng chat đã được tải
-            setTimeout(() => {
-                setSelectedChatRoom(parseInt(savedChatRoomId));
-                localStorage.removeItem('selectedChatRoomId');
-                console.log("Đã chọn phòng chat từ localStorage:", savedChatRoomId);
-            }, 30);
+        // Nếu đã khởi tạo xong và không có thay đổi từ URL, bỏ qua
+        if (hasInitialized.current &&
+            ((chatRoomId && parseInt(chatRoomId) === selectedChatRoom) ||
+                (!chatRoomId && selectedChatRoom))) {
+            return;
         }
-    }, [fetchChatRooms]);
 
+        // Đánh dấu là đang khởi tạo để tránh gọi lại
+        isInitializing.current = true;
+
+        const initializeChat = async () => {
+            try {
+                // Tải danh sách phòng chat
+                await fetchChatRooms(false); // false để không tự động chọn phòng đầu tiên
+
+                // Nếu có chatRoomId từ URL, ưu tiên sử dụng nó
+                if (chatRoomId) {
+                    const roomId = parseInt(chatRoomId);
+                    setMessages([]);
+                    setSelectedChatRoom(roomId);
+                }
+                // Nếu không có chatRoomId từ URL và đã có phòng chat đang chọn, giữ nguyên
+                else if (selectedChatRoom) {
+                    console.log("Giữ nguyên phòng chat đang chọn:", selectedChatRoom);
+                    // Cập nhật URL theo phòng chat đang chọn
+                    navigate(`/messages/u/${selectedChatRoom}`, { replace: true });
+                }
+                // Nếu không có chatRoomId từ URL và không có phòng chat đang chọn
+                else {
+                    // Nếu không có chatRoomId từ URL, kiểm tra localStorage
+                    const savedChatRoomId = localStorage.getItem('selectedChatRoomId');
+                    if (savedChatRoomId) {
+                        const roomId = parseInt(savedChatRoomId);
+                        console.log("Chọn phòng chat từ localStorage:", roomId);
+                        setMessages([]);
+                        setSelectedChatRoom(roomId);
+
+                        // Đánh dấu đang chuyển phòng chat
+                        setSwitchingRoom(true);
+                        setTimeout(() => {
+                            setSwitchingRoom(false);
+                        }, 100);
+
+                        localStorage.removeItem('selectedChatRoomId');
+                        // Cập nhật URL
+                        navigate(`/messages/u/${roomId}`, { replace: true });
+                    }
+                    // Nếu không có cả hai và có ít nhất một phòng chat, chọn phòng đầu tiên
+                    else if (chatRooms.length > 0) {
+                        const firstRoomId = chatRooms[0].chatRoomId;
+                        console.log("Tự động chọn phòng chat đầu tiên:", firstRoomId);
+                        setMessages([]);
+                        setSelectedChatRoom(firstRoomId);
+                        // Cập nhật URL
+                        navigate(`/messages/u/${firstRoomId}`, { replace: true });
+                    }
+                }
+
+                // Đánh dấu là đã khởi tạo xong
+                hasInitialized.current = true;
+            } catch (error) {
+                console.error("Lỗi khi khởi tạo chat:", error);
+            } finally {
+                // Kết thúc quá trình khởi tạo
+                isInitializing.current = false;
+            }
+        };
+
+        initializeChat();
+    }, [chatRoomId, fetchChatRooms, chatRooms, navigate, setMessages, setSelectedChatRoom, selectedChatRoom]);
 
     // Xử lý gửi tin nhắn
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
+        if (sendingMessage) return; // Không gửi nếu đang trong quá trình gửi tin nhắn
         if (!messageInput.trim() && attachments.length === 0) return;
-        sendNewMessage(e);
+
+        try {
+            setSendingMessage(true); // Đánh dấu đang gửi tin nhắn
+            await sendNewMessage(e);
+        } finally {
+            // Đảm bảo luôn reset trạng thái gửi tin nhắn khi hoàn tất
+            setTimeout(() => {
+                setSendingMessage(false);
+            }, 300);
+        }
     };
 
     // Xử lý khi chọn phòng chat
     const handleSelectChatRoom = (chatRoomId) => {
-        setSelectedChatRoom(chatRoomId);
-        // Không cần cuộn nữa vì đã dùng flex-col-reverse
+        if (selectedChatRoom === chatRoomId) {
+            console.log("Đã chọn phòng chat này rồi:", chatRoomId);
+            return; // Tránh chọn lại phòng chat hiện tại
+        }
+
+        // console.log("Người dùng chọn phòng chat:", chatRoomId);
+
+        // Đánh dấu đang chuyển phòng chat
+        setSwitchingRoom(true);
+
+        // Đánh dấu là đang khởi tạo để tránh useEffect gọi lại
+        isInitializing.current = true;
+
+        try {
+            // Làm sạch tin nhắn cũ trước khi chuyển phòng chat
+            setMessages([]);
+
+            // Chọn phòng chat mới
+            setSelectedChatRoom(chatRoomId);
+
+            // Cập nhật URL
+            navigate(`/messages/u/${chatRoomId}`, { replace: true });
+
+            // Đánh dấu là đã khởi tạo xong
+            hasInitialized.current = true;
+        } finally {
+            // Đảm bảo reset flag sau một thời gian nhỏ
+            setTimeout(() => {
+                isInitializing.current = false;
+                // Tắt trạng thái chuyển phòng chat
+                setSwitchingRoom(false);
+            }, 300); // Cho thêm thời gian để tải tin nhắn
+        }
     };
 
     // Lọc phòng chat theo từ khóa tìm kiếm
@@ -300,7 +409,7 @@ export default function Messages() {
                                         className={`w-full flex items-center p-3 hover:bg-gray-100 transition-colors ${selectedChatRoom === room.chatRoomId ? 'bg-blue-100' : ''}`}
                                     >
                                         <img
-                                            src={room.targetAvatar || 'https://via.placeholder.com/40'}
+                                            src={room.targetAvatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
                                             alt={room.targetName}
                                             className="w-12 h-12 rounded-full object-cover"
                                         />
@@ -354,8 +463,17 @@ export default function Messages() {
                                         </div>
                                     ) : (
                                         <div className="flex items-center">
+                                            {/* <button
+                                                className="mr-2 text-gray-600 hover:text-gray-800"
+                                                onClick={() => {
+                                                    setSelectedChatRoom(null);
+                                                    navigate('/messages');
+                                                }}
+                                            >
+                                                <i className="fas fa-arrow-left"></i>
+                                            </button> */}
                                             <img
-                                                src={chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetAvatar || 'https://via.placeholder.com/40'}
+                                                src={chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetAvatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
                                                 alt="Avatar"
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />
@@ -368,6 +486,16 @@ export default function Messages() {
                                         </div>
                                     )}
                                     <div className="relative">
+                                        <button
+                                            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-all duration-200 mr-2"
+                                            title="Sao chép liên kết"
+                                            onClick={() => {
+                                                const url = `${window.location.origin}/messages/u/${selectedChatRoom}`;
+                                                navigator.clipboard.writeText(url);
+                                            }}
+                                        >
+                                            <i className="fas fa-link text-gray-600"></i>
+                                        </button>
                                         <button
                                             className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-all duration-200"
                                         >
@@ -388,9 +516,18 @@ export default function Messages() {
                                         </div>
                                     )}
 
-                                    {loading && messages.length === 0 ? (
+                                    {switchingRoom ? (
+                                        <div className="flex items-center justify-center h-32">
+                                            {/* Không hiển thị loading khi chuyển phòng */}
+                                        </div>
+                                    ) : loading && messages.length === 0 ? (
                                         <div className="flex justify-center items-center h-32">
                                             <CircularProgress size={24} />
+                                        </div>
+                                    ) : messages.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                                            <i className="fas fa-comments text-4xl mb-3"></i>
+                                            <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
                                         </div>
                                     ) : (
                                         <>
@@ -399,7 +536,7 @@ export default function Messages() {
                                                 .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
                                                 .map(msg => {
                                                     const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
-                                                    const senderInfo = chatMembers[msg.senderId || msg.senderAccountId];
+                                                    const senderInfo = chatMembers[msg.senderAccountId];
                                                     const isImageMessage = msg.type === "File" && msg.content && (
                                                         msg.content.toLowerCase().endsWith('.jpg') ||
                                                         msg.content.toLowerCase().endsWith('.jpeg') ||
@@ -408,14 +545,17 @@ export default function Messages() {
                                                         msg.content.toLowerCase().endsWith('.webp')
                                                     );
 
+                                                    // Kiểm tra tin nhắn tạm
+                                                    const isTemp = msg.isTemp === true;
+
                                                     return (
                                                         <div
                                                             key={msg.id || msg.messageId}
-                                                            className={`flex items-start space-x-3 ${isMe ? 'justify-end' : ''}`}
+                                                            className={`flex items-start space-x-3 ${isMe ? 'justify-end' : ''} ${isTemp ? 'opacity-70' : ''}`}
                                                         >
                                                             {!isMe && (
                                                                 <img
-                                                                    src={senderInfo?.avatar || msg.avatarUrl || 'https://via.placeholder.com/40'}
+                                                                    src={senderInfo?.avatarUrl || msg.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
                                                                     alt={senderInfo?.fullName || msg.name || 'User'}
                                                                     className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
                                                                 />
@@ -425,7 +565,7 @@ export default function Messages() {
                                                                 <div className="max-w-sm">
                                                                     {!isMe && (
                                                                         <div className="font-semibold text-sm mb-1 ml-1">
-                                                                            {senderInfo?.fullName || msg.name || 'User'}
+                                                                            {senderInfo?.name || msg.name || 'User'}
                                                                         </div>
                                                                     )}
 
@@ -452,7 +592,7 @@ export default function Messages() {
                                                                 >
                                                                     {!isMe && (
                                                                         <div className="font-semibold text-sm mb-1">
-                                                                            {senderInfo?.fullName || msg.name || 'User'}
+                                                                            {senderInfo?.name || msg.name || 'User'}
                                                                         </div>
                                                                     )}
                                                                     {/* Không hiển thị content trực tiếp, mà dùng renderMessageContent */}
@@ -496,9 +636,9 @@ export default function Messages() {
                                             <button
                                                 type="submit"
                                                 className="bg-blue-600 text-white px-5 py-2 rounded-r-lg hover:bg-blue-700 transition-all flex items-center gap-1"
-                                                disabled={loading}
+                                                disabled={sendingMessage}
                                             >
-                                                {loading ? (
+                                                {sendingMessage ? (
                                                     <div className="flex items-center">
                                                         <i className="fas fa-spinner fa-spin mr-2"></i>
                                                         Đang gửi...
@@ -535,14 +675,8 @@ export default function Messages() {
                         ) : (
                             // Hiển thị khi chưa chọn cuộc trò chuyện
                             <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                <i className="fas fa-comments text-6xl mb-4"></i>
-                                <p className="text-lg font-medium">Chọn một cuộc trò chuyện để bắt đầu</p>
-                                <p className="text-sm mt-2">Hoặc tạo một cuộc trò chuyện mới</p>
-                                <button
-                                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                                >
-                                    Tạo cuộc trò chuyện mới
-                                </button>
+                                <CircularProgress size={30} className="mb-4" />
+                                <p className="text-lg font-medium">Đang chuyển hướng tới phòng chat...</p>
                             </div>
                         )}
                     </div>

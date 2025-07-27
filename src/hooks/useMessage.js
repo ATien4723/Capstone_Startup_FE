@@ -63,11 +63,28 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     const fetchMessages = useCallback(async (chatRoomId, page = 1, pageSize = 20) => {
         if (!chatRoomId) return Promise.resolve();
 
+        // Lưu lại ID phòng chat hiện tại để kiểm tra sau khi API trả về
+        const requestChatRoomId = chatRoomId;
+
+        // Khi tải trang đầu tiên của phòng chat mới, làm sạch tin nhắn cũ trước
+        if (page === 1) {
+            // console.log(`Đặt tin nhắn về mảng rỗng cho phòng ${chatRoomId}`);
+            setMessages([]);
+        }
+
         setLoading(true);
         setError(null);
 
         try {
+            // console.log(`Đang gọi API getMessages cho phòng ${chatRoomId}`);
             const response = await chatService.getMessages(chatRoomId, page, pageSize);
+
+            // Kiểm tra xem phòng chat hiện tại có còn là phòng được yêu cầu không
+            if (selectedChatRoom !== requestChatRoomId) {
+                console.log(`Phòng chat đã thay đổi từ ${requestChatRoomId} sang ${selectedChatRoom}, bỏ qua kết quả`);
+                return null;
+            }
+
             const messageList = Array.isArray(response.items) ? response.items :
                 Array.isArray(response) ? response : [];
 
@@ -99,12 +116,20 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 };
             });
 
+            // Kiểm tra lại lần nữa trước khi cập nhật state
+            if (selectedChatRoom !== requestChatRoomId) {
+                console.log(`Phòng chat đã thay đổi (kiểm tra lần 2), bỏ qua kết quả`);
+                return null;
+            }
+
             if (page === 1) {
                 // Sắp xếp tin nhắn từ mới đến cũ để phù hợp với flex-col-reverse
                 setMessages(normalizedMessages);
+                // console.log(`Đã cập nhật ${normalizedMessages.length} tin nhắn cho phòng ${requestChatRoomId}`);
             } else {
                 // Khi tải thêm tin nhắn cũ, thêm vào cuối mảng
                 setMessages(prev => [...prev, ...normalizedMessages]);
+                // console.log(`Đã thêm ${normalizedMessages.length} tin nhắn cũ cho phòng ${requestChatRoomId}`);
             }
 
             // Kiểm tra xem còn tin nhắn để tải không
@@ -115,13 +140,17 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
 
             return response;
         } catch (err) {
-            setError(err);
-            console.error('Lỗi khi lấy tin nhắn:', err);
+            if (selectedChatRoom === requestChatRoomId) { // Chỉ hiển thị lỗi nếu vẫn là phòng đang xem
+                setError(err);
+                console.error(`Lỗi khi lấy tin nhắn cho phòng ${chatRoomId}:`, err);
+            }
             return Promise.reject(err);
         } finally {
-            setLoading(false);
+            if (selectedChatRoom === requestChatRoomId) { // Chỉ cập nhật loading nếu vẫn là phòng đang xem
+                setLoading(false);
+            }
         }
-    }, []);
+    }, [selectedChatRoom]);
 
     // Cập nhật thông tin người gửi từ response tin nhắn
     const updateChatMembersFromMessages = (messageList) => {
@@ -142,7 +171,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         setChatMembers(updatedMembers);
     };
 
-    // Lấy thông tin người gửi tin nhắn
+    // Lấy thông tin người gửi tin nhắn - Phiên bản cũ (giữ lại để tương thích)
     const fetchChatMembersInfo = async (messageList) => {
         const uniqueSenderIds = [...new Set(messageList.map(msg => msg.senderId))];
 
@@ -152,16 +181,8 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         if (newSenderIds.length === 0) return;
 
         try {
-            const memberInfoPromises = newSenderIds.map(id => getAccountInfo(id));
-            const memberInfos = await Promise.all(memberInfoPromises);
-
-            setChatMembers(prev => {
-                const updated = { ...prev };
-                newSenderIds.forEach((id, index) => {
-                    updated[id] = memberInfos[index];
-                });
-                return updated;
-            });
+            // Sử dụng fetchCurrentUserInfo để lấy thông tin người dùng
+            await Promise.all(newSenderIds.map(id => fetchCurrentUserInfo(id)));
         } catch (err) {
             console.error('Lỗi khi lấy thông tin người dùng:', err);
         }
@@ -209,18 +230,25 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         }
     };
 
-    // Kết nối SignalR cho chat
+    // Kết nối SignalR cho tất cả phòng chat
     const connectToSignalR = useCallback(async () => {
-        if (!selectedChatRoom) return;
+        if (chatRooms.length === 0) return;
 
         try {
-            await signalRService.initChatConnection(selectedChatRoom, handleNewMessage);
+            // Lấy danh sách ID của tất cả phòng chat
+            const roomIds = chatRooms.map(room => room.chatRoomId);
+
+            // Kết nối với tất cả các phòng chat
+            await signalRService.initChatConnection(roomIds, (message) => {
+                // Gọi handleNewMessage ở đây để tránh vòng lặp dependency
+                handleNewMessage(message);
+            });
             signalRConnected.current = true;
-            console.log('Đã kết nối SignalR cho phòng chat:', selectedChatRoom);
+            // console.log('Đã kết nối SignalR cho tất cả phòng chat:', roomIds);
         } catch (err) {
             console.error('Lỗi kết nối SignalR:', err);
         }
-    }, [selectedChatRoom]);
+    }, [chatRooms]);
 
     // Ngắt kết nối SignalR
     const disconnectSignalR = useCallback(async () => {
@@ -233,9 +261,10 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
 
     // Xử lý khi nhận tin nhắn mới từ SignalR
     const handleNewMessage = useCallback((message) => {
-        if (!message || message.chatRoomId !== selectedChatRoom) return;
+        if (!message) return;
 
         console.log("Nhận tin nhắn mới từ SignalR:", message);
+
 
         // Xác định loại tin nhắn dựa trên nội dung
         let messageType = message.type || MESSAGE_TYPES.TEXT;
@@ -254,7 +283,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         const normalizedMessage = {
             id: message.messageId || message.id,
             chatRoomId: message.chatRoomId,
-            senderId: message.senderAccountId || message.senderId,
+            senderId: message.senderAccountId,
             content: message.content,
             sentAt: message.sentAt,
             isRead: message.isRead,
@@ -263,29 +292,39 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             avatarUrl: message.avatarUrl // Thêm avatar người gửi
         };
 
-        setMessages(prev => {
-            // Loại bỏ các tin nhắn tạm thời
-            const filtered = prev.filter(msg => !msg.isTemp);
+        // Cập nhật thông tin tin nhắn mới nhất trong danh sách phòng chat (cho tất cả phòng)
+        updateChatRoomLatestMessage(normalizedMessage);
 
-            // Kiểm tra xem tin nhắn đã có trong danh sách chưa
-            const exists = filtered.some(msg =>
-            (msg.id == normalizedMessage.id ||
-                (msg.content == normalizedMessage.content &&
-                    msg.senderId == normalizedMessage.senderId &&
-                    Math.abs(new Date(msg.sentAt) - new Date(normalizedMessage.sentAt)) < 5000))
-            );
+        // Chỉ cập nhật danh sách tin nhắn nếu tin nhắn thuộc phòng chat đang xem
+        if (message.chatRoomId === selectedChatRoom) {
+            setMessages(prev => {
+                // Loại bỏ các tin nhắn tạm thời có nội dung giống tin nhắn thật từ server
+                const filtered = prev.filter(msg =>
+                    !(msg.isTemp && msg.content === normalizedMessage.content &&
+                        msg.senderId == normalizedMessage.senderId)
+                );
 
-            if (!exists) {
-                // Với flex-col-reverse, thêm tin nhắn mới vào đầu mảng
-                // Không cần cuộn xuống vì tin nhắn mới sẽ tự hiển thị ở dưới cùng
+                // Kiểm tra xem tin nhắn đã có trong danh sách chưa (trừ các tin nhắn tạm)
+                const exists = filtered.some(msg =>
+                    (!msg.isTemp && msg.id == normalizedMessage.id) ||
+                    (!msg.isTemp && msg.content == normalizedMessage.content &&
+                        msg.senderId == normalizedMessage.senderId &&
+                        Math.abs(new Date(msg.sentAt) - new Date(normalizedMessage.sentAt)) < 5000)
+                );
 
-                // Cập nhật thông tin tin nhắn mới nhất trong danh sách phòng chat
-                updateChatRoomLatestMessage(normalizedMessage);
+                if (!exists) {
+                    // Thêm tin nhắn mới vào đầu mảng (flex-col-reverse)
+                    return [normalizedMessage, ...filtered];
+                }
+                return filtered; // Trả về danh sách đã lọc bỏ tin nhắn tạm
+            });
 
-                return [normalizedMessage, ...filtered];
-            }
-            return filtered;
-        });
+            // Cuộn xuống để hiển thị tin nhắn mới
+            scrollToBottom();
+        }
+
+        console.log("🔍 Tin nhắn nhận được:", normalizedMessage);
+
 
         // Cập nhật thông tin người gửi vào chatMembers
         if (normalizedMessage.name && normalizedMessage.senderId) {
@@ -303,6 +342,24 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             fetchChatMembersInfo([normalizedMessage]);
         }
     }, [selectedChatRoom, chatMembers]);
+
+    // Xử lý tải thêm tin nhắn khi cuộn lên
+    const loadMoreMessages = () => {
+        if (loading || !hasMoreMessages) return Promise.resolve();
+
+        const nextPage = messagePage + 1;
+        setMessagePage(nextPage);
+        return fetchMessages(selectedChatRoom, nextPage);
+    };
+
+    // Cuộn xuống cuối cùng khi có tin nhắn mới
+    const scrollToBottom = useCallback(() => {
+        setTimeout(() => {
+            if (window.messagesEndRef && window.messagesEndRef.current) {
+                window.messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 100);
+    }, []);
 
     // Cập nhật thông tin tin nhắn mới nhất của phòng chat
     const updateChatRoomLatestMessage = (message) => {
@@ -356,6 +413,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 typeMessage = MESSAGE_TYPES.FILE;  // Tất cả các loại file đều là FILE
             }
 
+            // Chuẩn bị dữ liệu tin nhắn để gửi
             const messageData = {
                 content: messageContent,
                 chatRoomId: selectedChatRoom,
@@ -370,19 +428,32 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 id: `temp-${Date.now()}`,
                 chatRoomId: selectedChatRoom,
                 senderId: currentUserId,
+                senderAccountId: currentUserId, // Thêm trường này để đảm bảo đúng với format
                 content: messageContent,
                 sentAt: new Date().toISOString(),
                 isRead: false,
+                isTemp: true, // Đánh dấu là tin nhắn tạm thời
                 type: typeMessage
             };
 
             // Cập nhật tin nhắn mới nhất trong phòng chat ngay lập tức
             updateChatRoomLatestMessage(tempMessage);
 
-            await sendMessage(messageData);
+            // Hiển thị tin nhắn tạm thời ngay lập tức trên UI
+            setMessages(prevMessages => [tempMessage, ...prevMessages]);
 
+            console.log("Đang gửi tin nhắn:", messageContent);
+
+            // Gửi tin nhắn tới server
+            const response = await sendMessage(messageData);
+            console.log("Gửi tin nhắn thành công:", response);
+
+            // Xóa các file đính kèm sau khi gửi
             setSelectedFile(null);
             setAttachments([]);
+
+            // Cuộn xuống để hiển thị tin nhắn mới
+            scrollToBottom();
         } catch (err) {
             console.error("Lỗi khi gửi tin nhắn:", err);
             toast.error('Gửi tin nhắn thất bại!');
@@ -392,16 +463,12 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     // Xử lý khi thay đổi phòng chat
     useEffect(() => {
         if (selectedChatRoom) {
-            // Lấy tin nhắn và kết nối SignalR
+            // Chỉ tải tin nhắn của phòng được chọn, không cần kết nối SignalR lại
+            // console.log(`Tải tin nhắn cho phòng chat ${selectedChatRoom}`);
             setMessagePage(1);
+            // Gọi API để lấy tin nhắn
             fetchMessages(selectedChatRoom, 1);
-            connectToSignalR();
         }
-
-        // Cleanup khi unmount hoặc thay đổi phòng chat
-        return () => {
-            disconnectSignalR();
-        };
     }, [selectedChatRoom]);
 
     // Lấy danh sách phòng chat khi component mount
@@ -416,23 +483,13 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         };
     }, [currentUserId]);
 
-    // Xử lý tải thêm tin nhắn khi cuộn lên
-    const loadMoreMessages = () => {
-        if (loading || !hasMoreMessages) return Promise.resolve();
-
-        const nextPage = messagePage + 1;
-        setMessagePage(nextPage);
-        return fetchMessages(selectedChatRoom, nextPage);
-    };
-
-    // Cuộn xuống cuối cùng khi có tin nhắn mới
-    const scrollToBottom = () => {
-        setTimeout(() => {
-            if (window.messagesEndRef && window.messagesEndRef.current) {
-                window.messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
-        }, 100);
-    };
+    // Kết nối SignalR sau khi có danh sách phòng chat
+    useEffect(() => {
+        if (chatRooms.length > 0) {
+            // Kết nối SignalR một lần sau khi có danh sách phòng chat
+            connectToSignalR();
+        }
+    }, [chatRooms.length, connectToSignalR]);
 
     // Xử lý thêm file đính kèm
     const handleAddAttachment = (files) => {
@@ -464,6 +521,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         setSelectedChatRoom,
         setMessageInput,
         setSelectedFile,
+        setMessages,
 
         // Actions
         fetchChatRooms,

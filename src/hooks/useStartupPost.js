@@ -240,7 +240,7 @@ export const useStartupPost = () => {
             setIsSearchingPosts(true);
             const response = await searchStartupPosts(userStartupId, postSearchText, 1, postsPagination.pageSize);
 
-            if (response && response.data && response.data.items) {
+            if (response && response.data.items) {
                 setPosts(response.data.items);
                 setPostsPagination({
                     currentPage: 1,

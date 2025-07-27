@@ -121,8 +121,15 @@ class SignalRService {
 
     // --- CHAT REALTIME ---
     async initChatConnection(chatRoomId, onReceiveMessage) {
-        if (!chatRoomId) return;
-        if (this.chatConnection && this.chatConnected) return;
+
+        // if (!chatRoomId) return;
+        // if (this.chatConnection && this.chatConnected) return;
+        if (!chatRoomId && !Array.isArray(chatRoomId)) return;
+
+        // Ngắt kết nối cũ nếu có
+        if (this.chatConnection) {
+            await this.disconnectChat();
+        }
 
         this.chatConnection = new signalR.HubConnectionBuilder()
             .withUrl(`${URL_API}messagehub`)
@@ -141,9 +148,23 @@ class SignalRService {
 
         try {
             await this.chatConnection.start();
-            await this.chatConnection.invoke("JoinGroup", chatRoomId.toString());
+            // Nếu là mảng các phòng chat, tham gia tất cả
+
+            if (Array.isArray(chatRoomId)) {
+                console.log('Tham gia vào nhiều phòng chat:', chatRoomId);
+                for (const roomId of chatRoomId) {
+                    if (roomId) {
+                        await this.chatConnection.invoke("JoinGroup", roomId.toString());
+                        console.log('Đã tham gia phòng chat:', roomId);
+                    }
+                }
+            } else {
+                // Nếu chỉ có một phòng chat
+                await this.chatConnection.invoke("JoinGroup", chatRoomId.toString());
+                console.log('Tham gia phòng chat:', chatRoomId);
+            }
+
             this.chatConnected = true;
-            console.log('SignalR chat connected & joined group', chatRoomId);
         } catch (err) {
             console.error('SignalR Chat Connection Error:', err);
             this.chatConnected = false;

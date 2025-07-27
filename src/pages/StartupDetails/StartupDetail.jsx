@@ -17,6 +17,7 @@ import { getUserId } from '@/apis/authService';
 import PDFViewer from '@/components/Common/PDFViewer';
 import VideoPlayer from '@/components/Common/VideoPlayer';
 import { getRelativeTime, formatPostTime, formatDuration } from '@/utils/dateUtils';
+import useMessage from '@/hooks/useMessage';
 
 
 const StartupDetail = () => {
@@ -80,6 +81,9 @@ const StartupDetail = () => {
         isFollowing,
     } = useFollow(accountId);
 
+    // Sử dụng useMessage hook để gọi ensureChatRoom
+    const { ensureChatRoom } = useMessage(accountId);
+
     // Xử lý hành động follow startup
     const handleFollowAction = async () => {
         const success = await handleFollowStartup();
@@ -93,6 +97,26 @@ const StartupDetail = () => {
         const success = await handleUnfollowStartup();
         if (success) {
             toast.success("Đã hủy theo dõi startup thành công!");
+        }
+    };
+
+    // Xử lý hành động liên hệ startup
+    const handleContactStartup = async () => {
+        try {
+            // Chỉ dùng startupId làm tham số thứ hai (targetStartupId)
+            // Để null cho tham số đầu tiên (targetAccountId)
+            const response = await ensureChatRoom(null, startupInfo.startupId);
+
+            if (response) {
+                // Lưu chatRoomId vào localStorage để mở đúng phòng chat khi chuyển trang
+                localStorage.setItem('selectedChatRoomId', response.chatRoomId);
+                // Chuyển hướng đến trang chat - sử dụng response.chatRoomId
+                navigate(`/messages/u/${response}`);
+
+            }
+        } catch (error) {
+            console.error("Lỗi khi tạo cuộc trò chuyện:", error);
+            toast.error("Không thể tạo cuộc trò chuyện. Vui lòng thử lại sau!");
         }
     };
 
@@ -396,7 +420,10 @@ const StartupDetail = () => {
                                             : "Theo dõi"
                                     }
                                 </button>
-                                <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition">
+                                <button
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition"
+                                    onClick={handleContactStartup}
+                                >
                                     <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Liên hệ
                                 </button>
                             </div>

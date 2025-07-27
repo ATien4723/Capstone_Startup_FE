@@ -3,7 +3,14 @@ import axiosClient from '@/config/axiosClient';
 // Đảm bảo tạo phòng chat giữa hai người dùng hoặc người dùng và startup
 export const ensureRoom = async (accountId, targetAccountId, targetStartupId) => {
     try {
-        let url = `api/UserChat/ensure-room?AccountId=${accountId}&TargetAccountId=${targetAccountId}`;
+        let url = `api/UserChat/ensure-room?AccountId=${accountId}`;
+
+        // Chỉ thêm nếu targetAccountId có giá trị hợp lệ
+        if (targetAccountId !== undefined && targetAccountId !== null) {
+            url += `&TargetAccountId=${targetAccountId}`;
+        }
+
+        // Chỉ thêm nếu targetStartupId có giá trị hợp lệ
         if (targetStartupId !== undefined && targetStartupId !== null) {
             url += `&TargetStartupId=${targetStartupId}`;
         }
@@ -15,6 +22,7 @@ export const ensureRoom = async (accountId, targetAccountId, targetStartupId) =>
         throw error;
     }
 };
+
 
 
 // Lấy danh sách tin nhắn trong một phòng chat

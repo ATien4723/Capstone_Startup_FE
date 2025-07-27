@@ -13,12 +13,23 @@ import {
     faClipboardList,
     faFileAlt,
     faBuilding,
-    faMagnifyingGlassChart
+    faMagnifyingGlassChart,
+    faUserGroup,
+    faMessage
 } from '@fortawesome/free-solid-svg-icons';
 
 const meMenu = [
     { label: "Dashboard", icon: faTachometerAlt, to: "/me/dashboard" },
-    { label: "Chat", icon: faComments, to: "/me/chat" },
+    {
+        label: "Chat",
+        icon: faComments,
+        to: "/me/chat",
+        hasSubmenu: true,
+        submenu: [
+            { label: "Nhóm Chat", icon: faUserGroup, to: "/me/chat" },
+            { label: "Tin nhắn cá nhân", icon: faMessage, to: "/me/chat/user" }
+        ]
+    },
     {
         label: "Posts",
         icon: faNewspaper,

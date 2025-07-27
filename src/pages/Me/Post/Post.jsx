@@ -108,6 +108,17 @@ const Post = () => {
     // State cho dropdown menu của bài viết
     const [openDropdownPostId, setOpenDropdownPostId] = useState(null);
 
+    // State để theo dõi các bài đăng đã mở rộng nội dung
+    const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Hàm để toggle hiển thị nội dung đầy đủ/rút gọn
+    const togglePostContent = (postId) => {
+        setExpandedPosts(prev => ({
+            ...prev,
+            [postId]: !prev[postId]
+        }));
+    };
+
     // Lấy thông tin người dùng hiện tại
     const currentUserId = getUserId();
     const [profileData, setProfileData] = useState(null);
@@ -440,16 +451,16 @@ const Post = () => {
             {posts.length > 0 ? (
                 <div className="space-y-6">
                     {posts.map(post => (
-                        <div key={post.postId} className="bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-xl overflow-hidden border border-gray-100 hover:border-blue-200">
+                        <div key={`${post.postId}-${post.createAt}`} className="bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-xl overflow-hidden border border-gray-100 hover:border-blue-200">
                             <div className="p-6">
                                 <div className="flex items-center mb-4">
                                     <img
-                                        src={post.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                        src={post.avatarUrl || post.startupLogo || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                         alt="Avatar"
                                         className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
                                     />
                                     <div>
-                                        <h3 className="font-medium text-gray-900">{post.accountName || 'Startup User'}</h3>
+                                        <h3 className="font-medium text-gray-900">{post.fullName || post.startupName || 'Startup User'}</h3>
                                         <div className="flex items-center text-sm text-gray-500">
                                             <FontAwesomeIcon icon={faCalendarAlt} className="mr-1 text-xs" />
                                             <span className="text-sm">{post.date || formatVietnameseDate(post.createAt)}</span>
@@ -461,9 +472,20 @@ const Post = () => {
                                     <h2 className="text-xl font-bold text-gray-800 mb-3">{post.title}</h2>
                                 )}
 
-                                <p className="text-gray-600 mb-4 leading-relaxed">{post.content}</p>
+                                <div className={`text-gray-600 mb-4 leading-relaxed ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>
+                                    {post.content}
+                                </div>
 
-                                {post.tags && post.tags.length > 0 && (
+                                {post.content && post.content.length > 100 && (
+                                    <button
+                                        onClick={() => togglePostContent(post.postId)}
+                                        className="text-blue-600 hover:text-blue-800 text-sm mb-4 font-medium"
+                                    >
+                                        {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                    </button>
+                                )}
+
+                                {/* {post.tags && post.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mb-4">
                                         {post.tags.map(tag => (
                                             <span
@@ -474,10 +496,10 @@ const Post = () => {
                                             </span>
                                         ))}
                                     </div>
-                                )}
+                                )} */}
 
                                 {/* Hiển thị dạng tệp đính kèm thay vì hiển thị trực tiếp ảnh */}
-                                {post.postMedia && post.postMedia.length > 0 && (
+                                {post.media && post.media.length > 0 && (
                                     <div className="mt-4 mb-4">
                                         {/* {post.postMedia.length === 1 ? (
                                             <img
@@ -503,6 +525,19 @@ const Post = () => {
                                                 )}
                                             </div>
                                         )} */}
+                                        <button
+                                            onClick={() => openMediaModal(post.media)}
+                                            className="flex items-center gap-2 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-700"
+                                        >
+                                            <FontAwesomeIcon icon={faPaperclip} className="text-blue-500" />
+                                            <span className="font-medium">{post.media.length} {post.media.length === 1 ? 'attachment' : 'attachments'}</span>
+                                            <FontAwesomeIcon icon={faEye} className="ml-auto text-gray-500" />
+                                        </button>
+                                    </div>
+                                )}
+                                {/* Hiển thị dạng tệp đính kèm thay vì hiển thị trực tiếp ảnh */}
+                                {post.postMedia && post.postMedia.length > 0 && (
+                                    <div className="mt-4 mb-4">
                                         <button
                                             onClick={() => openMediaModal(post.postMedia)}
                                             className="flex items-center gap-2 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-700"
