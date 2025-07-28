@@ -3,7 +3,8 @@ import { getRelativeTime } from "@/utils/dateUtils";
 import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import { getUserId } from '@/apis/authService';
-import useMessage from '@/hooks/useMessage';
+import useStartupChat from '@/hooks/useStartupChat';
+import { toast } from 'react-toastify';
 
 export default function UserChat() {
     const currentUserId = getUserId();
@@ -16,18 +17,22 @@ export default function UserChat() {
         attachments,
         chatMembers,
         hasMoreMessages,
+        selectedFile,
+        startupId,
 
         setSelectedChatRoom,
         setMessageInput,
+        setSelectedFile,
 
         fetchChatRooms,
         fetchMessages,
         ensureChatRoom,
-        sendNewMessage,
+        sendNewMessageAsStartup,
         loadMoreMessages,
         handleAddAttachment,
-        handleRemoveAttachment
-    } = useMessage(currentUserId);
+        handleRemoveAttachment,
+        fetchUserInfo
+    } = useStartupChat(currentUserId);
 
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
@@ -115,25 +120,25 @@ export default function UserChat() {
 
     // Lấy danh sách phòng chat khi component mount
     useEffect(() => {
-        fetchChatRooms();
+        const loadData = async () => {
+            await fetchChatRooms(); // luôn gọi, bên trong tự xử lý startupId
 
-        // Kiểm tra xem có chatRoomId được lưu trong localStorage không
-        const savedChatRoomId = localStorage.getItem('selectedChatRoomId');
-        if (savedChatRoomId) {
-            console.log("Đã tìm thấy chatRoomId trong localStorage:", savedChatRoomId);
-            // Đặt timeout nhỏ để đảm bảo danh sách phòng chat đã được tải
-            setTimeout(() => {
-                setSelectedChatRoom(parseInt(savedChatRoomId));
-                localStorage.removeItem('selectedChatRoomId');
-                console.log("Đã chọn phòng chat từ localStorage:", savedChatRoomId);
-            }, 30);
-        }
+            const savedChatRoomId = localStorage.getItem('selectedChatRoomId');
+            if (savedChatRoomId) {
+                setTimeout(() => {
+                    setSelectedChatRoom(parseInt(savedChatRoomId));
+                    localStorage.removeItem('selectedChatRoomId');
+                }, 30);
+            }
+        };
+
+        loadData();
     }, [fetchChatRooms]);
 
     // Xử lý gửi tin nhắn
-    const [sendingMessage, setSendingMessage] = useState(false); // Thêm state riêng để theo dõi việc gửi tin nhắn
+    const [sendingMessage, setSendingMessage] = useState(false);
 
-    // Xử lý gửi tin nhắn
+    // Xử lý gửi tin nhắn với vai trò là startup
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (sendingMessage) return; // Không gửi nếu đang trong quá trình gửi tin nhắn
@@ -141,7 +146,8 @@ export default function UserChat() {
 
         try {
             setSendingMessage(true); // Đánh dấu đang gửi tin nhắn
-            await sendNewMessage(e);
+            // Luôn gửi tin nhắn với vai trò startup
+            await sendNewMessageAsStartup(e);
         } finally {
             // Đảm bảo luôn reset trạng thái gửi tin nhắn khi hoàn tất
             setTimeout(() => {
@@ -253,17 +259,87 @@ export default function UserChat() {
         }
     };
 
+    // Hàm gửi tin nhắn với tư cách là startup
+    // const sendStartupMessage = async (startupId, content, chatRoomId, file = null) => {
+    //     try {
+    //         if (!startupId) {
+    //             toast.error('Cần cung cấp ID của startup!');
+    //             return null;
+    //         }
+
+    //         if (!chatRoomId) {
+    //             toast.error('Cần cung cấp ID phòng chat!');
+    //             return null;
+    //         }
+
+    //         // Xác định loại tin nhắn dựa vào file nếu có
+    //         let messageType = 'Text';
+    //         if (file) {
+    //             // Kiểm tra loại file để xác định loại tin nhắn
+    //             const fileName = file.name.toLowerCase();
+    //             if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ||
+    //                 fileName.endsWith('.png') || fileName.endsWith('.gif')) {
+    //                 messageType = 'Image';
+    //             } else if (fileName.endsWith('.mp4') || fileName.endsWith('.avi') ||
+    //                 fileName.endsWith('.mov') || fileName.endsWith('.webm')) {
+    //                 messageType = 'Video';
+    //             } else {
+    //                 messageType = 'File';
+    //             }
+    //         }
+
+    //         // Gọi hàm từ useMessage hook để gửi tin nhắn
+    //         const result = await sendMessageAsStartup(startupId, content, chatRoomId, messageType, file);
+
+    //         // Cuộn xuống để hiển thị tin nhắn mới
+    //         if (window.messagesEndRef && window.messagesEndRef.current) {
+    //             window.messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    //         }
+
+    //         return result;
+    //     } catch (error) {
+    //         console.error('Lỗi khi gửi tin nhắn từ startup:', error);
+    //         toast.error('Không thể gửi tin nhắn từ startup này');
+    //         return null;
+    //     }
+    // };
+
+    // Lấy thông tin người gửi khi tin nhắn thay đổi
+    useEffect(() => {
+        const fetchSendersInfo = async () => {
+            if (messages.length > 0) {
+                // Lấy tất cả các tin nhắn không phải từ startup và chưa có thông tin người gửi
+                const messagesNeedInfo = messages.filter(msg =>
+                    msg.senderId && !msg.senderStartupId &&
+                    (!chatMembers[msg.senderId] || !chatMembers[msg.senderId].fullName)
+                );
+
+                // Lấy danh sách unique senderIds
+                const uniqueSenderIds = [...new Set(messagesNeedInfo.map(msg => msg.senderId))];
+
+                // Lấy thông tin từng người gửi
+                for (const senderId of uniqueSenderIds) {
+                    if (senderId) {
+                        await fetchUserInfo(senderId);
+                    }
+                }
+            }
+        };
+
+        fetchSendersInfo();
+    }, [messages, chatMembers, fetchUserInfo]);
+
     return (
         <>
             {/* Header */}
-            <header className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg px-6 py-4 flex justify-between items-center mb-6 rounded-lg text-white">
+            <header className="bg-gradient-to-r from-green-600 to-green-800 shadow-lg px-6 py-4 flex justify-between items-center mb-6 rounded-lg text-white">
                 <h1 className="text-2xl font-bold flex items-center">
-                    <i className="fas fa-comments text-2xl mr-3"></i>
-                    Tin nhắn cá nhân
+                    <i className="fas fa-building text-2xl mr-3"></i>
+                    Tin nhắn doanh nghiệp
                 </h1>
                 <div className="flex space-x-3">
                     <button
-                        className={`p-2 rounded-lg text-sm font-medium transition duration-300 flex items-center space-x-1 ${showMembersSidebar ? 'bg-white text-blue-600' : 'bg-blue-700 text-white hover:bg-blue-900'}`}
+                        className={`p-2 rounded-lg text-sm font-medium transition duration-300 flex items-center space-x-1 ${showMembersSidebar ? 'bg-white text-green-600' : 'bg-green-700 text-white hover:bg-green-900'}`}
                         onClick={() => setShowMembersSidebar(!showMembersSidebar)}
                     >
                         <i className="fa-solid fa-user-group-simple text-lg"></i>
@@ -278,7 +354,7 @@ export default function UserChat() {
                 <div className="w-72 bg-gray-50 border-r border-gray-200 flex flex-col">
                     <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-100">
                         <h2 className="font-bold text-gray-800 flex items-center">
-                            <i className="fas fa-comment-dots text-blue-500 mr-2"></i>
+                            <i className="fas fa-comment-dots text-green-500 mr-2"></i>
                             Cuộc trò chuyện
                         </h2>
                     </div>
@@ -286,7 +362,7 @@ export default function UserChat() {
                         <div className="relative">
                             <input
                                 type="text"
-                                className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
+                                className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition-all"
                                 placeholder="Tìm kiếm tin nhắn..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -314,7 +390,7 @@ export default function UserChat() {
                                 <button
                                     key={room.chatRoomId}
                                     onClick={() => handleSelectChatRoom(room.chatRoomId)}
-                                    className={`w-full flex items-center p-3 hover:bg-gray-100 transition-colors ${selectedChatRoom === room.chatRoomId ? 'bg-blue-100' : ''}`}
+                                    className={`w-full flex items-center p-3 hover:bg-gray-100 transition-colors ${selectedChatRoom === room.chatRoomId ? 'bg-green-100' : ''}`}
                                 >
                                     <img
                                         src={room.targetAvatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
@@ -339,7 +415,7 @@ export default function UserChat() {
                                         </p>
                                     </div>
                                     {room.unreadCount > 0 && (
-                                        <span className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                        <span className="ml-2 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                                             {room.unreadCount}
                                         </span>
                                     )}
@@ -424,8 +500,24 @@ export default function UserChat() {
                                         {messages
                                             .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
                                             .map(msg => {
-                                                const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
-                                                const senderInfo = chatMembers[msg.senderAccountId];
+                                                const isMe = msg.senderStartupId == startupId;
+                                                // Xác định thông tin người gửi dựa trên senderId hoặc senderStartupId
+                                                let senderInfo;
+
+                                                if (msg.senderStartupId && msg.senderStartupId != startupId) {
+                                                    // Trường hợp tin nhắn từ startup khác
+                                                    senderInfo = chatMembers[`startup_${msg.senderStartupId}`] || {
+                                                        fullName: msg.name || "Startup",
+                                                        avatar: msg.avatarUrl
+                                                    };
+                                                } else if (msg.senderId) {
+                                                    // Trường hợp tin nhắn từ người dùng
+                                                    senderInfo = chatMembers[msg.senderId] || chatMembers[msg.senderAccountId] || {
+                                                        fullName: msg.name,
+                                                        avatar: msg.avatarUrl
+                                                    };
+                                                }
+
                                                 const isImageMessage = msg.type === "File" && msg.content && (
                                                     msg.content.toLowerCase().endsWith('.jpg') ||
                                                     msg.content.toLowerCase().endsWith('.jpeg') ||
@@ -441,8 +533,8 @@ export default function UserChat() {
                                                     >
                                                         {!isMe && (
                                                             <img
-                                                                src={senderInfo?.avatarUrl || msg.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
-                                                                alt={senderInfo?.name || msg.name || 'User'}
+                                                                src={senderInfo?.avatar || msg.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
+                                                                alt={senderInfo?.fullName || msg.name || 'User'}
                                                                 className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
                                                             />
                                                         )}
@@ -451,7 +543,7 @@ export default function UserChat() {
                                                             <div className="max-w-sm">
                                                                 {!isMe && (
                                                                     <div className="font-semibold text-sm mb-1 ml-1">
-                                                                        {senderInfo?.name || msg.name || 'User'}
+                                                                        {senderInfo?.fullName || msg.name || 'User'}
                                                                     </div>
                                                                 )}
 
@@ -471,19 +563,19 @@ export default function UserChat() {
                                                         ) : (
                                                             <div
                                                                 className={`max-w-sm px-4 py-3 rounded-lg shadow-sm ${isMe
-                                                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none'
+                                                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white rounded-tr-none'
                                                                     : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                                                                     }`}
                                                                 style={{ wordBreak: 'break-word' }}
                                                             >
                                                                 {!isMe && (
                                                                     <div className="font-semibold text-sm mb-1">
-                                                                        {senderInfo?.name || msg.name || 'User'}
+                                                                        {senderInfo?.fullName || msg.name || 'User'}
                                                                     </div>
                                                                 )}
                                                                 {/* Không hiển thị content trực tiếp, mà dùng renderMessageContent */}
                                                                 {renderMessageContent(msg)}
-                                                                <div className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                                                                <div className={`text-xs mt-1 ${isMe ? 'text-green-100' : 'text-gray-500'}`}>
                                                                     {getRelativeTime(msg.sentAt || msg.createdAt)}
                                                                 </div>
                                                             </div>
@@ -501,13 +593,13 @@ export default function UserChat() {
                                     <div className="flex">
                                         <input
                                             type="text"
-                                            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Nhập tin nhắn..."
+                                            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                            placeholder="Nhập tin nhắn với tư cách doanh nghiệp..."
                                             value={messageInput}
                                             onChange={e => setMessageInput(e.target.value)}
                                         />
                                         <label className="bg-gray-100 text-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-200 transition-all flex items-center border-t border-b border-gray-300">
-                                            <i className="fas fa-paperclip text-blue-600"></i>
+                                            <i className="fas fa-paperclip text-green-600"></i>
                                             <input
                                                 type="file"
                                                 className="hidden"
@@ -521,7 +613,7 @@ export default function UserChat() {
                                         </label>
                                         <button
                                             type="submit"
-                                            className="bg-blue-600 text-white px-5 py-2 rounded-r-lg hover:bg-blue-700 transition-all flex items-center gap-1"
+                                            className="bg-green-600 text-white px-5 py-2 rounded-r-lg hover:bg-green-700 transition-all flex items-center gap-1"
                                             disabled={sendingMessage}
                                         >
                                             {sendingMessage ? (
@@ -561,11 +653,12 @@ export default function UserChat() {
                     ) : (
                         // Hiển thị khi chưa chọn cuộc trò chuyện
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                            <i className="fas fa-comments text-6xl mb-4"></i>
+                            <i className="fas fa-building text-6xl mb-4 text-green-300"></i>
                             <p className="text-lg font-medium">Chọn một cuộc trò chuyện để bắt đầu</p>
                             <p className="text-sm mt-2">Hoặc tạo một cuộc trò chuyện mới</p>
                             <button
-                                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                                onClick={() => toast.info('Tính năng đang được phát triển')}
                             >
                                 Tạo cuộc trò chuyện mới
                             </button>
@@ -650,4 +743,4 @@ export default function UserChat() {
             )}
         </>
     );
-} 
+}

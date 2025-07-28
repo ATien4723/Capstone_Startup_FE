@@ -26,8 +26,8 @@ const meMenu = [
         to: "/me/chat",
         hasSubmenu: true,
         submenu: [
-            { label: "Nhóm Chat", icon: faUserGroup, to: "/me/chat" },
-            { label: "Tin nhắn cá nhân", icon: faMessage, to: "/me/chat/user" }
+            { label: "Chat Group", icon: faUserGroup, to: "/me/chat" },
+            { label: "Startup Chat", icon: faMessage, to: "/me/chat/user" }
         ]
     },
     {

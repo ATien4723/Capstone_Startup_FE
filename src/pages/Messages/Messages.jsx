@@ -536,7 +536,23 @@ export default function Messages() {
                                                 .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
                                                 .map(msg => {
                                                     const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
-                                                    const senderInfo = chatMembers[msg.senderAccountId];
+                                                    // Xác định thông tin người gửi dựa trên senderId hoặc senderStartupId
+                                                    let senderInfo;
+
+                                                    if (msg.senderStartupId) {
+                                                        // Trường hợp tin nhắn từ startup
+                                                        senderInfo = chatMembers[`startup_${msg.senderStartupId}`] || {
+                                                            fullName: msg.name || "Startup",
+                                                            avatar: msg.avatarUrl
+                                                        };
+                                                    } else {
+                                                        // Trường hợp tin nhắn từ người dùng
+                                                        senderInfo = chatMembers[msg.senderId] || chatMembers[msg.senderAccountId] || {
+                                                            fullName: msg.name,
+                                                            avatar: msg.avatarUrl
+                                                        };
+                                                    }
+
                                                     const isImageMessage = msg.type === "File" && msg.content && (
                                                         msg.content.toLowerCase().endsWith('.jpg') ||
                                                         msg.content.toLowerCase().endsWith('.jpeg') ||
@@ -551,12 +567,12 @@ export default function Messages() {
                                                     return (
                                                         <div
                                                             key={msg.id || msg.messageId}
-                                                            className={`flex items-start space-x-3 ${isMe ? 'justify-end' : ''} ${isTemp ? 'opacity-70' : ''}`}
+                                                            className={`flex items-start space-x-3 ${isMe ? 'justify-end' : ''} ${isTemp ? 'opacity-90' : ''}`}
                                                         >
                                                             {!isMe && (
                                                                 <img
-                                                                    src={senderInfo?.avatarUrl || msg.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
-                                                                    alt={senderInfo?.fullName || msg.name || 'User'}
+                                                                    src={senderInfo?.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
+                                                                    alt={senderInfo?.fullName || 'User'}
                                                                     className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
                                                                 />
                                                             )}
@@ -565,7 +581,7 @@ export default function Messages() {
                                                                 <div className="max-w-sm">
                                                                     {!isMe && (
                                                                         <div className="font-semibold text-sm mb-1 ml-1">
-                                                                            {senderInfo?.name || msg.name || 'User'}
+                                                                            {senderInfo?.fullName || 'User'}
                                                                         </div>
                                                                     )}
 
@@ -592,7 +608,7 @@ export default function Messages() {
                                                                 >
                                                                     {!isMe && (
                                                                         <div className="font-semibold text-sm mb-1">
-                                                                            {senderInfo?.name || msg.name || 'User'}
+                                                                            {senderInfo?.fullName || 'User'}
                                                                         </div>
                                                                     )}
                                                                     {/* Không hiển thị content trực tiếp, mà dùng renderMessageContent */}

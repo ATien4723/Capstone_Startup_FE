@@ -880,7 +880,7 @@ const Home = () => {
                                             >
                                                 <div className="relative">
                                                     <img
-                                                        src={room.avatarURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        src={room.targetAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                                         alt={room.name || "Chat"}
                                                         className="w-10 h-10 rounded-full object-cover"
                                                     />
@@ -892,7 +892,7 @@ const Home = () => {
                                                     )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h6 className="font-semibold text-sm truncate">{room.name || "Người dùng"}</h6>
+                                                    <h6 className="font-semibold text-sm truncate">{room.targetName || "Người dùng"}</h6>
                                                     <p className="text-xs text-gray-500 truncate">
                                                         {room.latestMessageContent || "Chưa có tin nhắn"}
                                                     </p>

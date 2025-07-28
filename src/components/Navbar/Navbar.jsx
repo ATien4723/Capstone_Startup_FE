@@ -403,11 +403,11 @@ export default function Navbar() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="p-3 text-center border-t border-gray-100">
+                                    {/* <div className="p-3 text-center border-t border-gray-100">
                                         <Link to="/notifications" className="text-blue-600 hover:underline text-sm font-medium">
                                             Xem tất cả
                                         </Link>
-                                    </div>
+                                    </div> */}
                                 </div>
                             )}
                         </div>
@@ -488,7 +488,7 @@ export default function Navbar() {
                             <Link
                                 to={item.to}
                                 className={`px-4 py-2 rounded-lg transition-all duration-300 ${window.location.pathname === item.to
-                                    ? 'bg-white/20 text-black'
+                                    ? 'bg-white/20 text-white'
                                     : 'text-white hover:bg-white/10'
                                     }`}
                             >
@@ -575,9 +575,7 @@ export default function Navbar() {
                                         </div>
 
                                         <div className="p-3 text-center border-t border-gray-100">
-                                            <Link to="/notifications" className="text-blue-600 hover:underline text-sm font-medium">
-                                                Xem tất cả
-                                            </Link>
+
                                         </div>
                                     </div>
                                 )}

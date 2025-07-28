@@ -55,4 +55,16 @@ export const getChatRoomsByAccount = async (accountId) => {
         console.error('Lỗi khi lấy danh sách phòng chat:', error);
         throw error;
     }
+};
+
+
+// Lấy danh sách phòng chat của một startup
+export const getChatRoomsByStartup = async (startupId) => {
+    try {
+        const response = await axiosClient.get(`api/UserChat/list-chatroom-startup/${startupId}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách phòng chat của startup:', error);
+        throw error;
+    }
 }; 
