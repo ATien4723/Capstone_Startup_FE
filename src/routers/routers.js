@@ -33,6 +33,19 @@ const StartupInfo = lazy(() => import('@/pages/Me/StartupInfo/StartupInfo'));
 const MeAnalytics = lazy(() => import('@/pages/Me/Analytics/Analytics'));
 const nhap = lazy(() => import('@/pages/Test/Nhap'));
 
+// Thêm các component Admin
+const Admin = lazy(() => import('@/pages/Admin/Admin'));
+const AdminDashboard = lazy(() => import('@/pages/Admin/Dashboard/Dashboard'));
+const AccountList = lazy(() => import('@/pages/Admin/Accounts/AccountList'));
+const AccountVerification = lazy(() => import('@/pages/Admin/Accounts/AccountVerification'));
+const PolicyList = lazy(() => import('@/pages/Admin/Policies/PolicyList'));
+// const PolicyTypes = lazy(() => import('@/pages/Admin/Policies/PolicyTypes'));
+// const Roles = lazy(() => import('@/pages/Admin/Permissions/Roles'));
+// const PermissionAssign = lazy(() => import('@/pages/Admin/Permissions/PermissionAssign'));
+// const StartupManagement = lazy(() => import('@/pages/Admin/Startups/StartupManagement'));
+// const Statistics = lazy(() => import('@/pages/Admin/Statistics/Statistics'));
+// const Notifications = lazy(() => import('@/pages/Admin/Notifications/Notifications'));
+
 const routers = [
     {
         path: "/startup-detail/:id",
@@ -223,5 +236,83 @@ const routers = [
         component: nhap,
         protected: true
     },
+    // Thêm các đường dẫn Admin
+    {
+        path: '/admin',
+        component: Admin,
+        children: true,
+        protected: true,
+        requireAdmin: true
+    },
+    {
+        path: '/admin/dashboard',
+        component: AdminDashboard,
+        parent: '/admin',
+        protected: true,
+        requireAdmin: true
+    },
+    {
+        path: '/admin/accounts/list',
+        component: AccountList,
+        parent: '/admin',
+        protected: true,
+        requireAdmin: true
+    },
+    {
+        path: '/admin/accounts/verification',
+        component: AccountVerification,
+        parent: '/admin',
+        protected: true,
+        requireAdmin: true
+    },
+    {
+        path: '/admin/policies/list',
+        component: PolicyList,
+        parent: '/admin',
+        protected: true,
+        requireAdmin: true
+    },
+    // {
+    //     path: '/admin/policies/types',
+    //     component: PolicyTypes,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
+    // {
+    //     path: '/admin/permissions/roles',
+    //     component: Roles,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
+    // {
+    //     path: '/admin/permissions/assign',
+    //     component: PermissionAssign,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
+    // {
+    //     path: '/admin/startups',
+    //     component: StartupManagement,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
+    // {
+    //     path: '/admin/statistics',
+    //     component: Statistics,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
+    // {
+    //     path: '/admin/notifications',
+    //     component: Notifications,
+    //     parent: '/admin',
+    //     protected: true,
+    //     requireAdmin: true
+    // },
 ];
 export default routers;

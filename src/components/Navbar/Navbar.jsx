@@ -358,14 +358,14 @@ export default function Navbar() {
                                     <div className="p-3 border-b border-gray-200">
                                         <div className="flex justify-between items-center">
                                             <h3 className="font-bold text-gray-800 text-lg">Thông báo</h3>
-                                            <div className="flex space-x-2">
+                                            {/* <div className="flex space-x-2">
                                                 <button
                                                     className="text-sm text-blue-600 hover:text-blue-800"
                                                     onClick={markAllAsRead}
                                                 >
                                                     Đánh dấu đã đọc
                                                 </button>
-                                            </div>
+                                            </div> */}
                                         </div>
                                         <div className="flex mt-2 border-b border-gray-100 pb-1">
                                             <button
@@ -526,14 +526,14 @@ export default function Navbar() {
                                         <div className="p-3 border-b border-gray-200">
                                             <div className="flex justify-between items-center">
                                                 <h3 className="font-bold text-gray-800 text-lg">Thông báo</h3>
-                                                <div className="flex space-x-2">
+                                                {/* <div className="flex space-x-2">
                                                     <button
                                                         className="text-sm text-blue-600 hover:text-blue-800"
                                                         onClick={markAllAsRead}
                                                     >
                                                         Đánh dấu đã đọc
                                                     </button>
-                                                </div>
+                                                </div> */}
                                             </div>
                                             <div className="flex mt-2 border-b border-gray-100 pb-1">
                                                 <button

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
-import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, createTask, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment, getAllLabels, getAllActivityLogs } from "@/apis/taskService";
+import { getColumnsByMilestone, getTaskBoard, getAllMilestones, changeTaskColumn, createColumn, createTask, getTaskDetail, getTasksByMilestone, getMembersInMilestone, assignTask, unassignAccountFromTask, updateTask, addCommentToTask, getCommentsByTaskId, deleteTaskComment, getAllLabels, getAllActivityLogs, getDashboardData } from "@/apis/taskService";
 import { getUserId, getUserInfoFromToken } from "@/apis/authService";
 import { getStartupIdByAccountId } from "@/apis/startupService";
 import { toast } from "react-toastify";
@@ -26,6 +26,13 @@ const useMilestone = () => {
     // State cho danh sách các màu
     const [labelColors, setLabelColors] = useState([]);
     const [labelsLoading, setLabelsLoading] = useState(false);
+
+    // State cho dashboard
+    const [dashboardData, setDashboardData] = useState({
+        statusCounts: [],
+        memberTaskStats: []
+    });
+    const [dashboardLoading, setDashboardLoading] = useState(false);
 
     // State cho việc tạo/chỉnh sửa milestone và task
     const [showNewMilestoneForm, setShowNewMilestoneForm] = useState(false);
@@ -2054,6 +2061,43 @@ const useMilestone = () => {
         }
     };
 
+    // Hàm để lấy dữ liệu dashboard từ API
+    const fetchDashboardData = async () => {
+        if (!boardId) return;
+
+        try {
+            setDashboardLoading(true);
+            const response = await getDashboardData(boardId);
+
+            if (response) {
+                setDashboardData(response);
+            } else {
+                console.error('Định dạng phản hồi API getDashboardData không hợp lệ:', response);
+                toast.error('Không thể tải dữ liệu thống kê');
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu dashboard:', error);
+            toast.error('Có lỗi xảy ra khi tải dữ liệu thống kê');
+        } finally {
+            setDashboardLoading(false);
+        }
+    };
+
+    // Hàm lấy màu cho từng loại trạng thái
+    const getStatusColorClass = (statusName) => {
+        const status = statusName?.toLowerCase();
+        switch (status) {
+            case 'done': return 'bg-green-500';
+            case 'in progress': return 'bg-blue-500';
+            case 'to do': return 'bg-gray-500';
+            default: return 'bg-gray-500';
+        }
+    };
+
+    // Hàm định dạng phần trăm
+    const formatPercentage = (value) => {
+        return (value * 100).toFixed(1) + "%";
+    };
 
     return {
         // State
@@ -2087,7 +2131,8 @@ const useMilestone = () => {
         activityLogs,
         activityLogsLoading,
         showActivityLogs,
-
+        dashboardData,
+        dashboardLoading,
 
         // State setters
         setShowNewMilestoneForm,
@@ -2138,7 +2183,10 @@ const useMilestone = () => {
         handleLocalPageSizeChange,
         originalTasksList,
         fetchLabels,
-        fetchActivityLogs
+        fetchActivityLogs,
+        fetchDashboardData,
+        getStatusColorClass,
+        formatPercentage
     };
 };
 

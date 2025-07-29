@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStartupFeed, likePost, unlikePost, isPostLiked, getPostLikeCount, getPostCommentCount } from '@/apis/postService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
-import { getStartupIdByAccountId, getStartupMembers, getStartupById, getPitchingsByStartupAndType, subscribeStartup, unsubscribeStartup, isFollowingStartup } from '@/apis/startupService';
+import { getStartupIdByAccountId, getStartupMembers, getStartupById, getPitchingsByStartupAndType, subscribeStartup, unsubscribeStartup, isFollowingStartup as checkIsFollowingStartup } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
 import { useParams } from 'react-router-dom';
@@ -48,7 +48,7 @@ export const useStartupDetail = () => {
         // Nếu có id từ URL, sử dụng nó
         if (id) {
             setStartupId(parseInt(id));
-            console.log('Đã lấy startupId từ URL:', id);
+            // console.log('Đã lấy startupId từ URL:', id);
             return;
         }
 
@@ -84,7 +84,7 @@ export const useStartupDetail = () => {
             const response = await getStartupById(startupId);
             if (response && response.data) {
                 setStartupInfo(response.data);
-                console.log('Đã lấy thông tin startup:', response.data);
+                // console.log('Đã lấy thông tin startup:', response.data);
             } else {
                 console.error('Không tìm thấy thông tin startup:', response);
                 setErrorStartupInfo('Không tìm thấy thông tin startup');
@@ -140,7 +140,7 @@ export const useStartupDetail = () => {
                     const userProfile = await getAccountInfo(userId);
                     if (userProfile) {
                         setProfileData(userProfile);
-                        console.log('Đã lấy thông tin profile:', userProfile);
+                        // console.log('Đã lấy thông tin profile:', userProfile);
                     }
                 }
             } catch (error) {
@@ -354,6 +354,26 @@ export const useStartupDetail = () => {
         }
     };
 
+    // Kiểm tra xem người dùng đã follow startup chưa
+    const checkFollowStatus = useCallback(async () => {
+        if (!startupId) return;
+
+        try {
+            const accountId = await getUserId();
+            if (!accountId) return;
+
+            setFollowStartupLoading(true);
+            const isFollowing = await checkIsFollowingStartup(accountId, startupId);
+            setIsFollowingStartup(isFollowing);
+            // console.log('Đã kiểm tra trạng thái theo dõi:', isFollowing);
+        } catch (error) {
+            console.error('Lỗi khi kiểm tra trạng thái theo dõi:', error);
+            setIsFollowingStartup(false);
+        } finally {
+            setFollowStartupLoading(false);
+        }
+    }, [startupId]);
+
     // Xử lý follow startup
     const handleFollowStartup = async () => {
         if (!startupId) return false;
@@ -361,8 +381,11 @@ export const useStartupDetail = () => {
         try {
             setFollowStartupLoading(true);
             const accountId = await getUserId();
+            if (!accountId) return false;
+
             await subscribeStartup(accountId, startupId);
             setIsFollowingStartup(true);
+            // console.log('Đã theo dõi startup thành công');
             return true;
         } catch (error) {
             console.error('Lỗi khi đăng ký theo dõi startup:', error);
@@ -379,8 +402,11 @@ export const useStartupDetail = () => {
         try {
             setFollowStartupLoading(true);
             const accountId = await getUserId();
+            if (!accountId) return false;
+
             await unsubscribeStartup(accountId, startupId);
             setIsFollowingStartup(false);
+            // console.log('Đã hủy theo dõi startup thành công');
             return true;
         } catch (error) {
             console.error('Lỗi khi hủy đăng ký theo dõi startup:', error);
@@ -389,20 +415,6 @@ export const useStartupDetail = () => {
             setFollowStartupLoading(false);
         }
     };
-
-    // Kiểm tra xem người dùng đã follow startup chưa
-    const checkFollowStatus = useCallback(async () => {
-        if (!startupId) return;
-
-        try {
-            const accountId = await getUserId();
-            const isFollowing = await isFollowingStartup(accountId, startupId);
-            setIsFollowingStartup(isFollowing);
-        } catch (error) {
-            console.error('Lỗi khi kiểm tra trạng thái theo dõi:', error);
-            setIsFollowingStartup(false);
-        }
-    }, [startupId]);
 
     // Gọi API kiểm tra trạng thái follow khi startupId thay đổi
     useEffect(() => {

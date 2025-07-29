@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faEllipsisH, faImage, faPaperclip, faSmile, faPlus, faMapMarkerAlt, faEdit, faTrash, faShareSquare, faComment, faHeart, faEyeSlash,
-    faBriefcase, faLocationDot, faClock, faUserPlus, faUserCheck, faCircle
+    faBriefcase, faLocationDot, faClock, faUserPlus, faUserCheck, faCircle, faFileAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
@@ -22,6 +22,7 @@ import SharedPost from '@/components/PostMedia/SharedPost';
 import { InteractionContext } from '@/contexts/InteractionContext.jsx';
 import useFollow from '@/hooks/useFollow';
 import useMessage from '@/hooks/useMessage';
+import { getTopCVSubmittedInternshipPosts } from '@/apis/cvService';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -189,6 +190,30 @@ const Home = () => {
         }
     };
 
+    // State cho trending internship posts
+    const [trendingPosts, setTrendingPosts] = useState([]);
+    const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+    const [trendingError, setTrendingError] = useState(null);
+
+    // Lấy danh sách top internship posts khi component mount
+    useEffect(() => {
+        const fetchTrendingPosts = async () => {
+            try {
+                setIsLoadingTrending(true);
+                const response = await getTopCVSubmittedInternshipPosts(3);
+                setTrendingPosts(response || []);
+                setTrendingError(null);
+            } catch (err) {
+                console.error('Lỗi khi lấy danh sách top internship posts:', err);
+                setTrendingError('Không thể tải dữ liệu trending');
+            } finally {
+                setIsLoadingTrending(false);
+            }
+        };
+
+        fetchTrendingPosts();
+    }, []);
+
     // Render UI
     if (isLoadingProfile) {
         return (
@@ -259,14 +284,14 @@ const Home = () => {
                         <div className="bg-white rounded-lg shadow-md">
                             <div className="p-4">
                                 <div className="flex justify-between items-center mb-3">
-                                    <span className="font-bold">Gợi ý kết nối</span>
+                                    <span className="font-bold">Suggested connections</span>
                                 </div>
                                 {isLoadingSuggestions ? (
                                     <div className="flex justify-center py-3">
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                                     </div>
                                 ) : suggestionsError ? (
-                                    <div className="text-center py-3 text-sm text-red-500">Không thể tải gợi ý</div>
+                                    <div className="text-center py-3 text-sm text-red-500">Unable to load suggestions</div>
                                 ) : suggestedConnections && suggestedConnections.length > 0 ? (
                                     suggestedConnections.slice(0, 5).map((suggestion) => (
                                         <div
@@ -288,7 +313,7 @@ const Home = () => {
                                                         {suggestion.fullName}
                                                     </Link>
                                                 </div>
-                                                <div className="text-gray-600 text-sm">{suggestion.position || "Người dùng"}</div>
+                                                <div className="text-gray-600 text-sm">{suggestion.position || "User"}</div>
                                             </div>
                                             <button
                                                 className={`transition-all p-1.5 rounded-full flex items-center justify-center ${isFollowing(suggestion.accountId)
@@ -309,11 +334,11 @@ const Home = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-center py-3 text-sm text-gray-500">Không có gợi ý kết nối</div>
+                                    <div className="text-center py-3 text-sm text-gray-500">No suggested connections</div>
                                 )}
 
                                 <Link to="/network" className="block text-center mt-3 text-blue-600 text-sm hover:underline">
-                                    Xem thêm
+                                    See more
                                 </Link>
                             </div>
                         </div>
@@ -626,7 +651,7 @@ const Home = () => {
                                                         }}
                                                         className="text-blue-600 hover:text-blue-800 text-sm mb-4 font-medium"
                                                     >
-                                                        {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                                        {expandedPosts[post.postId] ? 'Collapse' : 'See more'}
                                                     </button>
                                                 )}
 
@@ -711,7 +736,7 @@ const Home = () => {
                                                             }}
                                                             className="text-blue-600 hover:text-blue-800 text-sm mb-3 font-medium"
                                                         >
-                                                            {expandedPosts[post.postId] ? 'Thu gọn' : 'Xem thêm'}
+                                                            {expandedPosts[post.postId] ? 'Collapse' : 'See more'}
                                                         </button>
                                                     )}
 
@@ -834,35 +859,58 @@ const Home = () => {
                                 <h5 className="font-bold">Trending</h5>
                             </div>
                             <div className="p-4">
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-xs text-gray-500 mb-1">#technology</div>
-                                        <h6 className="font-semibold text-sm">The Future of AI in Healthcare</h6>
-                                        <div className="text-xs text-gray-500">1.2k posts</div>
+                                {isLoadingTrending ? (
+                                    <div className="flex justify-center py-4">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 mb-1">#business</div>
-                                        <h6 className="font-semibold text-sm">Remote Work Trends in 2023</h6>
-                                        <div className="text-xs text-gray-500">856 posts</div>
+                                ) : trendingError ? (
+                                    <div className="text-center py-3 text-sm text-red-500">
+                                        Unable to load featured posts
                                     </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 mb-1">#design</div>
-                                        <h6 className="font-semibold text-sm">UI/UX Design Principles</h6>
-                                        <div className="text-xs text-gray-500">543 posts</div>
+                                ) : trendingPosts && trendingPosts.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {trendingPosts.map((post) => (
+                                            <div key={post.internshipId} onClick={() => goToPostDetail(post.internshipId, 'Internship', post.startupId)} className="cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                                                <div className="flex items-center">
+                                                    <img
+                                                        src={post.logo || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                        alt="Startup logo"
+                                                        className="w-10 h-10 rounded-full object-cover mr-3"
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                        }}
+                                                    />
+                                                    <div>
+                                                        <h6 className="font-semibold text-sm">
+                                                            {post.positionTitle || "Internship"}
+                                                        </h6>
+                                                        <div className="text-xs text-gray-500 flex items-center mt-1">
+                                                            <FontAwesomeIcon icon={faFileAlt} className="mr-1" />
+                                                            {post.totalCVs || 0} CVs submitted
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
-                                <button className="w-full mt-4 text-blue-600 text-sm font-medium">
-                                    Show more
-                                </button>
+                                ) : (
+                                    <div className="text-center py-3 text-sm text-gray-500">
+                                        No featured internship posts
+                                    </div>
+                                )}
+                                <Link to="/startups" className="block w-full mt-4 text-center text-blue-600 text-sm font-medium hover:underline">
+                                    See more internship opportunities
+                                </Link>
                             </div>
                         </div>
 
                         {/* Messages Card */}
                         <div className="bg-white rounded-lg shadow-md">
                             <div className="p-4 border-b flex justify-between items-center">
-                                <h5 className="font-bold">Tin nhắn</h5>
+                                <h5 className="font-bold">Messages</h5>
                                 <Link to="/messages" className="text-blue-600 text-sm hover:underline">
-                                    Xem tất cả
+                                    View all
                                 </Link>
                             </div>
                             <div className="p-4">
@@ -892,9 +940,9 @@ const Home = () => {
                                                     )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h6 className="font-semibold text-sm truncate">{room.targetName || "Người dùng"}</h6>
+                                                    <h6 className="font-semibold text-sm truncate">{room.targetName || "User"}</h6>
                                                     <p className="text-xs text-gray-500 truncate">
-                                                        {room.latestMessageContent || "Chưa có tin nhắn"}
+                                                        {room.latestMessageContent || "No messages yet"}
                                                     </p>
                                                 </div>
                                                 {room.latestMessageTime && (
@@ -907,11 +955,11 @@ const Home = () => {
                                     </div>
                                 ) : (
                                     <div className="text-center py-3 text-sm text-gray-500">
-                                        Bạn chưa có tin nhắn nào
+                                        You have no messages yet
                                     </div>
                                 )}
                                 <Link to="/messages" className="block w-full mt-4 text-center text-blue-600 text-sm font-medium hover:underline">
-                                    Tất cả tin nhắn
+                                    All messages
                                 </Link>
                             </div>
                         </div>

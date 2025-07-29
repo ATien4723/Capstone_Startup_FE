@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPenToSquare, faAngleDown, faClipboardList, faExclamationCircle, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList, faSearch, faAngleDoubleLeft, faAngleLeft, faAngleRight, faAngleDoubleRight, faHistory } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPenToSquare, faAngleDown, faClipboardList, faExclamationCircle, faEllipsisV, faPencilAlt, faTrashAlt, faClock, faArrowLeft, faEdit, faCalendarAlt, faUserFriends, faTag, faArrowRight, faCopy, faLink, faArchive, faCheck, faComment, faPaperPlane, faColumns, faList, faSearch, faAngleDoubleLeft, faAngleLeft, faAngleRight, faAngleDoubleRight, faHistory, faChartBar, faChartLine, faChartPie, faPercentage, faLayerGroup, faUsers, faTasks, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import {
     DndContext,
@@ -28,6 +28,7 @@ import useMilestone from '@/hooks/useMilestone';
 import { formatVietnameseDate, getRelativeTime } from '@/utils/dateUtils';
 import { getUserInfoFromToken } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
+import { getDashboardData } from '@/apis/taskService';
 
 // Component cho Task có thể kéo thả và sắp xếp
 const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTaskClick, teamMembers }) => {
@@ -957,10 +958,16 @@ const Milestone = () => {
         activityLogsLoading,
         fetchActivityLogs,
         setShowActivityLogs,
-        showActivityLogs
+        showActivityLogs,
+        // Dashboard related imports
+        dashboardData,
+        dashboardLoading,
+        fetchDashboardData,
+        getStatusColorClass,
+        formatPercentage
     } = useMilestone();
 
-    // Thêm state để quản lý chế độ xem (kanban hoặc list)
+    // Thêm state để quản lý chế độ xem (kanban, list hoặc dashboard)
     const [viewMode, setViewMode] = useState('kanban');
 
     const { boardId } = useParams();
@@ -1043,6 +1050,8 @@ const Milestone = () => {
     useEffect(() => {
         if (viewMode === 'list' && boardId) {
             loadTasksListView();
+        } else if (viewMode === 'dashboard' && boardId) {
+            fetchDashboardData();
         }
     }, [viewMode, boardId]);
 
@@ -1118,6 +1127,12 @@ const Milestone = () => {
                             onClick={() => setViewMode('list')}
                         >
                             <FontAwesomeIcon icon={faList} className="mr-2" /> Danh sách
+                        </button>
+                        <button
+                            className={`px-4 py-2 rounded-lg transition-colors ${viewMode === 'dashboard' ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+                            onClick={() => setViewMode('dashboard')}
+                        >
+                            <FontAwesomeIcon icon={faChartBar} className="mr-2" /> Thống kê
                         </button>
                     </div>
                     <button
@@ -2599,6 +2614,150 @@ const Milestone = () => {
                 </div>
             )}
 
+            {/* Chế độ xem Dashboard */}
+            {viewMode === 'dashboard' && (
+                <div className="space-y-8">
+                    {dashboardLoading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <div className="flex flex-col items-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
+                                <p className="text-gray-500">Đang tải dữ liệu thống kê...</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Thống kê trạng thái */}
+                            <div className="bg-white rounded-xl shadow-md p-6">
+                                <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <FontAwesomeIcon icon={faLayerGroup} className="mr-3 text-blue-600" />
+                                    Thống kê theo trạng thái
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {dashboardData.statusCounts && dashboardData.statusCounts.map((status, index) => (
+                                        <div key={index} className="bg-gray-50 p-5 rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <span className="text-sm font-medium text-gray-500">Trạng thái</span>
+                                                    <h3 className="text-xl font-bold mt-1">{status.statusName}</h3>
+                                                </div>
+                                                <div className={`w-12 h-12 rounded-full ${getStatusColorClass(status.statusName)} flex items-center justify-center text-white`}>
+                                                    <span className="text-lg font-bold">{status.count}</span>
+                                                </div>
+                                            </div>
+                                            {/* <div className="mt-4">
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div
+                                                        className={`${getStatusColorClass(status.statusName)} h-2 rounded-full`}
+                                                        style={{
+                                                            width: `${dashboardData.statusCounts.reduce((acc, curr) => acc + curr.count, 0) > 0
+                                                                ? (status.count / dashboardData.statusCounts.reduce((acc, curr) => acc + curr.count, 0) * 100)
+                                                                : 0}%`
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                                <p className="text-sm text-gray-600 mt-2">
+                                                    {dashboardData.statusCounts.reduce((acc, curr) => acc + curr.count, 0) > 0
+                                                        ? ((status.count / dashboardData.statusCounts.reduce((acc, curr) => acc + curr.count, 0)) * 100).toFixed(1)
+                                                        : 0}% công việc
+                                                </p>
+                                            </div> */}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Thống kê thành viên */}
+                            <div className="bg-white rounded-xl shadow-md p-6">
+                                <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <FontAwesomeIcon icon={faUsers} className="mr-3 text-indigo-600" />
+                                    Thống kê theo thành viên
+                                </h2>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full divide-y divide-gray-300">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Thành viên
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center">
+                                                        <FontAwesomeIcon icon={faTasks} className="mr-1" /> Tổng công việc
+                                                    </div>
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center">
+                                                        <FontAwesomeIcon icon={faCheck} className="mr-1 text-green-500" /> Đã hoàn thành
+                                                    </div>
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center">
+                                                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1 text-yellow-500" /> Quá hạn
+                                                    </div>
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center">
+                                                        <FontAwesomeIcon icon={faPercentage} className="mr-1 text-blue-500" /> Tỷ lệ hoàn thành
+                                                    </div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {dashboardData.memberTaskStats && dashboardData.memberTaskStats.length > 0 ? (
+                                                dashboardData.memberTaskStats.map((member, idx) => (
+                                                    <tr key={idx} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center">
+                                                                <div className="flex-shrink-0 h-10 w-10">
+                                                                    <img
+                                                                        className="h-10 w-10 rounded-full object-cover"
+                                                                        src={member.accountAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.accountName)}&background=random`}
+                                                                        alt={member.accountName}
+                                                                        onError={(e) => {
+                                                                            e.target.onerror = null;
+                                                                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(member.accountName)}&background=random`;
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="ml-4">
+                                                                    <div className="text-sm font-medium text-gray-900">{member.accountName}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium">{member.totalTasks}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-green-600">{member.completedTasks}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-yellow-500">{member.overdueTasks}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1 max-w-[150px]">
+                                                                <div
+                                                                    className="bg-blue-600 h-2.5 rounded-full"
+                                                                    style={{ width: formatPercentage(member.completionRate) }}
+                                                                ></div>
+                                                            </div>
+                                                            <div className="text-sm font-medium text-gray-900">{formatPercentage(member.completionRate)}</div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                                                        Không có dữ liệu về thành viên
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

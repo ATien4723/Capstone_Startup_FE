@@ -327,9 +327,24 @@ const StartupInfo = () => {
                                 <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
                                     <div className="flex items-center">
                                         <FontAwesomeIcon icon={faSeedling} className="text-blue-500 w-5 h-5" />
-                                        <div className="ml-3">
+                                        <div className="ml-3 flex-1">
                                             <h3 className="font-semibold text-gray-800 text-lg">Giai đoạn</h3>
-                                            <p className="text-gray-700 mt-1">Giai đoạn {startup.stageId || "N/A"}</p>
+                                            {!isEditing ? (
+                                                <p className="text-gray-700 mt-1">Giai đoạn {startup.stageId || "N/A"}</p>
+                                            ) : (
+                                                <div className="mt-1">
+                                                    <input
+                                                        type="number"
+                                                        name="stageId"
+                                                        value={formData.stageId}
+                                                        onChange={handleInputChange}
+                                                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Nhập giai đoạn (1-5)"
+                                                        min="1"
+                                                        max="5"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

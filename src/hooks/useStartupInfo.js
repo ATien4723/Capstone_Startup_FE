@@ -32,6 +32,7 @@ const useStartupInfo = () => {
         mission: '',
         websiteURL: '',
         email: '',
+        stageId: '',
     });
 
     // State cho file uploads
@@ -137,6 +138,7 @@ const useStartupInfo = () => {
                         mission: response.data.mission || '',
                         websiteURL: response.data.websiteURL || '',
                         email: response.data.email || '',
+                        stageId: response.data.stageId || '',
                     });
 
                     // Khởi tạo preview hình ảnh
@@ -287,6 +289,7 @@ const useStartupInfo = () => {
                 mission: startup.mission || '',
                 websiteURL: startup.websiteURL || '',
                 email: startup.email || '',
+                stageId: startup.stageId || '',
             });
 
             // Reset file previews

@@ -291,10 +291,10 @@ export const deletePositionRequirement = async (id) => {
 // API: Kiểm tra trạng thái theo dõi startup
 export const isFollowingStartup = async (accountId, startupId) => {
     try {
-        const response = await axiosClient.get('/api/Startup/is-following', {
+        const response = await axiosClient.get('/api/Startup/is-account-follow-startup', {
             params: { accountId, startupId }
         });
-        return response?.data === true;
+        return response;
     } catch (error) {
         console.error("Lỗi khi kiểm tra trạng thái theo dõi:", error);
         return false;

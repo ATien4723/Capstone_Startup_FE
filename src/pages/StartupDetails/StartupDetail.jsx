@@ -5,7 +5,7 @@ import { faLinkedin, faTwitter } from '@fortawesome/free-brands-svg-icons';
 import { faComment as farComment, faHeart as farHeart, faShareSquare as farShareSquare } from '@fortawesome/free-regular-svg-icons';
 import Navbar from '@components/Navbar/Navbar';
 import useStartupDetail from '@/hooks/useStartupDetail';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PostMediaGrid from '@/components/PostMedia/PostMediaGrid';
 import CommentSection from '@/components/CommentSection/CommentSection';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
@@ -87,17 +87,11 @@ const StartupDetail = () => {
     // Xử lý hành động follow startup
     const handleFollowAction = async () => {
         const success = await handleFollowStartup();
-        if (success) {
-            toast.success("Đã theo dõi startup thành công!");
-        }
     };
 
     // Xử lý hành động unfollow startup
     const handleUnfollowAction = async () => {
         const success = await handleUnfollowStartup();
-        if (success) {
-            toast.success("Đã hủy theo dõi startup thành công!");
-        }
     };
 
     // Xử lý hành động liên hệ startup
@@ -129,6 +123,7 @@ const StartupDetail = () => {
     // State cho việc hiển thị PDF và Video
     const [selectedPDF, setSelectedPDF] = useState(null);
     const [selectedVideo, setSelectedVideo] = useState(null);
+    const [showAllPDFs, setShowAllPDFs] = useState(false);
 
     // Hàm để lấy và hiển thị danh sách người đã thích bài viết
     const handleShowLikes = (postId) => {
@@ -558,23 +553,31 @@ const StartupDetail = () => {
                                                 <div className="text-red-500 text-center py-2">{errorPitching}</div>
                                             ) : (
                                                 <ul className="list-none">
-                                                    {pitchingData.find(p => p.type === 'PDF') ? (
+                                                    {pitchingData.filter(p => p.type === 'PDF').length > 0 ? (
                                                         <>
-                                                            <li className="mb-2 flex items-center">
-                                                                <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-500" />
-                                                                <button
-                                                                    onClick={() => setSelectedPDF(pitchingData.find(p => p.type === 'PDF')?.link)}
-                                                                    className="text-blue-600 hover:underline"
-                                                                >
-                                                                    Pitch Deck
-                                                                </button>
-                                                            </li>
-                                                            <li className="mb-2 flex items-center">
-                                                                <FontAwesomeIcon icon={faFileAlt} className="mr-2 text-gray-500" />
-                                                                <a href="#" className="text-blue-600 hover:underline">Business Plan</a>
-                                                            </li>
+                                                            {pitchingData.filter(p => p.type === 'PDF').slice(0, 3).map((pdfItem, index) => (
+                                                                <li key={index} className="mb-2 flex items-center">
+                                                                    <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-500" />
+                                                                    <button
+                                                                        onClick={() => setSelectedPDF(pdfItem.link)}
+                                                                        className="text-blue-600 hover:underline"
+                                                                    >
+                                                                        {pdfItem.title || `Tài liệu PDF ${index + 1}`}
+                                                                    </button>
+                                                                </li>
+                                                            ))}
+                                                            {pitchingData.filter(p => p.type === 'PDF').length > 3 && (
+                                                                <li className="mt-2">
+                                                                    <button
+                                                                        onClick={() => setShowAllPDFs(true)}
+                                                                        className="text-sm text-blue-500 hover:underline flex items-center"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faFilePdf} className="mr-1" />
+                                                                        Xem tất cả ({pitchingData.filter(p => p.type === 'PDF').length} tài liệu PDF)
+                                                                    </button>
+                                                                </li>
+                                                            )}
                                                         </>
-
                                                     ) : (
                                                         <li className="text-gray-500 text-center py-2">
                                                             Chưa có tài liệu PDF
@@ -770,6 +773,49 @@ const StartupDetail = () => {
                     pdfUrl={selectedPDF}
                     onClose={() => setSelectedPDF(null)}
                 />
+            )}
+
+            {/* All PDFs Modal */}
+            {showAllPDFs && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h3 className="text-lg font-medium">Tất cả tài liệu PDF</h3>
+                            <button
+                                onClick={() => setShowAllPDFs(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                x
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-4 flex-1">
+                            <ul className="divide-y divide-gray-200">
+                                {pitchingData.filter(p => p.type === 'PDF').map((pdfItem, index) => (
+                                    <li key={index} className="py-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center">
+                                                <FontAwesomeIcon icon={faFilePdf} className="mr-3 text-red-500 text-xl" />
+                                                <div>
+                                                    <h4 className="font-medium">{pdfItem.title || `Tài liệu PDF ${index + 1}`}</h4>
+                                                    {pdfItem.description && <p className="text-sm text-gray-500">{pdfItem.description}</p>}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedPDF(pdfItem.link);
+                                                    setShowAllPDFs(false);
+                                                }}
+                                                className="bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 text-sm"
+                                            >
+                                                Xem
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Video Player Modal */}

@@ -156,3 +156,10 @@ export const getAllActivityLogs = async (milestoneId) => {
     });
     return response;
 };
+
+export const getDashboardData = async (milestoneId) => {
+    const response = await axiosClient.get('/api/Task/dashboard-task', {
+        params: { milestoneId }
+    });
+    return response;
+};

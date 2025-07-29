@@ -10,8 +10,14 @@ import { checkCanPost, checkCanManageMember } from '@/apis/permissionService';
  * @param {React.ReactNode} props.children - Component con được bảo vệ
  * @param {boolean} props.requirePostPermission - Yêu cầu quyền đăng bài
  * @param {boolean} props.requireMemberManagement - Yêu cầu quyền quản lý thành viên
+ * @param {boolean} props.requireAdmin - Yêu cầu quyền admin
  */
-const PermissionRoute = ({ children, requirePostPermission = false, requireMemberManagement = false }) => {
+const PermissionRoute = ({
+    children,
+    requirePostPermission = false,
+    requireMemberManagement = false,
+    requireAdmin = false
+}) => {
     const location = useLocation();
     const { user, isReady } = useAuth();
     const [hasPermission, setHasPermission] = useState(true);
@@ -47,6 +53,17 @@ const PermissionRoute = ({ children, requirePostPermission = false, requireMembe
                     }
                 }
 
+                // Kiểm tra quyền admin
+                if (requireAdmin) {
+                    // Trong thực tế, bạn sẽ có API kiểm tra quyền admin
+                    // Đây là cách tạm thời để kiểm tra vai trò
+                    const isAdmin = user.role === 'Admin';
+                    console.log('Kiểm tra quyền admin:', isAdmin);
+                    if (!isAdmin) {
+                        permissionGranted = false;
+                    }
+                }
+
                 setHasPermission(permissionGranted);
             } catch (error) {
                 console.error('Lỗi khi kiểm tra quyền:', error);
@@ -56,12 +73,12 @@ const PermissionRoute = ({ children, requirePostPermission = false, requireMembe
             }
         };
 
-        if (isReady && (requirePostPermission || requireMemberManagement)) {
+        if (isReady && (requirePostPermission || requireMemberManagement || requireAdmin)) {
             checkPermissions();
-        } else if (!requirePostPermission && !requireMemberManagement) {
+        } else if (!requirePostPermission && !requireMemberManagement && !requireAdmin) {
             setLoading(false);
         }
-    }, [isReady, user, requirePostPermission, requireMemberManagement, isUserAuthenticated]);
+    }, [isReady, user, requirePostPermission, requireMemberManagement, requireAdmin, isUserAuthenticated]);
 
     // Hiển thị loading khi đang kiểm tra quyền
     if (loading) {
