@@ -510,13 +510,16 @@ export default function UserChat() {
                                                         fullName: msg.name || "Startup",
                                                         avatar: msg.avatarUrl
                                                     };
-                                                } else if (msg.senderId) {
+                                                } else if (msg.senderId || msg.senderAccountId) {
                                                     // Trường hợp tin nhắn từ người dùng
-                                                    senderInfo = chatMembers[msg.senderId] || chatMembers[msg.senderAccountId] || {
-                                                        fullName: msg.name,
+                                                    const senderId = msg.senderId || msg.senderAccountId;
+                                                    senderInfo = chatMembers[senderId] || {
+                                                        fullName: msg.name || 'User',
                                                         avatar: msg.avatarUrl
                                                     };
                                                 }
+
+
 
                                                 const isImageMessage = msg.type === "File" && msg.content && (
                                                     msg.content.toLowerCase().endsWith('.jpg') ||

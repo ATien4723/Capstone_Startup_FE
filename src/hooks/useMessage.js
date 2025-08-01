@@ -34,6 +34,13 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     // Ref để theo dõi kết nối SignalR
     const signalRConnected = useRef(false);
     const chatRoomsRef = useRef([]); // Thêm ref để theo dõi chatRooms mà không gây re-render
+    const chatMembersRef = useRef({}); // Ref để lưu chatMembers
+
+    // Debug: Log khi chatMembers thay đổi
+    useEffect(() => {
+        // console.log("ChatMembers đã được cập nhật:", chatMembers);
+        chatMembersRef.current = chatMembers; // Cập nhật ref
+    }, [chatMembers]);
 
     // Lấy danh sách phòng chat
     const fetchChatRooms = useCallback(async (shouldSelectFirst = true) => {
@@ -109,6 +116,8 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                     id: msg.messageId,
                     chatRoomId: msg.chatRoomId,
                     senderId: msg.senderAccountId,
+                    senderAccountId: msg.senderAccountId, // Thêm trường này để đảm bảo tính nhất quán
+                    senderStartupId: msg.senderStartupId,
                     content: msg.content,
                     sentAt: msg.sentAt,
                     isRead: msg.isRead,
@@ -173,19 +182,46 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
     const updateChatMembersFromMessages = (messageList) => {
         if (!messageList || messageList.length === 0) return;
 
-        const updatedMembers = { ...chatMembers };
+        setChatMembers(prev => {
+            const updatedMembers = { ...prev };
 
-        messageList.forEach(msg => {
-            if (msg.senderAccountId && msg.name) {
-                updatedMembers[msg.senderAccountId] = {
-                    id: msg.senderAccountId,
-                    fullName: msg.name,
-                    avatar: msg.avatarUrl
-                };
-            }
+            messageList.forEach(msg => {
+                // console.log("Xử lý tin nhắn:", {
+                //     senderAccountId: msg.senderAccountId,
+                //     name: msg.name,
+                //     avatarUrl: msg.avatarUrl
+                // });
+
+                if (msg.senderAccountId && msg.name) {
+                    // Trường hợp tin nhắn từ user
+                    updatedMembers[msg.senderAccountId] = {
+                        id: msg.senderAccountId,
+                        fullName: msg.name,
+                        avatar: msg.avatarUrl
+                    };
+                    // console.log("Đã thêm user vào chatMembers:", updatedMembers[msg.senderAccountId]);
+                } else if (msg.senderStartupId && msg.name) {
+                    // Trường hợp tin nhắn từ startup
+                    updatedMembers[`startup_${msg.senderStartupId}`] = {
+                        id: `startup_${msg.senderStartupId}`,
+                        fullName: msg.name,
+                        avatar: msg.avatarUrl,
+                        isStartup: true,
+                        startupId: msg.senderStartupId
+                    };
+                    // console.log("Đã thêm startup vào chatMembers:", updatedMembers[`startup_${msg.senderStartupId}`]);
+                } else {
+                    // console.log("Không thêm vào chatMembers vì thiếu thông tin:", {
+                    //     senderAccountId: msg.senderAccountId,
+                    //     senderStartupId: msg.senderStartupId,
+                    //     name: msg.name
+                    // });
+                }
+            });
+
+            // console.log("UpdatedMembers trước khi return:", updatedMembers);
+            return updatedMembers;
         });
-
-        setChatMembers(updatedMembers);
     };
 
     // Lấy thông tin người gửi tin nhắn - Phiên bản cũ (giữ lại để tương thích)
@@ -210,16 +246,27 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         try {
             const userInfo = await getAccountInfo(userId);
             if (userInfo) {
+                // Tạo fullName từ firstName và lastName
+                const fullName = userInfo.fullName ||
+                    (userInfo.firstName && userInfo.lastName ?
+                        `${userInfo.firstName} ${userInfo.lastName}` :
+                        userInfo.firstName || userInfo.lastName || userInfo.name || 'User');
+
                 // Cập nhật thông tin vào state chatMembers
                 setChatMembers(prev => ({
                     ...prev,
                     [userId]: {
                         id: userId,
-                        fullName: userInfo.fullName || userInfo.name,
+                        fullName: fullName,
                         avatar: userInfo.avatar || userInfo.avatarUrl
                     }
                 }));
-                return userInfo;
+
+                // Trả về userInfo với fullName đã được tạo
+                return {
+                    ...userInfo,
+                    fullName: fullName
+                };
             }
         } catch (err) {
             console.error(`Lỗi khi lấy thông tin người dùng ${userId}:`, err);
@@ -304,6 +351,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         if (!message) return;
 
         console.log("Nhận tin nhắn mới từ SignalR:", message);
+        console.log("ChatMembers hiện tại:", chatMembers);
 
 
         // Xác định loại tin nhắn dựa trên nội dung
@@ -319,19 +367,38 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             }
         }
 
+        // Lấy thông tin người gửi từ chatMembers nếu có
+        let senderName = message.name;
+        let senderAvatar = message.avatarUrl;
+
+        // console.log("Thông tin ban đầu - senderName:", senderName, "senderAvatar:", senderAvatar);
+        // console.log("SenderAccountId:", message.senderAccountId);
+        // console.log("ChatMember cho user này:", chatMembersRef.current[message.senderAccountId]);
+
+        if (message.senderAccountId && chatMembersRef.current[message.senderAccountId]) {
+            const memberInfo = chatMembersRef.current[message.senderAccountId];
+            senderName = senderName || memberInfo.fullName;
+            senderAvatar = senderAvatar || memberInfo.avatar;
+            console.log("Sau khi lấy từ chatMembers - senderName:", senderName, "senderAvatar:", senderAvatar);
+        }
+
+
         // Chuẩn hóa dữ liệu tin nhắn từ SignalR nếu cần
         const normalizedMessage = {
             id: message.messageId || message.id,
             chatRoomId: message.chatRoomId,
             senderId: message.senderAccountId,
+            senderAccountId: message.senderAccountId, // Thêm trường này để đảm bảo tính nhất quán
             senderStartupId: message.senderStartupId,
             content: message.content,
             sentAt: message.sentAt,
             isRead: message.isRead,
             type: messageType,
-            name: message.name, // Tên người gửi
-            avatarUrl: message.avatarUrl // Avatar người gửi
+            name: senderName, // Tên người gửi (ưu tiên từ chatMembers)
+            avatarUrl: senderAvatar // Avatar người gửi (ưu tiên từ chatMembers)
         };
+
+
 
         // Cập nhật thông tin tin nhắn mới nhất trong danh sách phòng chat (cho tất cả phòng)
         updateChatRoomLatestMessage(normalizedMessage);
@@ -371,7 +438,8 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
         // Xử lý thông tin người gửi
         if (normalizedMessage.senderId) {
             // Trường hợp người gửi là account
-            if (normalizedMessage.name && normalizedMessage.avatarUrl && normalizedMessage.senderId) {
+            if (normalizedMessage.name && normalizedMessage.senderId) {
+                // Cập nhật thông tin người gửi vào chatMembers
                 setChatMembers(prev => ({
                     ...prev,
                     [normalizedMessage.senderId]: {
@@ -382,6 +450,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 }));
             } else if (normalizedMessage.senderId) {
                 // Trường hợp không có tên hoặc avatar, lấy thông tin người dùng từ API
+                // Trường hợp không có tên, lấy thông tin người dùng từ API
                 const getUserInfo = async () => {
                     try {
                         const userInfo = await fetchCurrentUserInfo(normalizedMessage.senderId);
@@ -394,7 +463,7 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                                         msg.content === normalizedMessage.content)) {
                                     return {
                                         ...msg,
-                                        name: userInfo.fullName || userInfo.name,
+                                        name: userInfo.fullName,
                                         avatarUrl: userInfo.avatar || userInfo.avatarUrl
                                     };
                                 }
@@ -407,23 +476,28 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 };
 
                 // Kiểm tra xem đã có thông tin người dùng này trong chatMembers chưa
-                if (!chatMembers[normalizedMessage.senderId]) {
+                if (!chatMembersRef.current[normalizedMessage.senderId] || !normalizedMessage.name) {
                     getUserInfo();
                 } else {
                     // Nếu đã có thông tin trong chatMembers, sử dụng thông tin có sẵn để cập nhật tin nhắn
-                    const existingUser = chatMembers[normalizedMessage.senderId];
-                    setMessages(prev => prev.map(msg => {
-                        if (msg.id === normalizedMessage.id ||
-                            (msg.senderId == normalizedMessage.senderId &&
-                                msg.content === normalizedMessage.content)) {
-                            return {
-                                ...msg,
-                                name: existingUser.fullName,
-                                avatarUrl: existingUser.avatar
-                            };
-                        }
-                        return msg;
-                    }));
+                    const existingUser = chatMembersRef.current[normalizedMessage.senderId];
+                    if (existingUser && existingUser.fullName) {
+                        setMessages(prev => prev.map(msg => {
+                            if (msg.id === normalizedMessage.id ||
+                                (msg.senderId == normalizedMessage.senderId &&
+                                    msg.content === normalizedMessage.content)) {
+                                return {
+                                    ...msg,
+                                    name: existingUser.fullName,
+                                    avatarUrl: existingUser.avatar
+                                };
+                            }
+                            return msg;
+                        }));
+                    } else {
+                        // Nếu thông tin trong chatMembers không đầy đủ, lấy lại từ API
+                        getUserInfo();
+                    }
                 }
             }
         } else if (normalizedMessage.senderStartupId) {
@@ -469,11 +543,11 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             };
 
             // Kiểm tra xem đã có thông tin của startup này chưa
-            if (!chatMembers[`startup_${normalizedMessage.senderStartupId}`]) {
+            if (!chatMembersRef.current[`startup_${normalizedMessage.senderStartupId}`]) {
                 fetchStartupInfo();
             }
         }
-    }, [selectedChatRoom, chatMembers]);
+    }, [selectedChatRoom]);
 
     // Xử lý tải thêm tin nhắn khi cuộn lên
     const loadMoreMessages = () => {

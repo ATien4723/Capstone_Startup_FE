@@ -211,6 +211,11 @@ export default function useStartupChat(currentUserId, initialChatRoomId = null) 
         try {
             const userInfo = await getAccountInfo(userId);
             if (userInfo) {
+                // Tạo fullName từ firstName và lastName
+                const fullName = userInfo.fullName ||
+                    (userInfo.firstName && userInfo.lastName ?
+                        `${userInfo.firstName} ${userInfo.lastName}` :
+                        userInfo.firstName || userInfo.lastName || userInfo.name || 'User');
                 setChatMembers(prev => ({
                     ...prev,
                     [userId]: {
