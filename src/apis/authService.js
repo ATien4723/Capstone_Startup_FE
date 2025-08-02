@@ -9,13 +9,16 @@ export const getUserInfoFromToken = () => {
         if (!token) return null;
 
         const decodedToken = jwtDecode(token);
-        return {
+
+        const userInfo = {
             userId: decodedToken.nameid || decodedToken.sub || null,
             email: decodedToken.email || null,
-            role: decodedToken.role || null,
+            role: decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null,
             exp: decodedToken.exp || null,
             // Thêm các trường khác nếu cần
         };
+
+        return userInfo;
     } catch (error) {
         console.error("Error decoding token:", error);
         return null;

@@ -15,6 +15,7 @@ const MyNetwork = lazy(() => import('@/pages/MyNetwork/MyNetwork'));
 const NetworkList = lazy(() => import('@/pages/MyNetwork/NetworkList'));
 const CreateStartup = lazy(() => import('@/pages/Startups/CreateStartup'));
 const AccessDenied = lazy(() => import('@/pages/AccessDenied/AccessDenied'));
+const AdminAccessDenied = lazy(() => import('@/pages/AccessDenied/AdminAccessDenied'));
 const Policy = lazy(() => import('@/pages/Policy/Policy'));
 const PolicyDetail = lazy(() => import('@/pages/Policy/PolicyDetail'));
 
@@ -116,6 +117,11 @@ const routers = [
     {
         path: '/access-denied',
         component: AccessDenied,
+        protected: true
+    },
+    {
+        path: '/admin-access-denied',
+        component: AdminAccessDenied,
         protected: true
     },
     {

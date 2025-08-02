@@ -46,8 +46,14 @@ const Login = () => {
                 //     });
                 // }
                 toast.success('Đăng nhập thành công!');
-                // Chuyển hướng người dùng về trang họ đã cố gắng truy cập trước đó
-                navigate(from);
+
+                // Kiểm tra nếu là admin thì chuyển hướng đến trang admin
+                if (response.redirectToAdmin) {
+                    navigate('/admin');
+                } else {
+                    // Chuyển hướng người dùng về trang họ đã cố gắng truy cập trước đó
+                    navigate(from);
+                }
             } else {
                 console.error('Không nhận được token:', response);
                 toast.error('Đăng nhập thất bại, vui lòng thử lại');

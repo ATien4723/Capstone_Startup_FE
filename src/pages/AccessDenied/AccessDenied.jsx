@@ -1,7 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AccessDenied = () => {
+    const { isMember } = useAuth();
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center px-4">
             <div className="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
@@ -18,12 +21,14 @@ const AccessDenied = () => {
                     </p>
 
                     <div className="flex flex-col space-y-2">
-                        <Link to="/me/dashboard" className="bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded transition duration-200">
-                            Về trang chính
+                        <Link to={isMember ? "/me/dashboard" : "/home"} className="bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded transition duration-200">
+                            {isMember ? "Về trang chính" : "Về trang chủ"}
                         </Link>
-                        <Link to="/me/member" className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-center py-2 px-4 rounded transition duration-200">
-                            Quản lý thành viên
-                        </Link>
+                        {isMember && (
+                            <Link to="/me/member" className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-center py-2 px-4 rounded transition duration-200">
+                                Quản lý thành viên
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

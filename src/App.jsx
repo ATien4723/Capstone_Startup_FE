@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Suspense, useEffect } from 'react';
+import { Suspense } from 'react';
 import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
 import { InteractionProvider } from '@/contexts/InteractionContext.jsx';
@@ -41,9 +41,17 @@ function App() {
             path={parentRoute.path}
             element={
               parentRoute.protected ? (
-                <ProtectedRoute requireStartup={parentRoute.requireStartup} preventIfMember={parentRoute.preventIfMember}>
-                  <parentRoute.component />
-                </ProtectedRoute>
+                parentRoute.requireAdmin ? (
+                  <ProtectedRoute requireStartup={parentRoute.requireStartup} preventIfMember={parentRoute.preventIfMember}>
+                    <PermissionRoute requireAdmin={parentRoute.requireAdmin}>
+                      <parentRoute.component />
+                    </PermissionRoute>
+                  </ProtectedRoute>
+                ) : (
+                  <ProtectedRoute requireStartup={parentRoute.requireStartup} preventIfMember={parentRoute.preventIfMember}>
+                    <parentRoute.component />
+                  </ProtectedRoute>
+                )
               ) : (
                 <parentRoute.component />
               )
@@ -57,11 +65,12 @@ function App() {
                   path={childRoute.path.replace(`${parentRoute.path}/`, '')}
                   element={
                     childRoute.protected ? (
-                      childRoute.requirePostPermission || childRoute.requireMemberManagement ? (
+                      childRoute.requirePostPermission || childRoute.requireMemberManagement || childRoute.requireAdmin ? (
                         <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
                           <PermissionRoute
                             requirePostPermission={childRoute.requirePostPermission}
                             requireMemberManagement={childRoute.requireMemberManagement}
+                            requireAdmin={childRoute.requireAdmin}
                           >
                             <childRoute.component />
                           </PermissionRoute>

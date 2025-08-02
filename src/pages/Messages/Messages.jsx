@@ -45,6 +45,7 @@ export default function Messages() {
         isCallActive,
         isCallIncoming,
         callerInfo,
+        calleeInfo,
         isMuted,
         isVideoOff,
         connectionEstablished,
@@ -377,6 +378,21 @@ export default function Messages() {
         }
     };
 
+    // Kiểm tra xem có phải chat với startup không
+    const isStartupChat = () => {
+        const chatRoom = chatRooms.find(r => r.chatRoomId === selectedChatRoom);
+        if (!chatRoom) return false;
+
+        // console.log('🔍 Chat Room Type Check:', {
+        //     chatRoomId: selectedChatRoom,
+        //     type: chatRoom.type,
+        //     isUserToStartup: chatRoom.type === "UserToStartup"
+        // });
+
+        // Kiểm tra type của chatRoom
+        return chatRoom.type === "UserToStartup";
+    };
+
     // Hàm bắt đầu cuộc gọi video với người dùng hiện tại
     const initiateVideoCall = () => {
         // Kiểm tra nếu không có phòng chat được chọn
@@ -392,10 +408,22 @@ export default function Messages() {
             return;
         }
 
-        // Gọi hàm startVideoCall từ hook
+        // Gọi hàm startVideoCall từ hook với thông tin đầy đủ
+        const targetInfo = {
+            id: chatRoom.targetAccountId,
+            name: chatRoom.targetName,
+            fullName: chatRoom.targetName,
+            avatarUrl: chatRoom.targetAvatar, // Sử dụng targetAvatar từ chatRoom
+            accountId: chatRoom.targetAccountId
+        };
+
+        // console.log('🎯 Target Info for Video Call:', targetInfo);
+        // console.log('🎯 Chat Room Data:', chatRoom);
+
         startVideoCall(
             selectedChatRoom, // chatRoomId
-            chatRoom.targetName // Tên người nhận
+            chatRoom.targetName, // Tên người nhận
+            targetInfo // Thông tin đầy đủ của người nhận
         );
     };
 
@@ -549,13 +577,16 @@ export default function Messages() {
                                     )}
                                     <div className="flex items-center space-x-2">
                                         {/* Nút gọi video */}
-                                        <button
-                                            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-all duration-200"
-                                            title="Gọi video"
-                                            onClick={initiateVideoCall}
-                                        >
-                                            <i className="fas fa-video"></i>
-                                        </button>
+                                        {/* Chỉ hiển thị nút video call khi chat 1-1 với người dùng, không phải startup */}
+                                        {!isStartupChat() && (
+                                            <button
+                                                className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-all duration-200"
+                                                title="Gọi video"
+                                                onClick={initiateVideoCall}
+                                            >
+                                                <i className="fas fa-video"></i>
+                                            </button>
+                                        )}
 
                                         <button
                                             className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-all duration-200"
@@ -854,17 +885,56 @@ export default function Messages() {
                         {/* Header của modal cuộc gọi */}
                         <div className="bg-gray-800 px-6 py-4 flex justify-between items-center">
                             <div className="text-white font-bold flex items-center">
-                                <i className="fas fa-video mr-2"></i>
-                                {(() => {
-                                    // console.log('UI Debug - isCallIncoming:', isCallIncoming, 'isCallActive:', isCallActive, 'connectionEstablished:', connectionEstablished);
-                                    return isCallIncoming
-                                        ? "Cuộc gọi đến"
-                                        : isCallActive
-                                            ? connectionEstablished
-                                                ? "Đang trong cuộc gọi"
-                                                : "Đang kết nối cuộc gọi..."
-                                            : "Đang gọi...";
-                                })()}
+                                <i className="fas fa-video mr-3"></i>
+
+                                {/* Hiển thị avatar và tên */}
+                                {isCallIncoming && callerInfo ? (
+                                    <div className="flex items-center">
+                                        <img
+                                            src={callerInfo.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
+                                            alt={callerInfo.name}
+                                            className="w-8 h-8 rounded-full mr-3"
+                                            onError={(e) => {
+                                                e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                                            }}
+                                        />
+                                        <div>
+                                            <div className="text-sm">{callerInfo.name} đang gọi cho bạn</div>
+                                            <div className="text-xs text-gray-300">Cuộc gọi video</div>
+                                        </div>
+                                    </div>
+                                ) : calleeInfo ? (
+                                    <div className="flex items-center">
+                                        <img
+                                            src={calleeInfo.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
+                                            alt={calleeInfo.name}
+                                            className="w-8 h-8 rounded-full mr-3"
+                                            onError={(e) => {
+                                                e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                                            }}
+                                        />
+                                        <div>
+                                            <div className="text-sm">
+                                                {connectionEstablished
+                                                    ? `Đang trong cuộc gọi với ${calleeInfo.name}`
+                                                    : `Đang gọi ${calleeInfo.name}...`
+                                                }
+                                            </div>
+                                            <div className="text-xs text-gray-300">Cuộc gọi video</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        {isCallIncoming
+                                            ? "Cuộc gọi đến"
+                                            : isCallActive
+                                                ? connectionEstablished
+                                                    ? "Đang trong cuộc gọi"
+                                                    : "Đang kết nối cuộc gọi..."
+                                                : "Đang gọi..."
+                                        }
+                                    </div>
+                                )}
                             </div>
                             <div className="flex space-x-2">
                                 <button
@@ -908,9 +978,36 @@ export default function Messages() {
                                         />
                                     ) : (
                                         <div className="text-center p-6">
-                                            <div className="h-24 w-24 rounded-full bg-gray-700 mx-auto mb-4 flex items-center justify-center">
-                                                <i className="fas fa-user text-4xl text-gray-400"></i>
+                                            {/* Avatar người gọi/người nhận */}
+                                            <div className="h-24 w-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-gray-600">
+                                                {isCallIncoming && callerInfo?.avatarUrl ? (
+                                                    <img
+                                                        src={callerInfo.avatarUrl}
+                                                        alt={callerInfo.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                            e.target.nextSibling.style.display = 'flex';
+                                                        }}
+                                                    />
+                                                ) : calleeInfo?.avatarUrl ? (
+                                                    <img
+                                                        src={calleeInfo.avatarUrl}
+                                                        alt={calleeInfo.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                            e.target.nextSibling.style.display = 'flex';
+                                                        }}
+                                                    />
+                                                ) : null}
+
+                                                {/* Fallback icon */}
+                                                <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                                                    <i className="fas fa-user text-4xl text-gray-400"></i>
+                                                </div>
                                             </div>
+
                                             {isCallIncoming ? (
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium">
@@ -939,8 +1036,8 @@ export default function Messages() {
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium mb-3">
                                                         {connectionEstablished
-                                                            ? `Đang trong cuộc gọi với ${callerInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
-                                                            : `Đang kết nối với ${callerInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
+                                                            ? `Đang trong cuộc gọi với ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
+                                                            : `Đang kết nối với ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
                                                         }
                                                     </h3>
                                                     {!connectionEstablished && (
@@ -954,7 +1051,7 @@ export default function Messages() {
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium mb-3">
                                                         Đang gọi{" "}
-                                                        {chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}
+                                                        {calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}
                                                     </h3>
                                                     <div className="flex items-center justify-center">
                                                         <div className="animate-pulse">
@@ -967,8 +1064,6 @@ export default function Messages() {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Video của bạn (nhỏ ở góc) */}
                                 <div className="absolute bottom-4 right-4 w-1/4 aspect-video bg-gray-900 rounded-lg overflow-hidden shadow-lg border-2 border-gray-700">
                                     <video
                                         ref={localVideoRef}

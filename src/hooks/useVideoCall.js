@@ -10,6 +10,7 @@ export default function useVideoCall(currentUserId) {
     const [isCallActive, setIsCallActive] = useState(false);
     const [isCallIncoming, setIsCallIncoming] = useState(false);
     const [callerInfo, setCallerInfo] = useState(null);
+    const [calleeInfo, setCalleeInfo] = useState(null); // Thông tin người nhận cuộc gọi
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callSession, setCallSession] = useState(null);
@@ -50,8 +51,13 @@ export default function useVideoCall(currentUserId) {
 
     // Debug useEffect để theo dõi connectionEstablished
     // useEffect(() => {
-    //     console.log('connectionEstablished changed to:', connectionEstablished);
-    // }, [connectionEstablished]);
+    //     console.log('🔄 CONNECTION STATUS CHANGED:', {
+    //         connectionEstablished,
+    //         isCallActive,
+    //         isCallIncoming,
+    //         timestamp: new Date().toLocaleTimeString()
+    //     });
+    // }, [connectionEstablished, isCallActive, isCallIncoming]);
 
     // Xử lý khi nhận cuộc gọi đến qua SignalR
     const handleIncomingCall = async (data) => {
@@ -166,7 +172,7 @@ export default function useVideoCall(currentUserId) {
     };
 
     // Hàm bắt đầu cuộc gọi video
-    const startVideoCall = async (chatRoomId, targetName) => {
+    const startVideoCall = async (chatRoomId, targetName, targetInfo = null) => {
         try {
             // Hiển thị modal cuộc gọi
             setIsCallModalOpen(true);
@@ -219,13 +225,36 @@ export default function useVideoCall(currentUserId) {
                     console.warn('Không có roomToken trong response');
                 }
 
-                // Lưu thông tin người được gọi từ response
+                // Lưu thông tin người được gọi từ targetInfo được truyền vào
+                // console.log(' Setting Callee Info:', targetInfo);
+                if (targetInfo) {
+                    const calleeData = {
+                        id: targetInfo.accountId || targetInfo.id,
+                        name: targetInfo.fullName || targetInfo.name || targetName,
+                        avatarUrl: targetInfo.avatarUrl || "",
+                        connectionId: callResponse.calleeConnectionId
+                    };
+                    // console.log('Callee Data:', calleeData);
+                    setCalleeInfo(calleeData);
+                } else {
+                    // Fallback nếu không có targetInfo
+                    const fallbackData = {
+                        id: null,
+                        name: targetName,
+                        avatarUrl: "",
+                        connectionId: callResponse.calleeConnectionId
+                    };
+                    console.log('📞 Fallback Callee Data:', fallbackData);
+                    setCalleeInfo(fallbackData);
+                }
+
+                // Lưu thông tin người gọi (chính mình)
                 if (callResponse.caller) {
                     setCallerInfo({
                         id: callResponse.caller.accountId,
-                        name: callResponse.caller.fullName || "Người dùng",
+                        name: callResponse.caller.fullName || "Bạn",
                         avatarUrl: callResponse.caller.avatarUrl || "",
-                        connectionId: null // Có thể cập nhật sau khi kết nối
+                        connectionId: null
                     });
                 }
 
@@ -242,6 +271,10 @@ export default function useVideoCall(currentUserId) {
             }
 
             // Thiết lập WebRTC với simple-peer
+            // console.log('=== TẠO PEER CONNECTION (INITIATOR) ===');
+            // console.log('Local stream:', stream);
+            // console.log('Local stream tracks:', stream.getTracks());
+
             const peer = new SimplePeer({
                 initiator: true,
                 trickle: true,
@@ -254,9 +287,12 @@ export default function useVideoCall(currentUserId) {
                 }
             });
 
+            // console.log('Peer created (initiator):', peer);
+
             // Xử lý sự kiện khi có tín hiệu WebRTC (offer)
             peer.on('signal', async data => {
-                // console.log('Tín hiệu khởi tạo cuộc gọi:', data);
+                // console.log('=== TÍN HIỆU KHỞI TẠO CUỘC GỌI ===');
+                // console.log('Signal data:', data);
                 // Gửi tín hiệu qua SignalR
                 try {
                     // Sử dụng ref để lấy giá trị ngay lập tức
@@ -281,17 +317,36 @@ export default function useVideoCall(currentUserId) {
 
             // Xử lý khi nhận được stream từ người khác
             peer.on('stream', remoteStream => {
-                // console.log('Nhận được stream từ đối phương');
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = remoteStream;
-                    // Đánh dấu kết nối đã được thiết lập khi nhận được stream
-                    setConnectionEstablished(true);
-                }
+                // console.log("=== NHẬN ĐƯỢC STREAM TỪ ĐỐI PHƯƠNG ===");
+                // console.log('Remote stream:', remoteStream);
+                // console.log('Remote stream tracks:', remoteStream.getTracks());
+                console.log('remoteVideoRef.current:', remoteVideoRef.current);
+
+                // Hàm retry để đợi video element được render
+                const assignStreamWithRetry = (stream, maxRetries = 10, delay = 100) => {
+                    const tryAssign = (attempt) => {
+                        if (remoteVideoRef.current) {
+                            remoteVideoRef.current.srcObject = stream;
+                            // console.log('✅ Đã gán stream cho remoteVideoRef (attempt:', attempt, ')');
+                            // console.log('🟢 SETTING connectionEstablished = true (từ stream event - initiator)');
+                            setConnectionEstablished(true);
+                        } else if (attempt < maxRetries) {
+                            // console.log(`⏳ remoteVideoRef.current is null, retry ${attempt}/${maxRetries} sau ${delay}ms...`);
+                            setTimeout(() => tryAssign(attempt + 1), delay);
+                        } else {
+                            console.error('❌ remoteVideoRef.current vẫn null sau', maxRetries, 'lần thử!');
+                        }
+                    };
+                    tryAssign(1);
+                };
+
+                assignStreamWithRetry(remoteStream);
             });
 
             // Xử lý khi kết nối thành công
             peer.on('connect', () => {
-                // console.log('Kết nối P2P thành công');
+                // console.log('🟢 KẾT NỐI P2P THÀNH CÔNG (initiator)');
+                // console.log('🟢 SETTING connectionEstablished = true (từ connect event - initiator)');
                 toast.success(`Đã kết nối với ${targetName}`);
                 setConnectionEstablished(true);
             });
@@ -311,6 +366,7 @@ export default function useVideoCall(currentUserId) {
 
             // Lưu đối tượng peer để sử dụng sau
             peerRef.current = peer;
+            // console.log('Đã lưu peer vào peerRef (initiator):', peerRef.current);
 
             // Hiển thị thông báo đang gọi
             toast.info(`Đang gọi cho ${targetName}...`);
@@ -348,6 +404,7 @@ export default function useVideoCall(currentUserId) {
         }
 
         // Reset trạng thái cuộc gọi
+        // console.log('🔴 RESETTING connectionEstablished = false (endCall)');
         setIsCallActive(false);
         setIsCallIncoming(false);
         setConnectionEstablished(false);
@@ -424,6 +481,10 @@ export default function useVideoCall(currentUserId) {
             await callHubService.joinRoom(roomToken);
 
             // Thiết lập WebRTC để trả lời cuộc gọi
+            // console.log('=== TẠO PEER CONNECTION (ANSWERER) ===');
+            // console.log('Local stream:', stream);
+            // console.log('Local stream tracks:', stream.getTracks());
+
             const peer = new SimplePeer({
                 initiator: false,
                 trickle: true,
@@ -436,9 +497,12 @@ export default function useVideoCall(currentUserId) {
                 }
             });
 
+            // console.log('Peer created (answerer):', peer);
+
             // Xử lý sự kiện khi có tín hiệu WebRTC (answer)
             peer.on('signal', async data => {
-                // console.log('Tín hiệu trả lời cuộc gọi:', data);
+                // console.log('=== TÍN HIỆU TRẢ LỜI CUỘC GỌI ===');
+                // console.log('Answer signal data:', data);
 
                 // Gửi tín hiệu qua SignalR
                 try {
@@ -464,19 +528,36 @@ export default function useVideoCall(currentUserId) {
 
             // Xử lý khi nhận được stream từ người gọi
             peer.on('stream', remoteStream => {
-                // console.log('Nhận được stream từ người gọi, đang cập nhật connectionEstablished');
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = remoteStream;
-                    // Đánh dấu kết nối đã được thiết lập khi nhận được stream
-                    // console.log('Đang set connectionEstablished = true từ stream event');
-                    setConnectionEstablished(true);
-                }
+                // console.log("=== NHẬN ĐƯỢC STREAM TỪ NGƯỜI GỌI (ANSWER CALL) ===");
+                // console.log('Remote stream:', remoteStream);
+                // console.log('Remote stream tracks:', remoteStream.getTracks());
+                console.log('remoteVideoRef.current:', remoteVideoRef.current);
+
+                // Hàm retry để đợi video element được render
+                const assignStreamWithRetry = (stream, maxRetries = 10, delay = 100) => {
+                    const tryAssign = (attempt) => {
+                        if (remoteVideoRef.current) {
+                            remoteVideoRef.current.srcObject = stream;
+                            console.log('✅ Đã gán stream cho remoteVideoRef trong answerCall (attempt:', attempt, ')');
+                            // console.log('🟢 SETTING connectionEstablished = true (từ stream event - answerer)');
+                            setConnectionEstablished(true);
+                        } else if (attempt < maxRetries) {
+                            console.log(`⏳ remoteVideoRef.current is null trong answerCall, retry ${attempt}/${maxRetries} sau ${delay}ms...`);
+                            setTimeout(() => tryAssign(attempt + 1), delay);
+                        } else {
+                            console.error('❌ remoteVideoRef.current vẫn null trong answerCall sau', maxRetries, 'lần thử!');
+                        }
+                    };
+                    tryAssign(1);
+                };
+
+                assignStreamWithRetry(remoteStream);
             });
 
             // Xử lý khi kết nối thành công
             peer.on('connect', () => {
-                // console.log('Kết nối P2P thành công, đang cập nhật connectionEstablished');
-                // console.log('Đang set connectionEstablished = true từ connect event');
+                // console.log('🟢 KẾT NỐI P2P THÀNH CÔNG (answerer)');
+                // console.log('🟢 SETTING connectionEstablished = true (từ connect event - answerer)');
                 setConnectionEstablished(true);
                 toast.success(`Đã kết nối với ${callerInfo?.name || 'người gọi'}`);
             });
@@ -496,6 +577,7 @@ export default function useVideoCall(currentUserId) {
 
             // Lưu đối tượng peer để sử dụng sau
             peerRef.current = peer;
+            // console.log('Đã lưu peer vào peerRef (answerer):', peerRef.current);
 
             // Xử lý pending offer nếu có
             if (pendingOfferRef.current) {
@@ -610,6 +692,7 @@ export default function useVideoCall(currentUserId) {
         isCallActive,
         isCallIncoming,
         callerInfo,
+        calleeInfo,
         isMuted,
         isVideoOff,
         callSession,

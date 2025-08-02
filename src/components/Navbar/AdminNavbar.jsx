@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faSignOutAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { logout } from '@/apis/authService';
 
 const AdminNavbar = () => {
     const navigate = useNavigate();
@@ -39,9 +40,8 @@ const AdminNavbar = () => {
     }, []);
 
     const handleLogout = () => {
-        // Xử lý đăng xuất
-        // Chuyển hướng về trang đăng nhập
-        navigate('/login');
+        // Xử lý đăng xuất thực sự
+        logout();
     };
 
     return (

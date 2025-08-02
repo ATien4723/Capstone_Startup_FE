@@ -11,7 +11,7 @@ import { isAuthenticated } from '@/apis/authService';
  */
 const ProtectedRoute = ({ children, requireStartup = false, preventIfMember = false }) => {
     const location = useLocation();
-    const { isMember, loading, isReady } = useAuth();
+    const { isMember, loading, isReady, isAdmin } = useAuth();
     const isUserAuthenticated = isAuthenticated(); // Sử dụng trực tiếp từ authService
 
     // Hiển thị loading khi đang kiểm tra xác thực
@@ -32,13 +32,15 @@ const ProtectedRoute = ({ children, requireStartup = false, preventIfMember = fa
     }
 
     // Nếu route yêu cầu quyền startup và người dùng không phải là thành viên startup
-    if (requireStartup && !isMember) {
+    // Nhưng admin có thể truy cập mọi nơi
+    if (requireStartup && !isMember && !isAdmin) {
         return <Navigate to="/create-startup" state={{ from: location.pathname }} replace />;
     }
 
     // Nếu route cấm người dùng là thành viên startup (trang CreateStartup)
-    if (preventIfMember && isMember) {
-        return <Navigate to="/me/dashboard" replace />;
+    // Admin cũng không được tạo startup
+    if (preventIfMember && (isMember || isAdmin)) {
+        return <Navigate to={isAdmin ? "/admin" : "/me/dashboard"} replace />;
     }
 
     return children;

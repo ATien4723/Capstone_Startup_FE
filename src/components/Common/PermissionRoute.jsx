@@ -19,7 +19,7 @@ const PermissionRoute = ({
     requireAdmin = false
 }) => {
     const location = useLocation();
-    const { user, isReady } = useAuth();
+    const { user, isReady, isAdmin } = useAuth();
     const [hasPermission, setHasPermission] = useState(true);
     const [loading, setLoading] = useState(true);
     const isUserAuthenticated = isAuthenticated();
@@ -55,10 +55,7 @@ const PermissionRoute = ({
 
                 // Kiểm tra quyền admin
                 if (requireAdmin) {
-                    // Trong thực tế, bạn sẽ có API kiểm tra quyền admin
-                    // Đây là cách tạm thời để kiểm tra vai trò
-                    const isAdmin = user.role === 'Admin';
-                    console.log('Kiểm tra quyền admin:', isAdmin);
+                    console.log('Kiểm tra quyền admin:', isAdmin, 'User role:', user?.role);
                     if (!isAdmin) {
                         permissionGranted = false;
                     }
@@ -99,7 +96,10 @@ const PermissionRoute = ({
 
     // Nếu không có quyền, chuyển hướng đến trang từ chối truy cập
     if (!hasPermission) {
-        return <Navigate to="/access-denied" replace />;
+        // Kiểm tra nếu là admin route thì chuyển đến trang admin access denied
+        const isAdminRoute = location.pathname.startsWith('/admin');
+        const redirectPath = isAdminRoute ? '/admin-access-denied' : '/access-denied';
+        return <Navigate to={redirectPath} replace />;
     }
 
     return children;

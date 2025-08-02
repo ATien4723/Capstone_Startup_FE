@@ -56,6 +56,14 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
+        // Nếu user là admin, bỏ qua kiểm tra membership
+        if (user && (user.role === 'Admin' || user.role === 'admin')) {
+            setIsMember(false); // Admin không cần membership
+            setMembershipChecked(true);
+            setLoading(false);
+            return;
+        }
+
         // Hàm kiểm tra membership - cẩn thận với vòng lặp vô hạn
         const checkUserMembership = async () => {
             try {
@@ -110,10 +118,17 @@ export const AuthProvider = ({ children }) => {
 
                 // Cập nhật user state trong context
                 if (userId) {
-                    setUser({
+                    const userData = {
                         id: userId,
                         ...userInfo
-                    });
+                    };
+                    setUser(userData);
+
+                    // Kiểm tra role và chuyển hướng admin
+                    if (userInfo && (userInfo.role === 'Admin' || userInfo.role === 'admin')) {
+                        // Trả về response với flag để component Login biết cần chuyển hướng admin
+                        return { ...response, redirectToAdmin: true };
+                    }
                 }
                 return response;
             }
@@ -135,7 +150,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         isReady,
         refreshMembership,
-        login  // Thêm login vào context
+        login,  // Thêm login vào context
+        isAdmin: user?.role === 'Admin' || user?.role === 'admin'  // Thêm helper để kiểm tra admin
     };
 
     return (
