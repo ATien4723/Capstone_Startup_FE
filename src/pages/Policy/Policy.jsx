@@ -4,7 +4,7 @@ import { getAllPolicies, getPoliciesByPolicyType, getAllPolicyTypes } from '@/ap
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faFilter, faExternalLinkAlt, faSpinner, faHome, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-
+import Navbar from '@/components/Navbar/Navbar';
 const Policy = () => {
     const [policies, setPolicies] = useState([]);
     const [policyTypes, setPolicyTypes] = useState([]);
@@ -114,13 +114,15 @@ const Policy = () => {
     }
 
     return (
+
         <div className="container mx-auto px-4 py-8 mt-16">
+            <Navbar />
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Chính sách công ty</h1>
-                <Link to="/home" className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300">
+                {/* <Link to="/home" className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300">
                     <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
                     <span>Quay về trang chủ</span>
-                </Link>
+                </Link> */}
             </div>
 
             {/* Thanh tìm kiếm và bộ lọc */}

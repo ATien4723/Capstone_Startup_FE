@@ -65,7 +65,7 @@ const SharedPost = ({ postShareId }) => {
     return (
         <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 mt-3">
             <div className="flex items-center gap-3">
-                <Link to={`/profile/${sharedPost.accountId}`}>
+                <Link to={sharedPost.startupId ? `/startup-detail/${sharedPost.startupId}` : `/profile/${sharedPost.accountId}`}>
                     <img
                         src={sharedPost.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                         alt="Profile"
@@ -77,7 +77,7 @@ const SharedPost = ({ postShareId }) => {
                     />
                 </Link>
                 <div>
-                    <Link to={`/profile/${sharedPost.accountId}`} className="font-medium hover:underline">
+                    <Link to={sharedPost.startupId ? `/startup-detail/${sharedPost.startupId}` : `/profile/${sharedPost.accountId}`} className="font-medium hover:underline">
                         {sharedPost.fullName || "User"}
                     </Link>
                     <div className="text-xs text-gray-500 flex items-center">

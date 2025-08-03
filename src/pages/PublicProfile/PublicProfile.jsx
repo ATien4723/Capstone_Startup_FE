@@ -25,8 +25,8 @@ import SharedPost from '@/components/PostMedia/SharedPost';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-lg w-full max-w-lg shadow-lg relative p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-fade-in">
+        <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl relative animate-slide-in-up transform transition-all duration-300">
             <button
                 className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
                 onClick={onClose}
@@ -507,16 +507,16 @@ const PublicProfile = () => {
                                         <img
                                             src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                             alt="Profile"
-                                            className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                            className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
                                         />
                                         <div className="flex-grow">
                                             <button
-                                                className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
+                                                className="block w-full text-left px-5 py-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-all duration-300 hover:shadow-md"
                                                 onClick={() => setShowPostModal(true)}
                                             >
                                                 What would you like to talk about?
                                             </button>
-                                            <div className="flex justify-between items-center mt-2">
+                                            <div className="flex justify-between items-center mt-4">
                                                 <div className="space-x-2">
                                                     <button className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
                                                         onClick={() => setShowPostModal(true)}
@@ -528,7 +528,10 @@ const PublicProfile = () => {
                                                         <FontAwesomeIcon icon={faPaperclip} className="mr-1" /> Attachment
                                                     </button>
                                                 </div>
-                                                <button className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-all">
+                                                <button
+                                                    className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 hover:scale-105 hover:shadow-lg transition-all duration-300 ease-in-out transform"
+                                                    onClick={() => setShowPostModal(true)}
+                                                >
                                                     Post
                                                 </button>
                                             </div>
@@ -641,7 +644,7 @@ const PublicProfile = () => {
                                             {newPost.files.map((file, index) => {
                                                 const isVideo = file.type && file.type.startsWith('video/');
                                                 return (
-                                                    <div key={index} className="relative">
+                                                    <div key={index} className="relative group animate-scale-in">
                                                         {isVideo ? (
                                                             <video
                                                                 src={URL.createObjectURL(file)}
@@ -678,9 +681,9 @@ const PublicProfile = () => {
                                                 className="hidden"
                                                 onChange={handleFileUpload}
                                             />
-                                            <FontAwesomeIcon icon={faImage} className="text-blue-500" />
+                                            <FontAwesomeIcon icon={faImage} className="text-blue-500 size-8" />
                                         </label>
-                                        <FontAwesomeIcon icon={faSmile} className="text-yellow-500" />
+                                        <FontAwesomeIcon icon={faSmile} className="text-yellow-500 size-8" />
                                     </div>
                                 </div>
                                 <div className="flex justify-end p-4 border-t">

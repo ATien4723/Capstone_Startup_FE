@@ -20,7 +20,6 @@ export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 
 export const getNewFeed = async (userId, page = 1, pageSize = 10) => {
     try {
         const response = await axiosClient.get(`NewFeed?userId=${userId}&page=${page}&pageSize=${pageSize}`);
-        console.log('Kết quả API New Feed:', response);
         return response;
     } catch (error) {
         console.error('Lỗi khi gọi API New Feed:', error);

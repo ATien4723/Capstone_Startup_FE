@@ -26,8 +26,19 @@ import { getTopCVSubmittedInternshipPosts } from '@/apis/cvService';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-lg w-full max-w-lg shadow-lg relative p-6">
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-fade-in"
+        onClick={(e) => {
+            // Đóng modal khi click vào backdrop
+            if (e.target === e.currentTarget) {
+                onClose();
+            }
+        }}
+    >
+        <div
+            className="bg-white rounded-xl w-full max-w-lg shadow-2xl relative animate-slide-in-up transform transition-all duration-300"
+            onClick={(e) => e.stopPropagation()} // Ngăn đóng modal khi click vào nội dung
+        >
             <button
                 className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
                 onClick={onClose}
@@ -265,27 +276,42 @@ const Home = () => {
                                 </div>
                                 <Link
                                     to={`/profile/${currentUserId}`}
-                                    className="block w-full mt-3 py-1 border border-gray-400 text-gray-700 rounded-full text-sm hover:bg-gray-100 transition-all"
+                                    className="inline-block mt-4 px-12 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
                                 >
-                                    View Public Profile
+                                    View Profile
                                 </Link>
 
                                 {/* About Me Section */}
-                                <div className="mt-4 text-left">
+                                {/* <div className="mt-4 text-left">
                                     <div className="flex justify-between items-center mb-3">
                                         <h6 className="font-semibold">About Me</h6>
                                     </div>
                                     <p className="text-gray-600">{profileData?.introTitle || "No introduction yet."}</p>
                                 </div>
                             </div>
+                        </div> */}
+
+                                <div className="mt-6 text-left bg-gray-50 rounded-lg p-4">
+                                    <h6 className="font-semibold text-gray-800 mb-2 flex items-center">
+                                        <FontAwesomeIcon icon={faEdit} className="mr-2 text-blue-500" />
+                                        About Me
+                                    </h6>
+                                    <p className="text-gray-600 text-sm leading-relaxed">
+                                        {profileData?.introTitle || "Share something about yourself..."}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Suggestions Card */}
-                        <div className="bg-white rounded-lg shadow-md">
+                        <div className="bg-white rounded-xl shadow-md">
+                            <div className="bg-gradient-to-r rounded-t-lg from-green-500 to-teal-500 p-4">
+                                <h5 className="font-bold text-white flex items-center">
+                                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                                    People You May Know
+                                </h5>
+                            </div>
                             <div className="p-4">
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="font-bold">Suggested connections</span>
-                                </div>
                                 {isLoadingSuggestions ? (
                                     <div className="flex justify-center py-3">
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
@@ -353,16 +379,16 @@ const Home = () => {
                                     <img
                                         src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                                         alt="Profile"
-                                        className="w-9 h-9 rounded-full border-2 border-white/20 object-cover"
+                                        className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
                                     />
                                     <div className="flex-grow">
                                         <button
-                                            className="w-full p-3 border border-gray-200 rounded-lg text-left text-gray-500"
+                                            className="block w-full text-left px-5 py-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-all duration-300 hover:shadow-md"
                                             onClick={() => setShowPostModal(true)}
                                         >
                                             What would you like to talk about?
                                         </button>
-                                        <div className="flex justify-between items-center mt-2">
+                                        <div className="flex justify-between items-center mt-4">
                                             <div className="space-x-2">
                                                 <button
                                                     className="px-3 py-1 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-all"
@@ -378,7 +404,7 @@ const Home = () => {
                                                 </button>
                                             </div>
                                             <button
-                                                className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-all"
+                                                className="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 hover:scale-105 hover:shadow-lg transition-all duration-300 ease-in-out transform"
                                                 onClick={() => setShowPostModal(true)}
                                             >
                                                 Post
@@ -446,6 +472,7 @@ const Home = () => {
                                 setPostError(''); // Reset lỗi khi đóng modal
                                 setNewPost({ content: '', files: [] }); // Reset form
                             }}>
+
                                 <div className="flex items-center gap-3 p-6 border-b">
                                     <img
                                         src={profileData?.avatarUrl || "/api/placeholder/40/40"}
@@ -457,13 +484,18 @@ const Home = () => {
                                         <div className="text-xs text-gray-500">Posting publicly</div>
                                     </div>
                                 </div>
-                                <div className="p-6">
+                                <div className="p-6 animate-slide-in-right">
                                     <textarea
-                                        className={`w-full border-none outline-none resize-none text-lg ${postError ? 'border-red-500' : ''}`}
+                                        className="w-full border-none outline-none resize-none text-lg focus:ring-2 focus:ring-blue-300 rounded-lg p-2 transition-all duration-200"
                                         rows={4}
                                         placeholder="What would you like to talk about?"
                                         value={newPost.content}
-                                        onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                                        onChange={(e) => {
+                                            setNewPost(prev => ({ ...prev, content: e.target.value }));
+                                            if (postError) {
+                                                setPostError('');
+                                            }
+                                        }}
                                     />
                                     {postError && (
                                         <div className="mt-2 text-red-500 text-sm bg-red-50 p-2 rounded-md">
@@ -471,13 +503,13 @@ const Home = () => {
                                         </div>
                                     )}
                                     {newPost.files.length > 0 && (
-                                        <div className="mt-4 flex flex-wrap gap-2">
+                                        <div className="mt-4 flex flex-wrap gap-2 animate-fade-in-up">
                                             {newPost.files.map((file, index) => (
-                                                <div key={index} className="relative">
+                                                <div key={index} className="relative group animate-scale-in" >
                                                     <img
                                                         src={URL.createObjectURL(file)}
                                                         alt={`Upload ${index + 1}`}
-                                                        className="w-20 h-20 object-cover rounded"
+                                                        className="w-20 h-20 object-cover rounded-lg shadow-md group-hover:shadow-lg transition-shadow duration-200"
                                                     />
                                                     <button
                                                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
@@ -500,9 +532,9 @@ const Home = () => {
                                                 className="hidden"
                                                 onChange={handleFileUpload}
                                             />
-                                            <FontAwesomeIcon icon={faImage} className="text-blue-500" />
+                                            <FontAwesomeIcon icon={faImage} className="text-blue-500 size-8" />
                                         </label>
-                                        <FontAwesomeIcon icon={faSmile} className="text-yellow-500" />
+                                        <FontAwesomeIcon icon={faSmile} className="text-yellow-500 size-8" />
                                     </div>
                                 </div>
                                 <div className="flex justify-end p-4 border-t">
@@ -854,9 +886,12 @@ const Home = () => {
                     {/* Right Column - Trending */}
                     <div className="space-y-6 hidden md:block md:col-span-1">
                         {/* Trending Card */}
-                        <div className="bg-white rounded-lg shadow-md">
-                            <div className="p-4 border-b">
-                                <h5 className="font-bold">Trending</h5>
+                        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4">
+                                <h5 className="font-bold text-white flex items-center">
+                                    <FontAwesomeIcon icon={faBriefcase} className="mr-2" />
+                                    Trending Internships
+                                </h5>
                             </div>
                             <div className="p-4">
                                 {isLoadingTrending ? (
@@ -906,12 +941,17 @@ const Home = () => {
                         </div>
 
                         {/* Messages Card */}
-                        <div className="bg-white rounded-lg shadow-md">
-                            <div className="p-4 border-b flex justify-between items-center">
-                                <h5 className="font-bold">Messages</h5>
-                                <Link to="/messages" className="text-blue-600 text-sm hover:underline">
-                                    View all
-                                </Link>
+                        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center space-x-2">
+                                        <i className="fa-solid fa-messages text-white"></i>
+                                        <h5 className="font-bold text-white">Messages</h5>
+                                    </div>
+                                    {/* <Link to="/messages" className="text-blue-100 hover:text-white text-sm transition-colors">
+                                        View all
+                                    </Link> */}
+                                </div>
                             </div>
                             <div className="p-4">
                                 {loadingChatRooms ? (
@@ -965,7 +1005,7 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         </div >
     );
 };

@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
                 if (isAuthenticated()) {
                     const userInfo = getUserInfoFromToken();
                     const userId = getUserId();
-                    console.log('userId trong useEffect:', userId);
+                    // console.log('userId trong useEffect:', userId);
                     if (userId) {
                         setUser({
                             id: userId,
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 const result = await checkMembership(userId);
-                console.log('API trả về:', result);
+                // console.log('API trả về:', result);
                 setIsMember(result.isMember === true);
             } catch (err) {
                 console.error('Lỗi khi kiểm tra membership:', err);
