@@ -1,12 +1,53 @@
-# React + Vite
+# 🚀 React Startup Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive platform for startups built with React and Vite.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 📱 Post management with media support
+- 👥 Social interaction and messaging
+- 💼 Startup management tools
+- 🎨 Modern responsive interface
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **React 19** + **Vite 6**
+- **Tailwind CSS** + **Material-UI**
+- **TanStack Query** + **Axios**
+- **SignalR** for real-time features
+
+## 🚀 Quick Start
+
+```bash
+# Clone and install
+git clone <repository-url>
+cd react-startup
+npm install
+
+# Run development
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## 📁 Structure
+
+```
+src/
+├── components/     # Reusable components
+├── pages/         # Page components
+├── hooks/         # Custom hooks
+├── apis/          # API services
+└── utils/         # Utilities
+```
+
+## 🔧 Environment
+
+```env
+VITE_API_BASE_URL=your_api_url
+VITE_SIGNALR_HUB_URL=your_signalr_url
+```
+---
+
+⭐ Star this project if you find it helpful! hihihi Tiendz
