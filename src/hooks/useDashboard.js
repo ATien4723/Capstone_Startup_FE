@@ -70,7 +70,7 @@ const useDashboard = () => {
                 new Date(stat.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })) || [],
             datasets: [
                 {
-                    label: 'Lượt Click',
+                    label: 'Clicks',
                     data: dashboardData?.clickStatsResultDTO?.dailyClickStats?.map(stat => stat.clickCount) || [],
                     fill: true,
                     backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -90,7 +90,7 @@ const useDashboard = () => {
                 new Date(stat.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })) || [],
             datasets: [
                 {
-                    label: 'Lượt Tương Tác',
+                    label: 'Interactions',
                     data: dashboardData?.interactionStatsResultDTO?.dailyInteractionStats?.map(stat => stat.interactionCount) || [],
                     backgroundColor: 'rgba(34, 197, 94, 0.7)',
                     borderColor: 'rgb(34, 197, 94)',
@@ -128,7 +128,7 @@ const useDashboard = () => {
                 new Date(stat.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })) || [],
             datasets: [
                 {
-                    label: 'Lượt Click',
+                    label: 'Clicks',
                     data: dashboardData?.clickStatsResultDTO?.dailyClickStats?.map(stat => stat.clickCount) || [],
                     fill: false,
                     backgroundColor: 'rgba(59, 130, 246, 0.5)',
@@ -141,7 +141,7 @@ const useDashboard = () => {
                     yAxisID: 'y',
                 },
                 {
-                    label: 'Lượt Tương Tác',
+                    label: 'Interactions',
                     data: dashboardData?.interactionStatsResultDTO?.dailyInteractionStats?.map(stat => stat.interactionCount) || [],
                     fill: false,
                     backgroundColor: 'rgba(34, 197, 94, 0.5)',
@@ -178,7 +178,7 @@ const useDashboard = () => {
                 },
                 title: {
                     display: true,
-                    text: 'Thống Kê Lượt Click Theo Ngày',
+                    text: 'Click Statistics By Day',
                     font: { size: 16 }
                 }
             },
@@ -203,7 +203,7 @@ const useDashboard = () => {
                 },
                 title: {
                     display: true,
-                    text: 'Thống Kê Tương Tác Theo Ngày',
+                    text: 'Interaction Statistics By Day',
                     font: { size: 16 }
                 }
             },
@@ -228,7 +228,7 @@ const useDashboard = () => {
                 },
                 title: {
                     display: true,
-                    text: 'Phân Bố Tương Tác',
+                    text: 'Interaction Distribution',
                     font: { size: 16 }
                 }
             }

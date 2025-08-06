@@ -424,12 +424,16 @@ const PublicProfile = () => {
                                         <span>{profileData.postCount || 0}</span>
                                     </div>
                                     <div className="text-center">
-                                        <h6 className="font-semibold">Following</h6>
-                                        <span>{following.length}</span>
+                                        <Link to="/network/following" className="block">
+                                            <div className="font-semibold hover:text-blue-600">Follow</div>
+                                            <div className=" hover:text-blue-600">{following?.length || 0}</div>
+                                        </Link>
                                     </div>
                                     <div className="text-center">
-                                        <h6 className="font-semibold">Followers</h6>
-                                        <span>{followers.length}</span>
+                                        <Link to="/network/followers" className="block">
+                                            <div className="font-semibold hover:text-blue-600">Followers</div>
+                                            <div className=" text-lg hover:text-blue-600">{followers?.length || 0}</div>
+                                        </Link>
                                     </div>
                                 </div>
                                 <div className="space-y-2">

@@ -364,6 +364,10 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
                 contentLower.endsWith('.png') || contentLower.endsWith('.gif') ||
                 contentLower.endsWith('.webp')) {
                 messageType = MESSAGE_TYPES.FILE;  // Đánh dấu là file để hiển thị đúng
+            } else if (contentLower.endsWith('.mp4') || contentLower.endsWith('.webm') ||
+                contentLower.endsWith('.mov') || contentLower.endsWith('.avi') ||
+                contentLower.endsWith('.mkv')) {
+                messageType = MESSAGE_TYPES.FILE;  // Đánh dấu video cũng là file để hiển thị đúng
             }
         }
 

@@ -248,7 +248,7 @@ export default function UserChat() {
                                 rel="noopener noreferrer"
                                 className="underline hover:text-blue-500 transition-colors"
                             >
-                                Tệp đính kèm
+                                Attachment
                             </a>
                         </div>
                     );
@@ -335,17 +335,17 @@ export default function UserChat() {
             <header className="bg-gradient-to-r from-green-600 to-green-800 shadow-lg px-6 py-4 flex justify-between items-center mb-6 rounded-lg text-white">
                 <h1 className="text-2xl font-bold flex items-center">
                     <i className="fas fa-building text-2xl mr-3"></i>
-                    Tin nhắn doanh nghiệp
+                    Business Messages
                 </h1>
-                <div className="flex space-x-3">
+                {/* <div className="flex space-x-3">
                     <button
                         className={`p-2 rounded-lg text-sm font-medium transition duration-300 flex items-center space-x-1 ${showMembersSidebar ? 'bg-white text-green-600' : 'bg-green-700 text-white hover:bg-green-900'}`}
                         onClick={() => setShowMembersSidebar(!showMembersSidebar)}
                     >
                         <i className="fa-solid fa-user-group-simple text-lg"></i>
-                        <span>Danh bạ</span>
+                        <span>Contacts</span>
                     </button>
-                </div>
+                </div> */}
             </header>
 
             {/* Main Content */}
@@ -355,7 +355,7 @@ export default function UserChat() {
                     <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-100">
                         <h2 className="font-bold text-gray-800 flex items-center">
                             <i className="fas fa-comment-dots text-green-500 mr-2"></i>
-                            Cuộc trò chuyện
+                            Conversations
                         </h2>
                     </div>
                     <div className="px-4 py-3">
@@ -363,7 +363,7 @@ export default function UserChat() {
                             <input
                                 type="text"
                                 className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition-all"
-                                placeholder="Tìm kiếm tin nhắn..."
+                                placeholder="Search messages..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -411,7 +411,7 @@ export default function UserChat() {
                                                 room.latestMessageContent.toLowerCase().endsWith('.png') ||
                                                 room.latestMessageContent.toLowerCase().endsWith('.gif') ||
                                                 room.latestMessageContent.toLowerCase().endsWith('.webp')
-                                            ) ? '🖼️ Hình ảnh' : room.latestMessageContent}
+                                            ) ? '🖼️ Image' : room.latestMessageContent}
                                         </p>
                                     </div>
                                     {room.unreadCount > 0 && (
@@ -442,7 +442,7 @@ export default function UserChat() {
                                     <div className="flex items-center">
                                         <CircularProgress size={20} />
                                         <div className="ml-3">
-                                            <h2 className="font-medium text-gray-900">Đang tải...</h2>
+                                            <h2 className="font-medium text-gray-900">Loading...</h2>
                                         </div>
                                     </div>
                                 ) : (
@@ -456,7 +456,7 @@ export default function UserChat() {
                                             <h2 className="font-medium text-gray-900">
                                                 {chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName}
                                             </h2>
-                                            <p className="text-xs text-gray-500">Trực tuyến</p>
+                                            <p className="text-xs text-gray-500">Online</p>
                                         </div>
                                     </div>
                                 )}
@@ -492,7 +492,7 @@ export default function UserChat() {
                                 ) : messages.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-32 text-gray-400">
                                         <i className="fas fa-comments text-4xl mb-3"></i>
-                                        <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
+                                        <p>No messages yet. Start the conversation!</p>
                                     </div>
                                 ) : (
                                     <>
@@ -597,7 +597,7 @@ export default function UserChat() {
                                         <input
                                             type="text"
                                             className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                            placeholder="Nhập tin nhắn với tư cách doanh nghiệp..."
+                                            placeholder="Type a message..."
                                             value={messageInput}
                                             onChange={e => setMessageInput(e.target.value)}
                                         />
@@ -622,12 +622,12 @@ export default function UserChat() {
                                             {sendingMessage ? (
                                                 <div className="flex items-center">
                                                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                                                    Đang gửi...
+                                                    Sending...
                                                 </div>
                                             ) : (
                                                 <>
                                                     <i className="fas fa-paper-plane"></i>
-                                                    Gửi
+                                                    Send
                                                 </>
                                             )}
                                         </button>

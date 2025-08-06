@@ -33,21 +33,21 @@ const PDFViewer = ({ pdfUrl, onClose }) => {
                 {/* Header */}
                 <div className="flex justify-between items-center p-4 border-b">
                     <h2 className="text-xl font-semibold text-gray-800">
-                        Xem tài liệu PDF
+                        View PDF Document
                     </h2>
                     <div className="flex items-center space-x-4">
                         <a
                             href={pdfUrl}
                             download
                             className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                            title="Tải xuống"
+                            title="Download"
                         >
                             <FontAwesomeIcon icon={faDownload} />
                         </a>
                         <button
                             onClick={onClose}
                             className="text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
-                            title="Đóng"
+                            title="Close"
                         >
                             <FontAwesomeIcon icon={faTimes} />
                         </button>
@@ -63,13 +63,13 @@ const PDFViewer = ({ pdfUrl, onClose }) => {
                             loading={
                                 <div className="flex flex-col items-center justify-center h-64">
                                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                                    <p className="mt-4 text-gray-600">Đang tải tài liệu...</p>
+                                    <p className="mt-4 text-gray-600">Loading document...</p>
                                 </div>
                             }
                             error={
                                 <div className="text-center text-red-600 p-4">
-                                    <p className="font-medium">Không thể tải tài liệu PDF</p>
-                                    <p className="mt-2">Vui lòng thử lại sau hoặc tải xuống để xem</p>
+                                    <p className="font-medium">Unable to load PDF document</p>
+                                    <p className="mt-2">Please try again later or download to view</p>
                                 </div>
                             }
                         >
@@ -92,17 +92,17 @@ const PDFViewer = ({ pdfUrl, onClose }) => {
                         className={`px-4 py-2 rounded-lg flex items-center ${pageNumber <= 1 ? 'text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
                     >
                         <FontAwesomeIcon icon={faChevronLeft} className="mr-1" />
-                        Trang trước
+                        Previous Page
                     </button>
                     <p className="text-gray-700">
-                        Trang <span className="font-semibold">{pageNumber}</span> / {numPages || '--'}
+                        Page <span className="font-semibold">{pageNumber}</span> / {numPages || '--'}
                     </p>
                     <button
                         disabled={pageNumber >= numPages}
                         onClick={nextPage}
                         className={`px-4 py-2 rounded-lg flex items-center ${pageNumber >= numPages ? 'text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
                     >
-                        Trang sau
+                        Next Page
                         <FontAwesomeIcon icon={faChevronRight} className="ml-1" />
                     </button>
                 </div>

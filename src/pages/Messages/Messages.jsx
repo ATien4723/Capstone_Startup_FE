@@ -306,22 +306,25 @@ export default function Messages() {
     const renderMessageContent = (msg) => {
         const isMe = msg.senderId == currentUserId || msg.senderAccountId == currentUserId;
 
-        // Kiểm tra nếu tin nhắn là hình ảnh
+        // Kiểm tra nếu tin nhắn là hình ảnh hoặc video
         if (msg.type === "File" && msg.content && (
             msg.content.toLowerCase().endsWith('.jpg') ||
             msg.content.toLowerCase().endsWith('.jpeg') ||
             msg.content.toLowerCase().endsWith('.png') ||
             msg.content.toLowerCase().endsWith('.gif') ||
-            msg.content.toLowerCase().endsWith('.webp')
+            msg.content.toLowerCase().endsWith('.webp') ||
+            msg.content.toLowerCase().endsWith('.mp4') ||
+            msg.content.toLowerCase().endsWith('.webm') ||
+            msg.content.toLowerCase().endsWith('.mov') ||
+            msg.content.toLowerCase().endsWith('.avi')
         )) {
-            return null; // Hình ảnh sẽ được xử lý riêng ở nơi khác
+            return null; // Hình ảnh và video sẽ được xử lý riêng ở nơi khác
         }
 
         switch (msg.type) {
             case "Link":
                 return (
                     <div className="leading-relaxed">
-                        {/* Tách và hiển thị các link */}
                         {msg.content.match(/(https?:\/\/[^\s]+)/g)?.map((url, index) => (
                             <a
                                 key={index}
@@ -338,40 +341,20 @@ export default function Messages() {
             case "File":
                 if (!msg.content) return null;
 
-                // Kiểm tra loại file để hiển thị phù hợp
-                if (msg.content.toLowerCase().endsWith('.mp4') ||
-                    msg.content.toLowerCase().endsWith('.webm') ||
-                    msg.content.toLowerCase().endsWith('.mov') ||
-                    msg.content.toLowerCase().endsWith('.avi')) {
-                    return (
-                        <div className="flex flex-col">
-                            <div className="overflow-hidden shadow-md rounded-lg">
-                                <video
-                                    controls
-                                    className="max-w-full"
-                                >
-                                    <source src={msg.content} />
-                                    Trình duyệt của bạn không hỗ trợ video này.
-                                </video>
-                            </div>
-                        </div>
-                    );
-                } else {
-                    // Hiển thị link tải xuống cho các loại file khác
-                    return (
-                        <div className="flex items-center bg-gray-50 p-3 text-gray-700 rounded-lg">
-                            <i className="fas fa-file-download mr-2 text-blue-500"></i>
-                            <a
-                                href={msg.content}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline hover:text-blue-500 transition-colors"
-                            >
-                                Tệp đính kèm
-                            </a>
-                        </div>
-                    );
-                }
+                // Hiển thị link tải xuống cho các loại file khác
+                return (
+                    <div className="flex items-center bg-gray-50 p-3 text-gray-700 rounded-lg">
+                        <i className="fas fa-file-download mr-2 text-blue-500"></i>
+                        <a
+                            href={msg.content}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-blue-500 transition-colors"
+                        >
+                            Attachment
+                        </a>
+                    </div>
+                );
             case "Text":
             default:
                 return <div className="leading-relaxed">{msg.content}</div>;
@@ -435,7 +418,7 @@ export default function Messages() {
                 <header className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg px-6 py-4 flex justify-between items-center mb-6 rounded-lg text-white">
                     <h1 className="text-2xl font-bold flex items-center">
                         <i className="fas fa-comments text-2xl mr-3"></i>
-                        Tin nhắn
+                        Messages
                     </h1>
                     {/* <div className="flex space-x-3">
                         <button
@@ -443,7 +426,7 @@ export default function Messages() {
                             onClick={() => setShowMembersSidebar(!showMembersSidebar)}
                         >
                             <i className="fa-solid fa-user-group-simple text-lg"></i>
-                            <span>Danh bạ</span>
+                            <span>Contacts</span>
                         </button>
                     </div> */}
                 </header>
@@ -455,7 +438,7 @@ export default function Messages() {
                         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-100">
                             <h2 className="font-bold text-gray-800 flex items-center">
                                 <i className="fas fa-comment-dots text-blue-500 mr-2"></i>
-                                Cuộc trò chuyện
+                                Conversations
                             </h2>
                             {/* <button
                                 className="ml-2 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow transition-all duration-200 focus:outline-none flex items-center justify-center"
@@ -469,7 +452,7 @@ export default function Messages() {
                                 <input
                                     type="text"
                                     className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
-                                    placeholder="Tìm kiếm tin nhắn..."
+                                    placeholder="Search messages..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -517,7 +500,14 @@ export default function Messages() {
                                                     room.latestMessageContent.toLowerCase().endsWith('.png') ||
                                                     room.latestMessageContent.toLowerCase().endsWith('.gif') ||
                                                     room.latestMessageContent.toLowerCase().endsWith('.webp')
-                                                ) ? '🖼️ Hình ảnh' : room.latestMessageContent}
+                                                ) ? '🖼️ Image' :
+                                                    room.latestMessageContent && (
+                                                        room.latestMessageContent.toLowerCase().endsWith('.mp4') ||
+                                                        room.latestMessageContent.toLowerCase().endsWith('.webm') ||
+                                                        room.latestMessageContent.toLowerCase().endsWith('.mov') ||
+                                                        room.latestMessageContent.toLowerCase().endsWith('.avi') ||
+                                                        (room.latestMessageContent.includes('cloudinary.com/') && room.latestMessageContent.includes('/video/'))
+                                                    ) ? '🎬 Video' : room.latestMessageContent}
                                             </p>
                                         </div>
                                         {room.unreadCount > 0 && (
@@ -548,7 +538,7 @@ export default function Messages() {
                                         <div className="flex items-center">
                                             <CircularProgress size={20} />
                                             <div className="ml-3">
-                                                <h2 className="font-medium text-gray-900">Đang tải...</h2>
+                                                <h2 className="font-medium text-gray-900">Loading...</h2>
                                             </div>
                                         </div>
                                     ) : (
@@ -571,7 +561,7 @@ export default function Messages() {
                                                 <h2 className="font-medium text-gray-900">
                                                     {chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName}
                                                 </h2>
-                                                <p className="text-xs text-gray-500">Trực tuyến</p>
+                                                <p className="text-xs text-gray-500">Online</p>
                                             </div>
                                         </div>
                                     )}
@@ -581,7 +571,7 @@ export default function Messages() {
                                         {!isStartupChat() && (
                                             <button
                                                 className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-all duration-200"
-                                                title="Gọi video"
+                                                title="Video call"
                                                 onClick={initiateVideoCall}
                                             >
                                                 <i className="fas fa-video"></i>
@@ -590,11 +580,11 @@ export default function Messages() {
 
                                         <button
                                             className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-all duration-200"
-                                            title="Sao chép liên kết"
+                                            title="Copy link"
                                             onClick={() => {
                                                 const url = `${window.location.origin}/messages/u/${selectedChatRoom}`;
                                                 navigator.clipboard.writeText(url);
-                                                toast.success("Đã sao chép liên kết cuộc trò chuyện");
+                                                // toast.success("Conversation link copied");
                                             }}
                                         >
                                             <i className="fas fa-link text-gray-600"></i>
@@ -631,7 +621,7 @@ export default function Messages() {
                                     ) : messages.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-32 text-gray-400">
                                             <i className="fas fa-comments text-4xl mb-3"></i>
-                                            <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
+                                            <p>No messages yet. Start the conversation!</p>
                                         </div>
                                     ) : (
                                         <>
@@ -665,6 +655,12 @@ export default function Messages() {
                                                         msg.content.toLowerCase().endsWith('.webp')
                                                     );
 
+                                                    const isVideoMessage = msg.type === "File" && msg.content && (
+                                                        msg.content.toLowerCase().endsWith('.mp4') ||
+                                                        msg.content.toLowerCase().endsWith('.webm') ||
+                                                        msg.content.toLowerCase().endsWith('.mov') ||
+                                                        msg.content.toLowerCase().endsWith('.avi')
+                                                    );
                                                     // Kiểm tra tin nhắn tạm
                                                     const isTemp = msg.isTemp === true;
 
@@ -692,10 +688,32 @@ export default function Messages() {
                                                                     <div className="rounded-lg overflow-hidden shadow-sm">
                                                                         <img
                                                                             src={msg.content}
-                                                                            alt="Hình ảnh"
+                                                                            alt="Image"
                                                                             className="max-w-full object-contain cursor-pointer hover:opacity-90"
                                                                             onClick={() => openImagePreview(msg.content)}
                                                                         />
+                                                                    </div>
+
+                                                                    <div className={`text-xs mt-1 ml-1 ${isMe ? 'text-right text-gray-600' : 'text-gray-500'}`}>
+                                                                        {getRelativeTime(msg.sentAt || msg.createdAt)}
+                                                                    </div>
+                                                                </div>
+                                                            ) : isVideoMessage ? (
+                                                                <div className="max-w-sm">
+                                                                    {!isMe && (
+                                                                        <div className="font-semibold text-sm mb-1 ml-1">
+                                                                            {senderInfo?.fullName || msg.name || 'User'}
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="rounded-lg overflow-hidden shadow-sm">
+                                                                        <video
+                                                                            src={msg.content}
+                                                                            controls
+                                                                            className="w-full"
+                                                                        >
+                                                                            Video not supported
+                                                                        </video>
                                                                     </div>
 
                                                                     <div className={`text-xs mt-1 ml-1 ${isMe ? 'text-right text-gray-600' : 'text-gray-500'}`}>
@@ -736,7 +754,7 @@ export default function Messages() {
                                             <input
                                                 type="text"
                                                 className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="Nhập tin nhắn..."
+                                                placeholder="Type a message..."
                                                 value={messageInput}
                                                 onChange={e => setMessageInput(e.target.value)}
                                             />
@@ -760,13 +778,16 @@ export default function Messages() {
                                             >
                                                 {sendingMessage ? (
                                                     <div className="flex items-center">
-                                                        <i className="fas fa-spinner fa-spin mr-2"></i>
-                                                        Đang gửi...
+                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Sending...
                                                     </div>
                                                 ) : (
                                                     <>
                                                         <i className="fas fa-paper-plane"></i>
-                                                        Gửi
+                                                        Send
                                                     </>
                                                 )}
                                             </button>
@@ -775,18 +796,61 @@ export default function Messages() {
                                         {/* Hiển thị file đính kèm */}
                                         {attachments.length > 0 && (
                                             <div className="flex flex-wrap gap-2 mt-2">
-                                                {attachments.map((file, index) => (
-                                                    <div key={index} className="bg-gray-100 rounded-md p-1 flex items-center">
-                                                        <span className="text-xs text-gray-700 truncate max-w-[100px]">{file.name}</span>
-                                                        <button
-                                                            type="button"
-                                                            className="ml-1 text-gray-500 hover:text-red-500"
-                                                            onClick={() => handleRemoveAttachment(index)}
-                                                        >
-                                                            <i className="fas fa-times"></i>
-                                                        </button>
-                                                    </div>
-                                                ))}
+                                                {attachments.map((file, index) => {
+                                                    const isImage = file.type && file.type.startsWith('image/');
+                                                    const isVideo = file.type && file.type.startsWith('video/');
+
+                                                    return (
+                                                        <div key={index} className="relative group">
+                                                            {isImage ? (
+                                                                <div className="relative">
+                                                                    <img
+                                                                        src={URL.createObjectURL(file)}
+                                                                        alt={`Preview ${index + 1}`}
+                                                                        className="w-20 h-20 object-cover rounded-lg shadow-md"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                                                                        onClick={() => handleRemoveAttachment(index)}
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            ) : isVideo ? (
+                                                                <div className="relative">
+                                                                    <video
+                                                                        src={URL.createObjectURL(file)}
+                                                                        className="w-20 h-20 object-cover rounded-lg shadow-md"
+                                                                        muted
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                                                                        onClick={() => handleRemoveAttachment(index)}
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                    <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded">
+                                                                        <i className="fas fa-play"></i>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="bg-gray-100 rounded-md p-2 flex items-center">
+                                                                    <i className="fas fa-file mr-2 text-gray-500"></i>
+                                                                    <span className="text-xs text-gray-700 truncate max-w-[100px]">{file.name}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="ml-2 text-gray-500 hover:text-red-500"
+                                                                        onClick={() => handleRemoveAttachment(index)}
+                                                                    >
+                                                                        <i className="fas fa-times"></i>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
@@ -796,7 +860,7 @@ export default function Messages() {
                             // Hiển thị khi chưa chọn cuộc trò chuyện
                             <div className="h-full flex flex-col items-center justify-center text-gray-400">
                                 <CircularProgress size={30} className="mb-4" />
-                                <p className="text-lg font-medium">Đang chuyển hướng tới phòng chat...</p>
+                                <p className="text-lg font-medium">Redirecting to chat room...</p>
                             </div>
                         )}
                     </div>
@@ -939,7 +1003,7 @@ export default function Messages() {
                             <div className="flex space-x-2">
                                 <button
                                     className={`p-2 rounded-full ${isVideoOff ? 'bg-red-500' : 'bg-gray-700'} text-white hover:opacity-80`}
-                                    title={isVideoOff ? "Bật camera" : "Tắt camera"}
+                                    title={isVideoOff ? "Turn on camera" : "Turn off camera"}
                                     onClick={toggleVideo}
                                     disabled={!isCallActive}
                                 >
@@ -947,7 +1011,7 @@ export default function Messages() {
                                 </button>
                                 <button
                                     className={`p-2 rounded-full ${isMuted ? 'bg-red-500' : 'bg-gray-700'} text-white hover:opacity-80`}
-                                    title={isMuted ? "Bật microphone" : "Tắt microphone"}
+                                    title={isMuted ? "Turn on microphone" : "Turn off microphone"}
                                     onClick={toggleMute}
                                     disabled={!isCallActive}
                                 >
@@ -955,7 +1019,7 @@ export default function Messages() {
                                 </button>
                                 <button
                                     className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
-                                    title="Kết thúc cuộc gọi"
+                                    title="End call"
                                     onClick={endCall}
                                 >
                                     <i className="fas fa-phone-slash"></i>

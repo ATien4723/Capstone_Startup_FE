@@ -358,7 +358,7 @@ const StartupDetail = () => {
                         <div className="flex justify-center items-center">
                             <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
                         </div>
-                        <p className="mt-4 text-gray-600">Đang tải thông tin startup...</p>
+                        <p className="mt-4 text-gray-600">Loading startup information...</p>
                     </div>
                 ) : errorStartupInfo ? (
                     <div className="text-center py-20 bg-red-50 rounded-lg">
@@ -409,17 +409,17 @@ const StartupDetail = () => {
                                         className={`mr-2 ${followStartupLoading ? "fa-spin" : ""}`}
                                     />
                                     {followStartupLoading
-                                        ? "Đang xử lý..."
+                                        ? "Processing..."
                                         : isFollowingStartup
-                                            ? "Đã theo dõi"
-                                            : "Theo dõi"
+                                            ? "Following"
+                                            : "Follow"
                                     }
                                 </button>
                                 <button
                                     className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition"
                                     onClick={handleContactStartup}
                                 >
-                                    <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Liên hệ
+                                    <FontAwesomeIcon icon={faHandshake} className="mr-2" /> Contact
                                 </button>
                             </div>
                         </div>
@@ -443,7 +443,7 @@ const StartupDetail = () => {
                                         className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
                                         onClick={() => setActiveTab(tab)}
                                     >
-                                        {tab === 'posts' ? 'Bài đăng' : tab === 'overview' ? 'Tổng quan' : tab === 'team' ? 'Đội ngũ' : tab === 'events' ? 'Sự kiện' : 'BMC'}
+                                        {tab === 'posts' ? 'Posts' : tab === 'overview' ? 'Overview' : tab === 'team' ? 'Team' : tab === 'events' ? 'Events' : 'BMC'}
                                     </button>
                                 </li>
                             ))}
@@ -474,11 +474,11 @@ const StartupDetail = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="md:col-span-2">
                                         <div className="bg-white p-6 rounded-lg shadow-md mb-4">
-                                            <h5 className="text-lg font-semibold mb-2">Mô tả</h5>
-                                            <p className="text-gray-600">{startupInfo?.description || "Chưa có mô tả chi tiết về startup."}</p>
+                                            <h5 className="text-lg font-semibold mb-2">Description</h5>
+                                            <p className="text-gray-600">{startupInfo?.description || "No detailed description about the startup yet."}</p>
                                         </div>
                                         <div className="bg-white p-6 rounded-lg shadow-md">
-                                            <h5 className="text-lg font-semibold mb-2">Video Pitching</h5>
+                                            <h5 className="text-lg font-semibold mb-2">Pitching Video</h5>
                                             {loadingPitching ? (
                                                 <div className="flex justify-center items-center h-40">
                                                     <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
@@ -488,19 +488,6 @@ const StartupDetail = () => {
                                             ) : (
                                                 <div>
                                                     {pitchingData.find(p => p.type === 'Video') ? (
-                                                        //   <div
-                                                        //   className="relative w-full cursor-pointer group"
-                                                        //   style={{ paddingBottom: '40%' }}
-                                                        //   onClick={() => setSelectedVideo(pitchingData.find(p => p.type === 'Video')?.link)}
-                                                        // >
-                                                        //   <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-all rounded-lg">
-                                                        //       <FontAwesomeIcon icon={faPlay} className="text-white text-4xl" />
-                                                        //   </div>
-                                                        //   <img
-                                                        //       src="https://placehold.co/600x400/png"
-                                                        //       alt="Video thumbnail"
-                                                        //       className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
-                                                        //   />
                                                         <div className="w-full rounded-lg overflow-hidden">
                                                             <video
                                                                 className="w-full h-auto rounded-lg"
@@ -508,12 +495,12 @@ const StartupDetail = () => {
                                                                 preload="metadata"
                                                             >
                                                                 <source src={pitchingData.find(p => p.type === 'Video')?.link} type="video/mp4" />
-                                                                Trình duyệt của bạn không hỗ trợ thẻ video.
+                                                                Your browser does not support the video tag.
                                                             </video>
                                                         </div>
                                                     ) : (
                                                         <div className="text-center py-4 text-gray-500">
-                                                            Chưa có video pitching
+                                                            No pitching video yet
                                                         </div>
                                                     )}
                                                 </div>
@@ -523,11 +510,11 @@ const StartupDetail = () => {
                                     <div>
                                         <div className="bg-white p-6 rounded-lg shadow-md mb-4">
                                             <div className="text-left">
-                                                <h5 className="text-lg font-semibold mb-2">Thông tin nhanh</h5>
+                                                <h5 className="text-lg font-semibold mb-2">Quick Info</h5>
                                                 <ul className="list-none">
-                                                    <li className="mb-2"><strong>Thành lập:</strong> <span>{startupInfo?.createAt ? formatDate(startupInfo.createAt) : "N/A"}</span></li>
-                                                    <li className="mb-2"><strong>Trạng thái:</strong> <span>{startupInfo?.status || "N/A"}</span></li>
-                                                    <li className="mb-2"><strong>Giai đoạn:</strong> <span>Giai đoạn {startupInfo?.stageId || "N/A"}</span></li>
+                                                    <li className="mb-2"><strong>Founded:</strong> <span>{startupInfo?.createAt ? formatDate(startupInfo.createAt) : "N/A"}</span></li>
+                                                    <li className="mb-2"><strong>Status:</strong> <span>{startupInfo?.status || "N/A"}</span></li>
+                                                    <li className="mb-2"><strong>Stage:</strong> <span>Stage {startupInfo?.stageId || "N/A"}</span></li>
                                                     {startupInfo?.email && (
                                                         <li className="mb-2"><strong>Email:</strong> <span>{startupInfo.email}</span></li>
                                                     )}
@@ -536,7 +523,7 @@ const StartupDetail = () => {
                                                             <strong className="mr-2">Website:</strong>
                                                             <a href={startupInfo.websiteURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
                                                                 <FontAwesomeIcon icon={faGlobe} className="mr-1" />
-                                                                Truy cập
+                                                                Visit
                                                             </a>
                                                         </li>
                                                     )}
@@ -544,7 +531,7 @@ const StartupDetail = () => {
                                             </div>
                                         </div>
                                         <div className="bg-white p-6 rounded-lg shadow-md">
-                                            <h5 className="text-lg font-semibold mb-2">Tài liệu</h5>
+                                            <h5 className="text-lg font-semibold mb-2">Documents</h5>
                                             {loadingPitching ? (
                                                 <div className="flex justify-center items-center h-20">
                                                     <FontAwesomeIcon icon={faSpinner} className="text-2xl text-blue-500 animate-spin" />
@@ -562,7 +549,7 @@ const StartupDetail = () => {
                                                                         onClick={() => setSelectedPDF(pdfItem.link)}
                                                                         className="text-blue-600 hover:underline"
                                                                     >
-                                                                        {pdfItem.title || `Tài liệu PDF ${index + 1}`}
+                                                                        {pdfItem.title || `PDF Document ${index + 1}`}
                                                                     </button>
                                                                 </li>
                                                             ))}
@@ -573,14 +560,14 @@ const StartupDetail = () => {
                                                                         className="text-sm text-blue-500 hover:underline flex items-center"
                                                                     >
                                                                         <FontAwesomeIcon icon={faFilePdf} className="mr-1" />
-                                                                        Xem tất cả ({pitchingData.filter(p => p.type === 'PDF').length} tài liệu PDF)
+                                                                        View all ({pitchingData.filter(p => p.type === 'PDF').length} PDF documents)
                                                                     </button>
                                                                 </li>
                                                             )}
                                                         </>
                                                     ) : (
                                                         <li className="text-gray-500 text-center py-2">
-                                                            Chưa có tài liệu PDF
+                                                            No PDF documents yet
                                                         </li>
                                                     )}
                                                 </ul>
@@ -722,18 +709,18 @@ const StartupDetail = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mx-auto w-[1000px]">
                                     {/* Feed Posts Section */}
                                     <div className="bg-white p-6 rounded-lg shadow-md mb-6  " >
-                                        <h5 className="text-xl font-semibold mb-4">Bài đăng gần đây</h5>
+                                        <h5 className="text-xl font-semibold mb-4">Feed Posts</h5>
 
                                         {loadingFeed ? (
                                             <div className="text-center py-20">
                                                 <div className="flex justify-center items-center">
                                                     <FontAwesomeIcon icon={faSpinner} className="text-4xl text-blue-500 animate-spin" />
                                                 </div>
-                                                <p className="mt-4 text-gray-600">Đang tải bài viết...</p>
+                                                <p className="mt-4 text-gray-600">Loading feed posts...</p>
                                             </div>
                                         ) : feedPosts.length === 0 ? (
                                             <div className="text-center py-20 bg-gray-50 rounded-lg">
-                                                <p className="text-gray-500">Chưa có bài đăng nào</p>
+                                                <p className="text-gray-500">No posts yet</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-6">
@@ -744,17 +731,18 @@ const StartupDetail = () => {
                                                     {isLoadingMoreFeed ? (
                                                         <div className="flex items-center space-x-2">
                                                             <FontAwesomeIcon icon={faSpinner} className="text-blue-500 animate-spin" />
-                                                            <span className="text-gray-600">Đang tải thêm...</span>
+                                                            <span className="text-gray-600">Loading...</span>
                                                         </div>
                                                     ) : hasMoreFeed ? (
                                                         <button
                                                             className="px-6 py-2 border border-blue-500 text-blue-500 rounded-full hover:bg-blue-50 transition font-medium"
                                                             onClick={loadMoreFeed}
                                                         >
-                                                            Xem thêm bài đăng
+                                                            Load more
                                                         </button>
                                                     ) : feedPosts.length > 0 ? (
-                                                        <p className="text-gray-500 text-sm">Đã hiển thị tất cả bài đăng</p>
+                                                        <p className="text-gray-500 text-sm">Shown all posts
+                                                        </p>
                                                     ) : null}
                                                 </div>
                                             </div>
@@ -780,7 +768,7 @@ const StartupDetail = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
                         <div className="flex justify-between items-center p-4 border-b">
-                            <h3 className="text-lg font-medium">Tất cả tài liệu PDF</h3>
+                            <h3 className="text-lg font-medium">All PDF Documents</h3>
                             <button
                                 onClick={() => setShowAllPDFs(false)}
                                 className="text-gray-500 hover:text-gray-700"
@@ -796,7 +784,7 @@ const StartupDetail = () => {
                                             <div className="flex items-center">
                                                 <FontAwesomeIcon icon={faFilePdf} className="mr-3 text-red-500 text-xl" />
                                                 <div>
-                                                    <h4 className="font-medium">{pdfItem.title || `Tài liệu PDF ${index + 1}`}</h4>
+                                                    <h4 className="font-medium">{pdfItem.title || `PDF Document ${index + 1}`}</h4>
                                                     {pdfItem.description && <p className="text-sm text-gray-500">{pdfItem.description}</p>}
                                                 </div>
                                             </div>
@@ -807,7 +795,7 @@ const StartupDetail = () => {
                                                 }}
                                                 className="bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 text-sm"
                                             >
-                                                Xem
+                                                View
                                             </button>
                                         </div>
                                     </li>

@@ -15,18 +15,18 @@ const AccessDenied = () => {
                 </div>
 
                 <div className="p-6">
-                    <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">Truy cập bị từ chối</h2>
+                    <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">Access Denied</h2>
                     <p className="text-gray-600 text-center mb-6">
-                        Bạn không có quyền truy cập vào trang này. Vui lòng liên hệ quản trị viên hoặc người quản lý để được cấp quyền.
+                        You do not have permission to access this page. Please contact the administrator or manager to be granted access.
                     </p>
 
                     <div className="flex flex-col space-y-2">
                         <Link to={isMember ? "/me/dashboard" : "/home"} className="bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded transition duration-200">
-                            {isMember ? "Về trang chính" : "Về trang chủ"}
+                            {isMember ? "Back to Dashboard" : "Back to Home"}
                         </Link>
                         {isMember && (
                             <Link to="/me/member" className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-center py-2 px-4 rounded transition duration-200">
-                                Quản lý thành viên
+                                Member Management
                             </Link>
                         )}
                     </div>

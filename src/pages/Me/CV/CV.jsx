@@ -38,7 +38,7 @@ const CV = () => {
             setPositions(uniquePositions);
         } catch (error) {
             console.error('Lỗi khi tải danh sách CV:', error);
-            toast.error('Không thể tải danh sách CV');
+            toast.error('Unable to load CV list');
         } finally {
             setLoading(false);
         }
@@ -77,12 +77,12 @@ const CV = () => {
     const handleResponse = async (candidateCVId, status) => {
         try {
             await responseCandidateCV(candidateCVId, status);
-            toast.success(`Đã ${status === 'Approved' ? 'chấp nhận' : 'từ chối'} CV thành công`);
+            toast.success(`CV ${status === 'Approved' ? 'approved' : 'rejected'} successfully`);
             // Tải lại danh sách CV
             loadCVs();
         } catch (error) {
             console.error('Lỗi khi phản hồi CV:', error);
-            toast.error('Có lỗi xảy ra khi phản hồi CV');
+            toast.error('An error occurred while responding to CV');
         }
     };
 
@@ -156,8 +156,8 @@ const CV = () => {
                     {/* Header Modal */}
                     <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-800">Đánh giá chi tiết</h3>
-                            <p className="text-gray-600">{modalData.fullName || modalData.accountName} - {modalData.positionRequirement || modalData.positionName || 'Chưa xác định'}</p>
+                            <h3 className="text-xl font-bold text-gray-800">Detailed Evaluation</h3>
+                            <p className="text-gray-600">{modalData.fullName || modalData.accountName} - {modalData.positionRequirement || modalData.positionName || 'Not specified'}</p>
                         </div>
                         <button
                             onClick={closeModal}
@@ -174,7 +174,7 @@ const CV = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-lg font-medium text-gray-800">Kỹ năng kỹ thuật</h4>
+                                    <h4 className="text-lg font-medium text-gray-800">Technical Skills</h4>
                                     <span className="text-xl font-bold text-gray-800">{evaluation.evaluation_TechSkills?.match(/\[(\d+)\]/)?.[1] || '?'}/10</span>
                                 </div>
                                 {renderEvaluationBar(evaluation.evaluation_TechSkills)}
@@ -183,7 +183,7 @@ const CV = () => {
 
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-lg font-medium text-gray-800">Kinh nghiệm</h4>
+                                    <h4 className="text-lg font-medium text-gray-800">Experience</h4>
                                     <span className="text-xl font-bold text-gray-800">{evaluation.evaluation_Experience?.match(/\[(\d+)\]/)?.[1] || '?'}/10</span>
                                 </div>
                                 {renderEvaluationBar(evaluation.evaluation_Experience)}
@@ -192,7 +192,7 @@ const CV = () => {
 
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-lg font-medium text-gray-800">Kỹ năng mềm</h4>
+                                    <h4 className="text-lg font-medium text-gray-800">Soft Skills</h4>
                                     <span className="text-xl font-bold text-gray-800">{evaluation.evaluation_SoftSkills?.match(/\[(\d+)\]/)?.[1] || '?'}/10</span>
                                 </div>
                                 {renderEvaluationBar(evaluation.evaluation_SoftSkills)}
@@ -201,7 +201,7 @@ const CV = () => {
 
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-lg font-medium text-gray-800">Đánh giá tổng thể</h4>
+                                    <h4 className="text-lg font-medium text-gray-800">Overall Assessment</h4>
                                     <span className="text-xl font-bold text-gray-800">{evaluation.evaluation_OverallSummary?.match(/\[(\d+)\]/)?.[1] || '?'}/10</span>
                                 </div>
                                 {renderEvaluationBar(evaluation.evaluation_OverallSummary)}
@@ -209,51 +209,13 @@ const CV = () => {
                             </div>
                         </div>
 
-                        {/* Chart summary */}
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
-                            <h4 className="text-lg font-medium text-gray-800 mb-4">Biểu đồ đánh giá</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {['evaluation_TechSkills', 'evaluation_Experience', 'evaluation_SoftSkills', 'evaluation_OverallSummary'].map((key, index) => {
-                                    const score = parseInt(evaluation[key]?.match(/\[(\d+)\]/)?.[1] || 0);
-                                    let color = 'bg-red-500';
-                                    if (score > 7) color = 'bg-green-500';
-                                    else if (score > 4) color = 'bg-yellow-500';
-
-                                    const labels = ['Kỹ thuật', 'Kinh nghiệm', 'Kỹ năng mềm', 'Tổng thể'];
-
-                                    return (
-                                        <div key={key} className="flex-1 min-w-[120px]">
-                                            <div className="text-center mb-1 text-sm font-medium text-gray-700">{labels[index]}</div>
-                                            <div className="h-24 w-full bg-gray-200 rounded-t-lg relative">
-                                                <div
-                                                    className={`absolute bottom-0 w-full ${color} rounded-t-lg transition-all duration-500 ease-out`}
-                                                    style={{ height: `${score * 10}%` }}>
-                                                </div>
-                                                <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">
-                                                    {score}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Bottom buttons */}
-                        <div className="flex justify-end space-x-2">
-                            <a
-                                href={modalData.cvurl || modalData.cvFileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                            >
-                                Xem CV
-                            </a>
+                        {/* Action buttons */}
+                        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                             <button
                                 onClick={closeModal}
                                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
                             >
-                                Đóng
+                                Close
                             </button>
                         </div>
                     </div>
@@ -262,16 +224,16 @@ const CV = () => {
         );
     };
 
-    // Component Modal Xem CV
+    // Component Modal xem CV
     const CvViewerModal = () => {
         if (!cvModalOpen || !currentCvUrl) return null;
 
         return (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                    {/* Header Modal */}
-                    <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                        <h3 className="text-xl font-bold text-gray-800">Xem CV</h3>
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 className="text-lg font-semibold text-gray-800">CV Viewer</h3>
                         <button
                             onClick={closeCvModal}
                             className="text-gray-500 hover:text-gray-700 focus:outline-none"
@@ -299,13 +261,13 @@ const CV = () => {
                             rel="noopener noreferrer"
                             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                         >
-                            Mở trong tab mới
+                            Open in new tab
                         </a>
                         <button
                             onClick={closeCvModal}
                             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
                         >
-                            Đóng
+                            Close
                         </button>
                     </div>
                 </div>
@@ -316,9 +278,9 @@ const CV = () => {
     return (
         <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Quản lý CV</h1>
+                <h1 className="text-3xl font-bold text-gray-800">CV Management</h1>
                 <div className="flex items-center">
-                    <label className="mr-2 text-gray-700">Lọc theo vị trí:</label>
+                    <label className="mr-2 text-gray-700">Filter by position:</label>
                     <select
                         className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
                         value={selectedPosition}
@@ -326,7 +288,7 @@ const CV = () => {
                     >
                         {positions.map((pos, index) => (
                             <option key={index} value={pos}>
-                                {pos === 'all' ? 'Tất cả vị trí' : pos}
+                                {pos === 'all' ? 'All positions' : pos}
                             </option>
                         ))}
                     </select>
@@ -339,25 +301,25 @@ const CV = () => {
                     className={`px-4 py-2 font-medium text-sm ${activeTab === 'all' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     onClick={() => setActiveTab('all')}
                 >
-                    Tất cả
+                    All
                 </button>
                 <button
                     className={`px-4 py-2 font-medium text-sm ${activeTab === 'pending' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     onClick={() => setActiveTab('pending')}
                 >
-                    Đang chờ
+                    Pending
                 </button>
                 <button
                     className={`px-4 py-2 font-medium text-sm ${activeTab === 'approved' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     onClick={() => setActiveTab('approved')}
                 >
-                    Đã chấp nhận
+                    Approved
                 </button>
                 <button
                     className={`px-4 py-2 font-medium text-sm ${activeTab === 'rejected' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     onClick={() => setActiveTab('rejected')}
                 >
-                    Đã từ chối
+                    Rejected
                 </button>
             </div>
 
@@ -379,7 +341,7 @@ const CV = () => {
                                     </div>
                                     <div>
                                         <h2 className="text-lg font-semibold text-gray-800">{cv.fullName || cv.accountName}</h2>
-                                        <p className="text-gray-500 text-sm">{cv.email || 'Email không có'}</p>
+                                        <p className="text-gray-500 text-sm">{cv.email || 'No email'}</p>
                                     </div>
                                 </div>
 
@@ -389,14 +351,13 @@ const CV = () => {
                                             <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
                                             <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
                                         </svg>
-                                        <span className="text-gray-700 font-medium">Vị trí: {cv.positionRequirement || cv.positionName || 'Chưa xác định'}</span>
+                                        <span className="text-gray-700 font-medium">Position: {cv.positionRequirement || cv.positionName || 'Not specified'}</span>
                                     </div>
-
                                     <div className="flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                                         </svg>
-                                        <span className="text-gray-500 text-sm">{formatDate(cv.createAt)}</span>
+                                        <span className="text-gray-700 font-medium">Applied: {formatDate(cv.appliedDate || cv.createdAt)}</span>
                                     </div>
                                 </div>
 
@@ -406,8 +367,8 @@ const CV = () => {
                                             cv.status === 'Approved' ? 'bg-green-100 text-green-800' :
                                                 'bg-red-100 text-red-800'}`}
                                     >
-                                        {cv.status === 'Pending' ? 'Đang chờ' :
-                                            cv.status === 'Approved' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                                        {cv.status === 'Pending' ? 'Pending' :
+                                            cv.status === 'Approved' ? 'Approved' : 'Rejected'}
                                     </span>
                                 </div>
                             </div>
@@ -421,7 +382,7 @@ const CV = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                                         </svg>
-                                        Xem CV
+                                        View CV
                                     </button>
 
                                     {cv.cvRequirementEvaluation && (
@@ -430,9 +391,9 @@ const CV = () => {
                                             className="flex items-center justify-center px-4 py-2 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                                             </svg>
-                                            Xem đánh giá
+                                            View Evaluation
                                         </button>
                                     )}
                                 </div>
@@ -446,7 +407,7 @@ const CV = () => {
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                             </svg>
-                                            Chấp nhận
+                                            Approve
                                         </button>
 
                                         <button
@@ -456,7 +417,7 @@ const CV = () => {
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                             </svg>
-                                            Từ chối
+                                            Reject
                                         </button>
                                     </div>
                                 )}
@@ -469,8 +430,8 @@ const CV = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <h3 className="text-xl font-medium text-gray-700 mb-1">Không có dữ liệu</h3>
-                    <p className="text-gray-500">Hiện tại chưa có CV nào trong danh sách.</p>
+                    <h3 className="text-xl font-medium text-gray-700 mb-1">No data available</h3>
+                    <p className="text-gray-500">There are currently no CVs in the list.</p>
                 </div>
             )}
 
@@ -489,7 +450,7 @@ const CV = () => {
                         </button>
 
                         <div className="px-4 py-2 rounded-md bg-white border border-gray-300 text-gray-700">
-                            Trang {page} / {totalPages}
+                            Page {page} / {totalPages}
                         </div>
 
                         <button

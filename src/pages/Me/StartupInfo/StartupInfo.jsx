@@ -86,7 +86,7 @@ const StartupInfo = () => {
     if (!startup) {
         return (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
-                <p>Không có thông tin startup nào được tìm thấy. Có thể bạn chưa tham gia hoặc tạo startup nào.</p>
+                <p>No startup information found. You may not have joined or created any startup yet.</p>
             </div>
         );
     }
@@ -97,14 +97,14 @@ const StartupInfo = () => {
         <>
             <div className="container mx-auto py-6 px-4">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">Thông tin Startup</h1>
+                    <h1 className="text-2xl font-bold text-gray-800">Startup Information</h1>
                     {!isEditing ? (
                         <button
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
                             onClick={() => setIsEditing(true)}
                         >
                             <FontAwesomeIcon icon={faPencilAlt} className="mr-2" />
-                            Chỉnh sửa thông tin
+                            Edit Information
                         </button>
                     ) : (
                         <div className="flex space-x-2">
@@ -114,7 +114,7 @@ const StartupInfo = () => {
                                 disabled={saving}
                             >
                                 <FontAwesomeIcon icon={faTimes} className="mr-2" />
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
@@ -124,12 +124,12 @@ const StartupInfo = () => {
                                 {saving ? (
                                     <>
                                         <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                                        Đang lưu...
+                                        Saving...
                                     </>
                                 ) : (
                                     <>
                                         <FontAwesomeIcon icon={faSave} className="mr-2" />
-                                        Lưu thay đổi
+                                        Save Changes
                                     </>
                                 )}
                             </button>
@@ -137,11 +137,11 @@ const StartupInfo = () => {
                     )}
                 </div>
 
-                {/* Card chính */}
+                {/* Main Card */}
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    {/* Banner và Logo */}
+                    {/* Banner and Logo */}
                     <div className="relative h-64 bg-gradient-to-r from-blue-500 to-indigo-600">
-                        {/* Hiển thị background image hoặc preview */}
+                        {/* Display background image or preview */}
                         {backgroundPreview ? (
                             <img
                                 src={backgroundPreview || startup.backgroundURL}
@@ -152,7 +152,7 @@ const StartupInfo = () => {
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-75"></div>
                         )}
 
-                        {/* Nút thay đổi background khi đang ở chế độ edit */}
+                        {/* Change background button when in edit mode */}
                         {isEditing && (
                             <div className="absolute top-4 right-4">
                                 <input
@@ -167,7 +167,7 @@ const StartupInfo = () => {
                                     className="bg-white/80 hover:bg-white text-gray-800 px-4 py-2 rounded-lg flex items-center shadow-md transition-all"
                                 >
                                     <FontAwesomeIcon icon={faImage} className="mr-2" />
-                                    Thay đổi ảnh bìa
+                                    Change Cover Image
                                 </button>
                             </div>
                         )}
@@ -175,7 +175,7 @@ const StartupInfo = () => {
                         {/* Logo area */}
                         <div className="absolute -bottom-20 left-8 border-4 border-white rounded-lg shadow-xl">
                             <div className="relative overflow-hidden w-36 h-36 bg-white rounded-lg">
-                                {/* Hiển thị logo hoặc preview */}
+                                {/* Display logo or preview */}
                                 <img
                                     src={logoPreview || startup.logo || "https://via.placeholder.com/150"}
                                     alt={startup.startupName}
@@ -186,7 +186,7 @@ const StartupInfo = () => {
                                     }}
                                 />
 
-                                {/* Nút thay đổi logo khi ở chế độ edit */}
+                                {/* Change logo button when in edit mode */}
                                 {isEditing && (
                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
                                         <input
@@ -201,7 +201,7 @@ const StartupInfo = () => {
                                             className="bg-white/90 hover:bg-white text-gray-800 px-3 py-2 rounded-lg flex items-center text-sm"
                                         >
                                             <FontAwesomeIcon icon={faUpload} className="mr-2" />
-                                            Thay logo
+                                            Change Logo
                                         </button>
                                     </div>
                                 )}
@@ -209,9 +209,9 @@ const StartupInfo = () => {
                         </div>
                     </div>
 
-                    {/* Phần nội dung */}
+                    {/* Content section */}
                     <div className="pt-24 px-8 pb-8">
-                        {/* Header với tên và trạng thái */}
+                        {/* Header with name and status */}
                         <div className="flex justify-between items-start mb-6">
                             <div>
                                 {!isEditing ? (
@@ -224,7 +224,7 @@ const StartupInfo = () => {
                                 ) : (
                                     <div className="space-y-3">
                                         <div>
-                                            <label htmlFor="startupName" className="block text-sm font-medium text-gray-700">Tên Startup</label>
+                                            <label htmlFor="startupName" className="block text-sm font-medium text-gray-700">Startup Name</label>
                                             <input
                                                 type="text"
                                                 id="startupName"
@@ -235,7 +235,7 @@ const StartupInfo = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="abbreviationName" className="block text-sm font-medium text-gray-700">Tên viết tắt</label>
+                                            <label htmlFor="abbreviationName" className="block text-sm font-medium text-gray-700">Abbreviation Name</label>
                                             <input
                                                 type="text"
                                                 id="abbreviationName"
@@ -256,16 +256,16 @@ const StartupInfo = () => {
                             </div>
                         </div>
 
-                        {/* Thông tin chi tiết */}
+                        {/* Detailed information */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
                             <div className="space-y-6">
                                 <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
                                     <div className="flex items-start">
                                         <FontAwesomeIcon icon={faInfoCircle} className="mt-1 text-blue-500 w-5 h-5" />
                                         <div className="ml-3 flex-1">
-                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Mô tả</h3>
+                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Description</h3>
                                             {!isEditing ? (
-                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.description || "Chưa có mô tả"}</p>
+                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.description || "No description available"}</p>
                                             ) : (
                                                 <textarea
                                                     name="description"
@@ -273,7 +273,7 @@ const StartupInfo = () => {
                                                     onChange={handleInputChange}
                                                     rows={4}
                                                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Nhập mô tả về startup của bạn"
+                                                    placeholder="Enter description about your startup"
                                                 />
                                             )}
                                         </div>
@@ -284,9 +284,9 @@ const StartupInfo = () => {
                                     <div className="flex items-start">
                                         <FontAwesomeIcon icon={faEye} className="mt-1 text-blue-500 w-5 h-5" />
                                         <div className="ml-3 flex-1">
-                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Tầm nhìn</h3>
+                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Vision</h3>
                                             {!isEditing ? (
-                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.vision || "Chưa có tầm nhìn"}</p>
+                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.vision || "No vision available"}</p>
                                             ) : (
                                                 <textarea
                                                     name="vision"
@@ -294,7 +294,7 @@ const StartupInfo = () => {
                                                     onChange={handleInputChange}
                                                     rows={4}
                                                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Nhập tầm nhìn của startup"
+                                                    placeholder="Enter startup vision"
                                                 />
                                             )}
                                         </div>
@@ -305,9 +305,9 @@ const StartupInfo = () => {
                                     <div className="flex items-start">
                                         <FontAwesomeIcon icon={faBullseye} className="mt-1 text-blue-500 w-5 h-5" />
                                         <div className="ml-3 flex-1">
-                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Sứ mệnh</h3>
+                                            <h3 className="font-semibold text-gray-800 text-lg mb-2">Mission</h3>
                                             {!isEditing ? (
-                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.mission || "Chưa có sứ mệnh"}</p>
+                                                <p className="text-gray-700 whitespace-pre-wrap">{startup.mission || "No mission available"}</p>
                                             ) : (
                                                 <textarea
                                                     name="mission"
@@ -315,7 +315,7 @@ const StartupInfo = () => {
                                                     onChange={handleInputChange}
                                                     rows={4}
                                                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Nhập sứ mệnh của startup"
+                                                    placeholder="Enter startup mission"
                                                 />
                                             )}
                                         </div>
@@ -328,9 +328,9 @@ const StartupInfo = () => {
                                     <div className="flex items-center">
                                         <FontAwesomeIcon icon={faSeedling} className="text-blue-500 w-5 h-5" />
                                         <div className="ml-3 flex-1">
-                                            <h3 className="font-semibold text-gray-800 text-lg">Giai đoạn</h3>
+                                            <h3 className="font-semibold text-gray-800 text-lg">Stage</h3>
                                             {!isEditing ? (
-                                                <p className="text-gray-700 mt-1">Giai đoạn {startup.stageId || "N/A"}</p>
+                                                <p className="text-gray-700 mt-1">Stage {startup.stageId || "N/A"}</p>
                                             ) : (
                                                 <div className="mt-1">
                                                     <input
@@ -339,7 +339,7 @@ const StartupInfo = () => {
                                                         value={formData.stageId}
                                                         onChange={handleInputChange}
                                                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="Nhập giai đoạn (1-5)"
+                                                        placeholder="Enter stage (1-5)"
                                                         min="1"
                                                         max="5"
                                                     />
@@ -350,34 +350,24 @@ const StartupInfo = () => {
                                 </div>
 
                                 <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
-                                    <div className="flex items-center">
-                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 w-5 h-5" />
-                                        <div className="ml-3">
-                                            <h3 className="font-semibold text-gray-800 text-lg">Ngày thành lập</h3>
-                                            <p className="text-gray-700 mt-1">{formatDate(startup.createAt)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
                                     <div className="flex items-start">
                                         <FontAwesomeIcon icon={faGlobe} className="text-blue-500 w-5 h-5 mt-1" />
                                         <div className="ml-3 flex-1">
                                             <h3 className="font-semibold text-gray-800 text-lg">Website</h3>
                                             {!isEditing ? (
-                                                startup.websiteURL ? (
-                                                    <a href={startup.websiteURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-1 block">
-                                                        {startup.websiteURL}
+                                                startup.website ? (
+                                                    <a href={startup.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-1 block">
+                                                        {startup.website}
                                                     </a>
                                                 ) : (
-                                                    <p className="text-gray-600 mt-1">Chưa có website</p>
+                                                    <p className="text-gray-600 mt-1">No website available</p>
                                                 )
                                             ) : (
                                                 <div className="mt-1">
                                                     <input
-                                                        type="text"
-                                                        name="websiteURL"
-                                                        value={formData.websiteURL}
+                                                        type="url"
+                                                        name="website"
+                                                        value={formData.website}
                                                         onChange={handleInputChange}
                                                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                         placeholder="https://example.com"
@@ -399,7 +389,7 @@ const StartupInfo = () => {
                                                         {startup.email}
                                                     </a>
                                                 ) : (
-                                                    <p className="text-gray-600 mt-1">Chưa có email</p>
+                                                    <p className="text-gray-600 mt-1">No email available</p>
                                                 )
                                             ) : (
                                                 <div className="mt-1">
@@ -416,20 +406,30 @@ const StartupInfo = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
+                                    <div className="flex items-center">
+                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 w-5 h-5" />
+                                        <div className="ml-3 flex-1">
+                                            <h3 className="font-semibold text-gray-800 text-lg">Founded Date</h3>
+                                            <p className="text-gray-700 mt-1">{formatDate(startup.createAt)}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Phần Pitching */}
                         <div className="mt-10">
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-gray-800">Tài liệu Pitching</h2>
+                                <h2 className="text-xl font-bold text-gray-800">Pitching Documents</h2>
                                 {!addPitchingMode ? (
                                     <button
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
                                         onClick={() => setAddPitchingMode(true)}
                                     >
                                         <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                                        Thêm tài liệu Pitching
+                                        Add Pitching Document
                                     </button>
                                 ) : (
                                     <button
@@ -437,7 +437,7 @@ const StartupInfo = () => {
                                         onClick={() => setAddPitchingMode(false)}
                                     >
                                         <FontAwesomeIcon icon={faTimes} className="mr-2" />
-                                        Hủy
+                                        Cancel
                                     </button>
                                 )}
                             </div>
@@ -445,10 +445,10 @@ const StartupInfo = () => {
                             {/* Form thêm pitching */}
                             {addPitchingMode && (
                                 <div className="bg-white p-6 rounded-lg shadow-md mb-6 border border-gray-200">
-                                    <h3 className="text-lg font-semibold mb-4">Thêm tài liệu Pitching mới</h3>
+                                    <h3 className="text-lg font-semibold mb-4">Add New Pitching Document</h3>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Loại tài liệu</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
                                             <div className="flex space-x-4">
                                                 <button
                                                     className={`px-4 py-2 rounded-lg flex items-center ${currentPitchingType === 'PDF' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-gray-100 text-gray-700'}`}
@@ -469,7 +469,7 @@ const StartupInfo = () => {
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                {currentPitchingType === 'PDF' ? 'Tải lên file PDF' : 'Tải lên file Video'}
+                                                {currentPitchingType === 'PDF' ? 'Upload PDF File' : 'Upload Video File'}
                                             </label>
                                             <div className="flex items-center">
                                                 <input
@@ -481,7 +481,7 @@ const StartupInfo = () => {
                                             </div>
                                             {pitchingFile && (
                                                 <p className="text-sm text-green-600 mt-1">
-                                                    Đã chọn: {pitchingFile.name}
+                                                    Selected: {pitchingFile.name}
                                                 </p>
                                             )}
                                         </div>
@@ -493,48 +493,106 @@ const StartupInfo = () => {
                                                 disabled={!pitchingFile}
                                             >
                                                 <FontAwesomeIcon icon={faUpload} className="mr-2" />
-                                                Tải lên
+                                                Upload
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Hiển thị danh sách pitching */}
+                            {/* Danh sách tài liệu pitching */}
                             {loadingPitchings ? (
-                                <div className="text-center py-4">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                                    <p className="text-gray-600 mt-2">Đang tải tài liệu...</p>
+                                <div className="flex justify-center items-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* PDF Pitchings */}
-                                    <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-                                        <div className="flex items-center mb-4">
-                                            <FontAwesomeIcon icon={faFilePdf} className="text-red-500 text-xl mr-2" />
-                                            <h3 className="text-lg font-semibold">Tài liệu PDF</h3>
-                                        </div>
-
+                                    {/* PDF Documents */}
+                                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                                        <h4 className="text-lg font-semibold mb-4 flex items-center">
+                                            <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-500" />
+                                            PDF Documents
+                                        </h4>
                                         {pitchings.filter(p => p.type === 'PDF').length > 0 ? (
                                             <ul className="space-y-3">
-                                                {pitchings.filter(p => p.type === 'PDF').map((pitching, index) => (
-                                                    <li key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                        <div>
-                                                            <div className="flex items-center">
-                                                                <FontAwesomeIcon icon={faFilePdf} className="text-red-500 mr-2" />
-                                                                <span className="text-gray-800">Tài liệu {index + 1}</span>
+                                                {pitchings.filter(p => p.type === 'PDF').map((pitching) => (
+                                                    <li key={pitching.pitchingId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                        <div className="flex items-center">
+                                                            <FontAwesomeIcon icon={faFilePdf} className="mr-3 text-red-500" />
+                                                            <div>
+                                                                <button
+                                                                    onClick={() => handleOpenPdfViewer(pitching.link)}
+                                                                    className="text-blue-600 hover:underline font-medium"
+                                                                >
+                                                                    PDF Document
+                                                                </button>
+                                                                <p className="text-sm text-gray-500">
+                                                                    Uploaded: {formatDate(pitching.createAt)}
+                                                                </p>
                                                             </div>
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Đăng tải: {formatDate(pitching.createAt)}
-                                                            </p>
                                                         </div>
-                                                        <div className="flex space-x-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
+                                                                <FontAwesomeIcon icon={faPencilAlt} />
+                                                                <input
+                                                                    type="file"
+                                                                    className="hidden"
+                                                                    accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
+                                                                    onChange={(e) => {
+                                                                        const file = e.target.files[0];
+                                                                        if (file) {
+                                                                            handleUpdatePitching(pitching.pitchingId, file);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </label>
                                                             <button
                                                                 onClick={() => handleOpenPdfViewer(pitching.link)}
                                                                 className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
                                                             >
                                                                 <FontAwesomeIcon icon={faEye} />
                                                             </button>
+                                                            <button
+                                                                className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                                                                onClick={() => handleDeletePitching(pitching.pitchingId)}
+                                                            >
+                                                                <FontAwesomeIcon icon={faTrash} />
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-gray-500 italic">No PDF documents yet</p>
+                                        )}
+                                    </div>
+
+                                    {/* Video Documents */}
+                                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                                        <h4 className="text-lg font-semibold mb-4 flex items-center">
+                                            <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-500" />
+                                            Video Pitching
+                                        </h4>
+                                        {pitchings.filter(p => p.type === 'Video').length > 0 ? (
+                                            <ul className="space-y-3">
+                                                {pitchings.filter(p => p.type === 'Video').map((pitching) => (
+                                                    <li key={pitching.pitchingId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                        <div className="flex items-center">
+                                                            <FontAwesomeIcon icon={faVideo} className="mr-3 text-blue-500" />
+                                                            <div>
+                                                                <button
+                                                                    onClick={() => handleOpenVideoPlayer(pitching.link)}
+                                                                    className="text-blue-600 hover:underline font-medium"
+                                                                >
+                                                                    Video Pitching
+                                                                </button>
+                                                                <p className="text-sm text-gray-500">
+                                                                    Uploaded: {formatDate(pitching.createAt)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center space-x-2">
                                                             <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
                                                                 <FontAwesomeIcon icon={faPencilAlt} />
                                                                 <input
@@ -549,62 +607,12 @@ const StartupInfo = () => {
                                                                     }}
                                                                 />
                                                             </label>
-                                                            <button
-                                                                className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
-                                                                onClick={() => handleDeletePitching(pitching.pitchingId)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faTrash} />
-                                                            </button>
-                                                        </div>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-gray-500 italic">Chưa có tài liệu PDF nào</p>
-                                        )}
-                                    </div>
-
-                                    {/* Video Pitchings */}
-                                    <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-                                        <div className="flex items-center mb-4">
-                                            <FontAwesomeIcon icon={faVideo} className="text-blue-500 text-xl mr-2" />
-                                            <h3 className="text-lg font-semibold">Video Pitching</h3>
-                                        </div>
-
-                                        {pitchings.filter(p => p.type === 'Video').length > 0 ? (
-                                            <ul className="space-y-3">
-                                                {pitchings.filter(p => p.type === 'Video').map((pitching, index) => (
-                                                    <li key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                        <div>
-                                                            <div className="flex items-center">
-                                                                <FontAwesomeIcon icon={faVideo} className="text-blue-500 mr-2" />
-                                                                <span className="text-gray-800">Video {index + 1}</span>
-                                                            </div>
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Đăng tải: {formatDate(pitching.createAt)}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex space-x-2">
                                                             <button
                                                                 onClick={() => handleOpenVideoPlayer(pitching.link)}
                                                                 className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
                                                             >
                                                                 <FontAwesomeIcon icon={faEye} />
                                                             </button>
-                                                            <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
-                                                                <FontAwesomeIcon icon={faPencilAlt} />
-                                                                <input
-                                                                    type="file"
-                                                                    className="hidden"
-                                                                    accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files[0];
-                                                                        if (file) {
-                                                                            handleUpdatePitching(pitching.pitchingId, file);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
                                                             <button
                                                                 className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
                                                                 onClick={() => handleDeletePitching(pitching.pitchingId)}
@@ -616,7 +624,7 @@ const StartupInfo = () => {
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <p className="text-gray-500 italic">Chưa có video pitching nào</p>
+                                            <p className="text-gray-500 italic">No video pitching yet</p>
                                         )}
                                     </div>
                                 </div>

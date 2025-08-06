@@ -142,10 +142,44 @@ export default function Navbar() {
 
 
     // Sử dụng AuthContext
-    const { isMember } = useAuth();
+    const { isMember, loading, isReady, checkMembershipAsync } = useAuth();
 
-    const handleMyStartupsClick = () => {
-        // Sử dụng isMember từ AuthContext
+    const handleMyStartupsClick = async () => {
+        // Nếu đang loading hoặc chưa sẵn sàng, đợi một chút
+        if (loading || !isReady) {
+            // Hiển thị loading state tạm thời
+            const loadingToast = toast.loading('Đang kiểm tra trạng thái startup...');
+
+            try {
+                // Đợi tối đa 5 giây để kiểm tra membership
+                let attempts = 0;
+                const maxAttempts = 50; // 5 giây (50 * 100ms)
+
+                while ((loading || !isReady) && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                toast.dismiss(loadingToast);
+
+                // Nếu vẫn đang loading sau 5 giây, sử dụng checkMembershipAsync
+                if (loading || !isReady) {
+                    const memberStatus = await checkMembershipAsync();
+                    if (memberStatus) {
+                        navigate('/me/dashboard');
+                    } else {
+                        navigate('/create-startup');
+                    }
+                    return;
+                }
+            } catch (error) {
+                toast.dismiss(loadingToast);
+                toast.error('Có lỗi xảy ra khi kiểm tra trạng thái startup');
+                return;
+            }
+        }
+
+        // Sử dụng isMember từ AuthContext khi đã sẵn sàng
         if (isMember) {
             navigate('/me/dashboard');
         } else {
