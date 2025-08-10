@@ -9,42 +9,99 @@ import {
     faExclamationTriangle,
     faCheckCircle
 } from '@fortawesome/free-solid-svg-icons';
+import { getAdminDashboard } from '@/apis/adminService';
+import { Line, Pie } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    ArcElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    ArcElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+);
 
 const Dashboard = () => {
-    // Dữ liệu mẫu - trong thực tế sẽ được lấy từ API
     const [stats, setStats] = useState({
         totalAccounts: 0,
+        activeAccounts: 0,
         newAccounts: 0,
-        pendingVerifications: 0,
         totalStartups: 0,
-        activePolicies: 0,
-        weeklyRegistrations: [0, 0, 0, 0, 0, 0, 0],
+        newStartups: 0,
+        weeklyAccountRegistrations: [],
+        weeklyStartupRegistrations: [],
+        growthPercent: 0,
+        dailyAccountStats: [],
         recentActivities: []
     });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Mô phỏng việc lấy dữ liệu từ API
-        const fetchData = () => {
-            // Giả lập dữ liệu
-            setStats({
-                totalAccounts: 1250,
-                newAccounts: 78,
-                pendingVerifications: 23,
-                totalStartups: 45,
-                activePolicies: 12,
-                weeklyRegistrations: [25, 40, 35, 50, 49, 60, 70],
-                recentActivities: [
-                    { id: 1, type: 'account_created', user: 'Nguyễn Văn A', time: '15 phút trước' },
-                    { id: 2, type: 'account_verified', user: 'Trần Thị B', time: '1 giờ trước' },
-                    { id: 3, type: 'policy_added', policy: 'Chính sách bảo mật', admin: 'Admin1', time: '3 giờ trước' },
-                    { id: 4, type: 'startup_created', startup: 'TechVN Solutions', time: '1 ngày trước' },
-                    { id: 5, type: 'warning', message: 'Phát hiện tài khoản khả nghi', time: '2 ngày trước' }
-                ]
-            });
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const response = await getAdminDashboard();
+
+                setStats({
+                    totalAccounts: response.numAccount || 0,
+                    activeAccounts: response.numAccountActive || 0,
+                    newAccounts: response.accountsCreatedLast7Days?.totalNewAccountCount || 0,
+                    totalStartups: response.numStartup || 0,
+                    newStartups: response.startupsCreatedLast7Days?.totalNewStartupCount || 0,
+                    weeklyAccountRegistrations: response.accountsCreatedLast7Days?.dailyAccountStats?.map(stat => stat.accountCount) || [],
+                    weeklyStartupRegistrations: response.startupsCreatedLast7Days?.dailyStartupStats?.map(stat => stat.startupCount) || [],
+                    growthPercent: response.growthAccountStatsDtocs?.growthPercent || 0,
+                    dailyAccountStats: response.accountsCreatedLast7Days?.dailyAccountStats || [],
+                    recentActivities: [
+                        { id: 1, type: 'account_created', user: 'New User', time: '15 minutes ago' },
+                        { id: 2, type: 'account_verified', user: 'Account Verified', time: '1 hour ago' },
+                        { id: 3, type: 'startup_created', startup: 'New Startup', time: '1 day ago' }
+                    ]
+                });
+            } catch (err) {
+                setError('Unable to load dashboard data');
+                console.error('Lỗi khi tải dashboard:', err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchData();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="px-6 py-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    {error}
+                </div>
+            </div>
+        );
+    }
 
     const getActivityIcon = (type) => {
         switch (type) {
@@ -66,17 +123,17 @@ const Dashboard = () => {
     const getActivityText = (activity) => {
         switch (activity.type) {
             case 'account_created':
-                return `Tài khoản mới được tạo bởi ${activity.user}`;
+                return `New account created by ${activity.user}`;
             case 'account_verified':
-                return `Tài khoản của ${activity.user} đã được xác thực`;
+                return `Account ${activity.user} has been verified`;
             case 'policy_added':
-                return `${activity.policy} được thêm bởi ${activity.admin}`;
+                return `${activity.policy} added by ${activity.admin}`;
             case 'startup_created':
-                return `Startup mới ${activity.startup} đã được đăng ký`;
+                return `New startup ${activity.startup} has been registered`;
             case 'warning':
                 return activity.message;
             default:
-                return 'Hoạt động không xác định';
+                return 'Unknown activity';
         }
     };
 
@@ -92,22 +149,22 @@ const Dashboard = () => {
                             <FontAwesomeIcon icon={faUsers} className="text-blue-500 text-xl" />
                         </div>
                         <div className="ml-4">
-                            <h2 className="text-sm font-medium text-gray-500">Tổng Tài Khoản</h2>
+                            <h2 className="text-sm font-medium text-gray-500">Total Accounts</h2>
                             <p className="text-2xl font-semibold text-gray-800">{stats.totalAccounts}</p>
-                            <p className="text-xs text-green-500">+{stats.newAccounts} tuần này</p>
+                            <p className="text-xs text-green-500">+{stats.newAccounts} this week</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <div className="flex items-center">
-                        <div className="bg-purple-100 p-3 rounded-full">
-                            <FontAwesomeIcon icon={faUserShield} className="text-purple-500 text-xl" />
+                        <div className="bg-green-100 p-3 rounded-full">
+                            <FontAwesomeIcon icon={faUserShield} className="text-green-500 text-xl" />
                         </div>
                         <div className="ml-4">
-                            <h2 className="text-sm font-medium text-gray-500">Đang Chờ Xác Thực</h2>
-                            <p className="text-2xl font-semibold text-gray-800">{stats.pendingVerifications}</p>
-                            <p className="text-xs text-gray-500">Cần xem xét</p>
+                            <h2 className="text-sm font-medium text-gray-500">Active Accounts</h2>
+                            <p className="text-2xl font-semibold text-gray-800">{stats.activeAccounts}</p>
+                            <p className="text-xs text-gray-500">Currently active</p>
                         </div>
                     </div>
                 </div>
@@ -120,20 +177,22 @@ const Dashboard = () => {
                         <div className="ml-4">
                             <h2 className="text-sm font-medium text-gray-500">Startups</h2>
                             <p className="text-2xl font-semibold text-gray-800">{stats.totalStartups}</p>
-                            <p className="text-xs text-gray-500">Đang hoạt động</p>
+                            <p className="text-xs text-gray-500">+{stats.newStartups} this week</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <div className="flex items-center">
-                        <div className="bg-green-100 p-3 rounded-full">
-                            <FontAwesomeIcon icon={faFileAlt} className="text-green-500 text-xl" />
+                        <div className="bg-purple-100 p-3 rounded-full">
+                            <FontAwesomeIcon icon={faChartLine} className="text-purple-500 text-xl" />
                         </div>
                         <div className="ml-4">
-                            <h2 className="text-sm font-medium text-gray-500">Chính Sách</h2>
-                            <p className="text-2xl font-semibold text-gray-800">{stats.activePolicies}</p>
-                            <p className="text-xs text-gray-500">Đang kích hoạt</p>
+                            <h2 className="text-sm font-medium text-gray-500">Growth</h2>
+                            <p className="text-2xl font-semibold text-gray-800">{stats.growthPercent}%</p>
+                            <p className={`text-xs ${stats.growthPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                Compared to last week
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -142,23 +201,168 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Chart */}
                 <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-                    <h2 className="text-lg font-medium text-gray-800 mb-4">Đăng Ký Tài Khoản (7 Ngày Qua)</h2>
-                    <div className="h-60 flex items-end justify-between">
-                        {stats.weeklyRegistrations.map((count, index) => (
-                            <div key={index} className="flex flex-col items-center">
-                                <div
-                                    className="bg-purple-500 w-10 rounded-t-md"
-                                    style={{ height: `${count * 2}px` }}
-                                ></div>
-                                <span className="text-xs mt-1">{['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][index]}</span>
-                            </div>
-                        ))}
+                    <h2 className="text-lg font-medium text-gray-800 mb-4">Account Registrations (Last 7 Days)</h2>
+                    <div className="h-80">
+                        <Line
+                            data={{
+                                labels: stats.dailyAccountStats?.map(stat => {
+                                    const date = new Date(stat.date);
+                                    return date.toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        day: '2-digit',
+                                        month: '2-digit'
+                                    });
+                                }) || ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                                datasets: [
+                                    {
+                                        label: 'New accounts',
+                                        data: stats.weeklyAccountRegistrations,
+                                        fill: true,
+                                        backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                                        borderColor: 'rgb(147, 51, 234)',
+                                        borderWidth: 3,
+                                        pointBackgroundColor: 'rgb(147, 51, 234)',
+                                        pointBorderColor: '#fff',
+                                        pointBorderWidth: 2,
+                                        pointRadius: 6,
+                                        pointHoverRadius: 8,
+                                        tension: 0.4,
+                                    }
+                                ]
+                            }}
+                            options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        titleColor: '#fff',
+                                        bodyColor: '#fff',
+                                        borderColor: 'rgb(147, 51, 234)',
+                                        borderWidth: 1,
+                                        cornerRadius: 8,
+                                        displayColors: false,
+                                        callbacks: {
+                                            label: function (context) {
+                                                return `${context.parsed.y} accounts registered`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        },
+                                        border: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            color: '#6B7280',
+                                            font: {
+                                                size: 12,
+                                                weight: '500'
+                                            }
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: 'rgba(156, 163, 175, 0.2)',
+                                            drawBorder: false
+                                        },
+                                        border: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            color: '#6B7280',
+                                            font: {
+                                                size: 12
+                                            },
+                                            stepSize: 1,
+                                            callback: function (value) {
+                                                return Number.isInteger(value) ? value : '';
+                                            }
+                                        }
+                                    }
+                                },
+                                interaction: {
+                                    intersect: false,
+                                    mode: 'index'
+                                }
+                            }}
+                        />
                     </div>
                 </div>
 
-                {/* Recent Activities */}
+                {/* Pie Chart */}
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg font-medium text-gray-800 mb-4">Hoạt Động Gần Đây</h2>
+                    <h2 className="text-lg font-medium text-gray-800 mb-4">Data Distribution</h2>
+                    <div className="h-80">
+                        <Pie
+                            data={{
+                                labels: ['Total Accounts', 'Active Accounts', 'Startups'],
+                                datasets: [
+                                    {
+                                        data: [stats.totalAccounts, stats.activeAccounts, stats.totalStartups],
+                                        backgroundColor: [
+                                            'rgba(59, 130, 246, 0.8)',
+                                            'rgba(34, 197, 94, 0.8)',
+                                            'rgba(99, 102, 241, 0.8)',
+                                        ],
+                                        borderColor: [
+                                            'rgb(59, 130, 246)',
+                                            'rgb(34, 197, 94)',
+                                            'rgb(99, 102, 241)',
+                                        ],
+                                        borderWidth: 2,
+                                        hoverOffset: 4
+                                    }
+                                ]
+                            }}
+                            options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            usePointStyle: true,
+                                            padding: 20,
+                                            font: {
+                                                size: 12
+                                            }
+                                        }
+                                    },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        titleColor: '#fff',
+                                        bodyColor: '#fff',
+                                        borderColor: 'rgb(147, 51, 234)',
+                                        borderWidth: 1,
+                                        cornerRadius: 8,
+                                        callbacks: {
+                                            label: function (context) {
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                                return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Activities Row */}
+            {/* <div className="mt-6">
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg font-medium text-gray-800 mb-4">Recent Activities</h2>
                     <div className="space-y-4">
                         {stats.recentActivities.map((activity) => (
                             <div key={activity.id} className="flex items-start">
@@ -170,11 +374,8 @@ const Dashboard = () => {
                             </div>
                         ))}
                     </div>
-                    <button className="mt-4 text-sm text-purple-600 hover:text-purple-800 font-medium">
-                        Xem tất cả hoạt động
-                    </button>
                 </div>
-            </div>
+            </div> */}
         </div>
     );
 };

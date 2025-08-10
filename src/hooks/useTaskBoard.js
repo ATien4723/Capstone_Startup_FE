@@ -100,6 +100,8 @@ const useTask = () => {
                 setStartupId(response);
                 // Lấy danh sách milestones
                 await fetchMilestones(response);
+                // Lấy danh sách thành viên startup để xác định vai trò
+                await fetchStartupMembers(response);
                 return response;
             } else {
                 toast.warning("Bạn chưa thuộc về startup nào");
@@ -326,13 +328,9 @@ const useTask = () => {
             const response = await getStartupMembers(startupId);
             const members = response || [];
 
-            // Lọc bỏ người dùng hiện tại khỏi danh sách thành viên
-            const filteredMembers = members.filter(member =>
-                String(member.accountId) !== String(currentUserId)
-            );
-
-            setStartupMembers(filteredMembers);
-            return filteredMembers;
+            // Giữ nguyên toàn bộ danh sách (bao gồm cả current user) để có thể kiểm tra role Founder
+            setStartupMembers(members);
+            return members;
         } catch (error) {
             console.error('Lỗi khi lấy danh sách thành viên:', error);
             return [];
@@ -517,6 +515,9 @@ const useTask = () => {
         addToSelectedMembers,
         removeFromSelectedMembers,
         resetMemberForm,
+
+        // Expose fetchStartupMembers so component can call it
+        fetchStartupMembers,
 
         // UI state setters
         setShowNewBoardForm,

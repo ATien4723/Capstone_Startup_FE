@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { isAuthenticated } from '@/apis/authService';
-import { checkCanPost, checkCanManageMember } from '@/apis/permissionService';
+import { checkCanPost, checkCanManageMember, canManageStartupChat } from '@/apis/permissionService';
 
 /**
  * Component kiểm tra quyền truy cập dựa trên quyền cụ thể
@@ -10,12 +10,14 @@ import { checkCanPost, checkCanManageMember } from '@/apis/permissionService';
  * @param {React.ReactNode} props.children - Component con được bảo vệ
  * @param {boolean} props.requirePostPermission - Yêu cầu quyền đăng bài
  * @param {boolean} props.requireMemberManagement - Yêu cầu quyền quản lý thành viên
+ * @param {boolean} props.requireStartupChatPermission - Yêu cầu quyền quản lý Startup Chat
  * @param {boolean} props.requireAdmin - Yêu cầu quyền admin
  */
 const PermissionRoute = ({
     children,
     requirePostPermission = false,
     requireMemberManagement = false,
+    requireStartupChatPermission = false,
     requireAdmin = false
 }) => {
     const location = useLocation();
@@ -44,14 +46,23 @@ const PermissionRoute = ({
                     }
                 }
 
-                // Kiểm tra quyền quản lý thành viên
-                if (requireMemberManagement) {
-                    const memberPermission = await checkCanManageMember(user.id);
-                    console.log('Phản hồi API quản lý thành viên:', memberPermission);
-                    if (memberPermission === false) {
+                // Kiểm tra quyền quản lý Startup Chat
+                if (requireStartupChatPermission) {
+                    const startupChatPermission = await canManageStartupChat(user.id);
+                    console.log('Phản hồi API quản lý Startup Chat:', startupChatPermission);
+                    if (startupChatPermission === false) {
                         permissionGranted = false;
                     }
                 }
+
+                // // Kiểm tra quyền quản lý thành viên
+                // if (requireMemberManagement) {
+                //     const memberPermission = await checkCanManageMember(user.id);
+                //     console.log('Phản hồi API quản lý thành viên:', memberPermission);
+                //     if (memberPermission === false) {
+                //         permissionGranted = false;
+                //     }
+                // }
 
                 // Kiểm tra quyền admin
                 if (requireAdmin) {
@@ -70,12 +81,12 @@ const PermissionRoute = ({
             }
         };
 
-        if (isReady && (requirePostPermission || requireMemberManagement || requireAdmin)) {
+        if (isReady && (requirePostPermission || requireMemberManagement || requireStartupChatPermission || requireAdmin)) {
             checkPermissions();
-        } else if (!requirePostPermission && !requireMemberManagement && !requireAdmin) {
+        } else if (!requirePostPermission && !requireMemberManagement && !requireStartupChatPermission && !requireAdmin) {
             setLoading(false);
         }
-    }, [isReady, user, requirePostPermission, requireMemberManagement, requireAdmin, isUserAuthenticated]);
+    }, [isReady, user, requirePostPermission, requireMemberManagement, requireAdmin, isUserAuthenticated, requireStartupChatPermission]);
 
     // Hiển thị loading khi đang kiểm tra quyền
     if (loading) {

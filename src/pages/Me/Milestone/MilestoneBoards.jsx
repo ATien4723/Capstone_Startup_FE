@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEllipsisV, faPencilAlt, faTrashAlt, faChartLine, faUserPlus, faStar, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import useTask from "@/hooks/useTaskBoard";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMembersInMilestone } from "@/apis/taskService";
 
 const MilestoneBoards = () => {
     const navigate = useNavigate();
@@ -11,6 +13,7 @@ const MilestoneBoards = () => {
         loading,
         startupId,
         milestones,
+        currentBoardId,
 
         // UI states
         showNewBoardForm,
@@ -63,17 +66,79 @@ const MilestoneBoards = () => {
         fetchStartupId();
     }, []);
 
-    // Điều hướng đến trang chi tiết của bảng
-    const navigateToBoard = (boardId) => {
-        // Sử dụng hàm từ hook để lưu dữ liệu mẫu vào localStorage
+    // Lấy user hiện tại
+    const { user } = useAuth();
 
-        // navigate(`/me/milestones/${boardId}`);
-        const url = navigateToMilestoneDetail(boardId);
-        navigate(url);
+    // Tính toán quyền Founder cho user hiện tại
+    const isFounder = React.useMemo(() => {
+        return startupMembers?.some(m =>
+            (m.roleName?.toLowerCase() === 'founder') && (String(m.accountId) === String(user?.id))
+        );
+    }, [startupMembers, user]);
+
+    // Helper: kiểm tra member đã được chọn hoặc đã thuộc board hiện tại chưa
+    const isMemberAlreadyAdded = (member) => {
+        // Đã nằm trong selectedMembers
+        const selected = selectedMembers.some(m => String(m.accountId) === String(member.accountId));
+
+        // Đã nằm trong board hiện tại
+        const board = milestones.find(b => String(b.milestoneId || b.id) === String(currentBoardId));
+        const inBoard = Array.isArray(board?.members) && board.members.some(m => {
+            if (typeof m === 'object') {
+                return (m.accountId && String(m.accountId) === String(member.accountId))
+                    || (m.memberid && String(m.memberid) === String(member.memberid))
+                    || (m.email && m.email === member.email);
+            }
+            return false;
+        });
+
+        return selected || inBoard;
+    };
+
+    // Điều hướng đến trang chi tiết của bảng (chỉ nếu user là member của milestone)
+    const navigateToBoard = async (boardId) => {
+        try {
+            const userId = user?.id;
+            if (!userId) return;
+
+            // Gọi API kiểm tra thành viên trong milestone
+            const members = await getMembersInMilestone(boardId);
+            const isMember = Array.isArray(members) && members.some(m => String(m.accountId) === String(userId));
+            if (!isMember) {
+                return; // Không cho vào nếu không phải member
+            }
+
+            const url = navigateToMilestoneDetail(boardId);
+            navigate(url);
+        } catch (e) {
+            console.error('Error checking milestone membership:', e);
+        }
     };
 
     // Lấy danh sách boards đã được lọc
     const filteredBoards = getFilteredMilestones();
+
+    // Set các milestone mà user là member (để hiển thị View Details)
+    const [memberMilestoneIds, setMemberMilestoneIds] = React.useState(new Set());
+
+    React.useEffect(() => {
+        const loadMembership = async () => {
+            if (!user?.id) return;
+            const ids = new Set();
+            await Promise.all((filteredBoards || []).map(async (board) => {
+                const id = board.milestoneId || board.id;
+                try {
+                    const members = await getMembersInMilestone(id);
+                    const isMember = Array.isArray(members) && members.some(m => String(m.accountId) === String(user.id));
+                    if (isMember) ids.add(String(id));
+                } catch (e) {
+                    console.error('Không tải được members cho milestone', id, e);
+                }
+            }));
+            setMemberMilestoneIds(ids);
+        };
+        loadMembership();
+    }, [filteredBoards, user]);
 
     // Thêm hàm xác định màu dựa trên ID
     const getBoardColor = (id) => {
@@ -87,12 +152,15 @@ const MilestoneBoards = () => {
             {/* Tiêu đề và nút thêm bảng */}
             <header className="bg-white shadow-md px-6 py-5 flex justify-between items-center mb-8 rounded-xl">
                 <h1 className="text-2xl font-bold text-gray-800">Project Management</h1>
-                <button
-                    onClick={handleAddBoard}
-                    className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
-                >
-                    <FontAwesomeIcon icon={faPlus} /> Add New Board
-                </button>
+                {/* Chỉ Founder (user hiện tại) mới thấy nút Add New Board */}
+                {isFounder && (
+                    <button
+                        onClick={handleAddBoard}
+                        className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
+                    >
+                        <FontAwesomeIcon icon={faPlus} /> Add New Board
+                    </button>
+                )}
             </header>
 
             {/* Thanh tìm kiếm và lọc */}
@@ -260,26 +328,38 @@ const MilestoneBoards = () => {
                                         <div
                                             key={user.accountId}
                                             className="flex items-center justify-between p-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                                            onClick={() => addToSelectedMembers(user)}
+                                            onClick={() => { if (!isMemberAlreadyAdded(user)) addToSelectedMembers(user); }}
                                         >
                                             <div className="flex items-center">
-                                                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                                                    {user.fullName?.charAt(0) || user.email?.charAt(0) || 'U'}
-                                                </div>
+                                                {user.avatarUrl ? (
+                                                    <img
+                                                        src={user.avatarUrl}
+                                                        alt={user.fullName || user.email}
+                                                        className="w-8 h-8 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                                                        {user.fullName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                                                    </div>
+                                                )}
                                                 <div className="ml-2">
                                                     <div className="font-medium">{user.fullName || user.email}</div>
                                                     <div className="text-xs text-gray-500">{user.email}</div>
                                                 </div>
                                             </div>
-                                            <button
-                                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addToSelectedMembers(user);
-                                                }}
-                                            >
-                                                Add
-                                            </button>
+                                            {isMemberAlreadyAdded(user) ? (
+                                                <span className="text-gray-400 text-sm">Added</span>
+                                            ) : (
+                                                <button
+                                                    className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        addToSelectedMembers(user);
+                                                    }}
+                                                >
+                                                    Add
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -320,26 +400,38 @@ const MilestoneBoards = () => {
                                         <div
                                             key={member.accountId}
                                             className="flex items-center justify-between p-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                                            onClick={() => addToSelectedMembers(member)}
+                                            onClick={() => { if (!isMemberAlreadyAdded(member)) addToSelectedMembers(member); }}
                                         >
                                             <div className="flex items-center">
-                                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
-                                                    {member.fullName?.charAt(0) || member.email?.charAt(0) || 'U'}
-                                                </div>
+                                                {member.avatarUrl ? (
+                                                    <img
+                                                        src={member.avatarUrl}
+                                                        alt={member.fullName || member.email}
+                                                        className="w-8 h-8 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
+                                                        {member.fullName?.charAt(0) || member.email?.charAt(0) || 'U'}
+                                                    </div>
+                                                )}
                                                 <div className="ml-2">
                                                     <div className="font-medium">{member.fullName}</div>
                                                     <div className="text-xs text-gray-500">{member.email}</div>
                                                 </div>
                                             </div>
-                                            <button
-                                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addToSelectedMembers(member);
-                                                }}
-                                            >
-                                                Add
-                                            </button>
+                                            {isMemberAlreadyAdded(member) ? (
+                                                <span className="text-gray-400 text-sm">Added</span>
+                                            ) : (
+                                                <button
+                                                    className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        addToSelectedMembers(member);
+                                                    }}
+                                                >
+                                                    Add
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -410,12 +502,15 @@ const MilestoneBoards = () => {
                                     className="dropdown relative"
                                     ref={el => dropdownRefs.current[board.milestoneId || board.id] = el}
                                 >
-                                    <button
-                                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-                                        onClick={() => toggleDropdown(board.milestoneId || board.id)}
-                                    >
-                                        <FontAwesomeIcon icon={faEllipsisV} />
-                                    </button>
+                                    {/* Chỉ Founder (user hiện tại) mới thấy menu ellipsis */}
+                                    {isFounder && (
+                                        <button
+                                            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                            onClick={() => toggleDropdown(board.milestoneId || board.id)}
+                                        >
+                                            <FontAwesomeIcon icon={faEllipsisV} />
+                                        </button>
+                                    )}
                                     {openDropdownId === (board.milestoneId || board.id) && (
                                         <div className="absolute right-0 mt-2 bg-white shadow-xl rounded-lg z-50 py-1 min-w-[160px] border border-gray-100 animate-fadeIn">
                                             <button
@@ -491,13 +586,16 @@ const MilestoneBoards = () => {
                             </div>
 
                             <div className="mt-4">
-                                <button
-                                    onClick={() => navigateToBoard(board.milestoneId || board.id)}
-                                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-md"
-                                >
-                                    <FontAwesomeIcon icon={faChartLine} className="mr-2" />
-                                    View Details
-                                </button>
+                                {/* Chỉ hiện nút View Details nếu user là member của milestone */}
+                                {memberMilestoneIds.has(String(board.milestoneId || board.id)) && (
+                                    <button
+                                        onClick={() => navigateToBoard(board.milestoneId || board.id)}
+                                        className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-md"
+                                    >
+                                        <FontAwesomeIcon icon={faChartLine} className="mr-2" />
+                                        View Details
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

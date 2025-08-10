@@ -277,13 +277,16 @@ export default function useVideoCall(currentUserId) {
 
             const peer = new SimplePeer({
                 initiator: true,
-                trickle: true,
+                trickle: false, // Tắt trickle ICE cho ổn định hơn
                 stream: stream,
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
+                    ],
+                    iceCandidatePoolSize: 10
                 }
             });
 

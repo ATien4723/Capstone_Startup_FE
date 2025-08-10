@@ -105,7 +105,9 @@ export const getPoliciesByPolicyType = async (policyTypeId) => {
 
 export const updatePolicyStatus = async (id, isActive) => {
     try {
-        const response = await axiosClient.put(`/api/update-policy-status/${id}`, { isActive });
+        const response = await axiosClient.put(`/api/update-policy-status/${id}`, null, {
+            params: { isActive }
+        });
         return response;
     } catch (error) {
         throw error;

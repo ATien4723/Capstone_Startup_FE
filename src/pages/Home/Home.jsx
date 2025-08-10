@@ -982,7 +982,20 @@ const Home = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <h6 className="font-semibold text-sm truncate">{room.targetName || "User"}</h6>
                                                     <p className="text-xs text-gray-500 truncate">
-                                                        {room.latestMessageContent || "No messages yet"}
+                                                        {room.latestMessageContent && (
+                                                            room.latestMessageContent.toLowerCase().endsWith('.jpg') ||
+                                                            room.latestMessageContent.toLowerCase().endsWith('.jpeg') ||
+                                                            room.latestMessageContent.toLowerCase().endsWith('.png') ||
+                                                            room.latestMessageContent.toLowerCase().endsWith('.gif') ||
+                                                            room.latestMessageContent.toLowerCase().endsWith('.webp')
+                                                        ) ? '🖼️ Picture' :
+                                                            room.latestMessageContent && (
+                                                                room.latestMessageContent.toLowerCase().endsWith('.mp4') ||
+                                                                room.latestMessageContent.toLowerCase().endsWith('.webm') ||
+                                                                room.latestMessageContent.toLowerCase().endsWith('.mov') ||
+                                                                room.latestMessageContent.toLowerCase().endsWith('.avi') ||
+                                                                (room.latestMessageContent.includes('cloudinary.com/') && room.latestMessageContent.includes('/video/'))
+                                                            ) ? '🎬 Video' : room.latestMessageContent || "No messages yet"}
                                                     </p>
                                                 </div>
                                                 {room.latestMessageTime && (

@@ -196,3 +196,14 @@ export const searchAccounts = async (searchText, currentAccountId, pageNumber = 
         throw error;
     }
 };
+
+// API: Lấy tất cả tài khoản
+export const getAllAccounts = async () => {
+    try {
+        const response = await axiosClient.get('api/Account/GetAllAccount');
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách tài khoản:', error);
+        throw error;
+    }
+};

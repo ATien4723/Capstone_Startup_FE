@@ -102,7 +102,8 @@ export default function useMemberManagement(startupId) {
                 canManageCandidate: permissions.canManageCandidate || false,
                 canManageChatRoom: permissions.canManageChatRoom || false,
                 canManageMember: permissions.canManageMember || false,
-                canManageMilestone: permissions.canManageMilestone || false
+                canManageMilestone: permissions.canManageMilestone || false,
+                canManageStartupChat: permissions.canManageStartupChat || false
             });
 
             toast.success("Đã cập nhật quyền thành công");

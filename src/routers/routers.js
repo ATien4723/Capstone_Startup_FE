@@ -38,8 +38,8 @@ const nhap = lazy(() => import('@/pages/Test/Nhap'));
 const Admin = lazy(() => import('@/pages/Admin/Admin'));
 const AdminDashboard = lazy(() => import('@/pages/Admin/Dashboard/Dashboard'));
 const AccountList = lazy(() => import('@/pages/Admin/Accounts/AccountList'));
-const AccountVerification = lazy(() => import('@/pages/Admin/Accounts/AccountVerification'));
-const PolicyList = lazy(() => import('@/pages/Admin/Policies/PolicyList'));
+const PolicyList = lazy(() => import('@/pages/Admin/Policies/PolicyManagement'));
+const CategoryManagement = lazy(() => import('@/pages/Admin/CategoryManagement/CategoryManagement'));
 // const PolicyTypes = lazy(() => import('@/pages/Admin/Policies/PolicyTypes'));
 // const Roles = lazy(() => import('@/pages/Admin/Permissions/Roles'));
 // const PermissionAssign = lazy(() => import('@/pages/Admin/Permissions/PermissionAssign'));
@@ -161,7 +161,8 @@ const routers = [
         component: MeUserChat,
         parent: '/me',
         protected: true,
-        requireStartup: true
+        requireStartup: true,
+        requireStartupChatPermission: true
     },
     {
         path: '/me/post',
@@ -258,22 +259,22 @@ const routers = [
         requireAdmin: true
     },
     {
-        path: '/admin/accounts/list',
+        path: '/admin/accounts',
         component: AccountList,
         parent: '/admin',
         protected: true,
         requireAdmin: true
     },
     {
-        path: '/admin/accounts/verification',
-        component: AccountVerification,
+        path: '/admin/policies',
+        component: PolicyList,
         parent: '/admin',
         protected: true,
         requireAdmin: true
     },
     {
-        path: '/admin/policies/list',
-        component: PolicyList,
+        path: '/admin/categories',
+        component: CategoryManagement,
         parent: '/admin',
         protected: true,
         requireAdmin: true

@@ -4,11 +4,9 @@ import { getUserId } from '@/apis/authService';
 // Get posts by account ID
 export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 10) => {
     try {
-        // Lấy ID của người dùng hiện tại
         const currentAccountId = await getUserId() || 0;
-
         const response = await axiosClient.get(
-            `GetPostsByAccountId?accountId=${accountId}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`
+            `api/post/GetPostsByAccountId?accountId=${accountId}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`
         );
         return response;
     } catch (error) {
@@ -19,7 +17,7 @@ export const getPostsByAccountId = async (accountId, pageNumber = 1, pageSize = 
 //New Feed
 export const getNewFeed = async (userId, page = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`NewFeed?userId=${userId}&page=${page}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/NewFeed?userId=${userId}&page=${page}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi gọi API New Feed:', error);
@@ -30,7 +28,7 @@ export const getNewFeed = async (userId, page = 1, pageSize = 10) => {
 // Get post comments by post ID
 export const getPostCommentsByPostId = async (postId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostCommentsByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/GetPostCommentsByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         console.log('Kết quả API bình luận:', response);
         return response;
     } catch (error) {
@@ -42,8 +40,7 @@ export const getPostCommentsByPostId = async (postId, pageNumber = 1, pageSize =
 // Get post likes by post ID
 export const getPostLikesByPostId = async (postId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostLikeByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
-        // console.log('Kết quả API danh sách người thích bài viết:', response);
+        const response = await axiosClient.get(`api/post/GetPostLikeByPostId?postId=${postId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy danh sách người thích bài viết:', error);
@@ -54,14 +51,10 @@ export const getPostLikesByPostId = async (postId, pageNumber = 1, pageSize = 10
 // Create post comment
 export const createPostComment = async (commentData) => {
     try {
-        // Xây dựng URL với các tham số
-        let url = `CreatePostComment?AccountId=${commentData.accountId}&PostId=${commentData.postId}&Content=${encodeURIComponent(commentData.content)}`;
-
-        // Thêm ParentCommentId nếu có
+        let url = `api/post/CreatePostComment?AccountId=${commentData.accountId}&PostId=${commentData.postId}&Content=${encodeURIComponent(commentData.content)}`;
         if (commentData.parentCommentId) {
             url += `&ParentCommentId=${commentData.parentCommentId}`;
         }
-
         const response = await axiosClient.post(url);
         return response;
     } catch (error) {
@@ -72,7 +65,7 @@ export const createPostComment = async (commentData) => {
 // Create post
 export const createPost = async (postData) => {
     try {
-        const response = await axiosClient.post('CreatePost', postData, {
+        const response = await axiosClient.post('api/post/CreatePost', postData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -88,7 +81,7 @@ export const createPost = async (postData) => {
 // Get post like count
 export const getPostLikeCount = async (postId) => {
     try {
-        const response = await axiosClient.get(`${postId}/like-count`);
+        const response = await axiosClient.get(`api/post/${postId}/like-count`);
         return response;
     } catch (error) {
         throw error;
@@ -98,7 +91,7 @@ export const getPostLikeCount = async (postId) => {
 // Get post comment count
 export const getPostCommentCount = async (postId) => {
     try {
-        const response = await axiosClient.get(`${postId}/comment-count`);
+        const response = await axiosClient.get(`api/post/${postId}/comment-count`);
         return response;
     } catch (error) {
         throw error;
@@ -108,7 +101,7 @@ export const getPostCommentCount = async (postId) => {
 // Check if post is liked
 export const isPostLiked = async (likeData) => {
     try {
-        const response = await axiosClient.get(`liked?postId=${likeData.postId}&accountId=${likeData.accountId}`);
+        const response = await axiosClient.get(`api/post/liked?postId=${likeData.postId}&accountId=${likeData.accountId}`);
         return response;
     } catch (error) {
         throw error;
@@ -119,7 +112,7 @@ export const isPostLiked = async (likeData) => {
 export const updatePostComment = async (commentData) => {
     try {
         const response = await axiosClient.put(
-            `update-post-comment`, {
+            `api/post/update-post-comment`, {
             postcommentId: commentData.postcommentId,
             content: commentData.content
         }
@@ -133,7 +126,7 @@ export const updatePostComment = async (commentData) => {
 // Xóa bình luận
 export const deletePostComment = async (commentId) => {
     try {
-        const response = await axiosClient.delete(`DeletePostComment?commentId=${commentId}`);
+        const response = await axiosClient.delete(`api/post/DeletePostComment?commentId=${commentId}`);
         return response;
     } catch (error) {
         throw error;
@@ -144,7 +137,7 @@ export const deletePostComment = async (commentId) => {
 export const getPostChildComments = async (parentCommentId, pageNumber = 1, pageSize = 10) => {
     try {
         const response = await axiosClient.get(
-            `GetPostChidComments?parrentCommentId=${parentCommentId}&pageNumber=${pageNumber}&pageSize=${pageSize}`
+            `api/post/GetPostChidComments?parrentCommentId=${parentCommentId}&pageNumber=${pageNumber}&pageSize=${pageSize}`
         );
         return response;
     } catch (error) {
@@ -155,7 +148,7 @@ export const getPostChildComments = async (parentCommentId, pageNumber = 1, page
 // Thích bình luận
 export const likeComment = async (commentId, accountId) => {
     try {
-        const response = await axiosClient.post(`LikeComment?commentId=${commentId}&accountId=${accountId}`);
+        const response = await axiosClient.post(`api/post/LikeComment?commentId=${commentId}&accountId=${accountId}`);
         return response;
     } catch (error) {
         throw error;
@@ -165,7 +158,7 @@ export const likeComment = async (commentId, accountId) => {
 // Bỏ thích bình luận
 export const unlikeComment = async (commentId, accountId) => {
     try {
-        const response = await axiosClient.post(`UnlikeComment?commentId=${commentId}&accountId=${accountId}`);
+        const response = await axiosClient.post(`api/post/UnlikeComment?commentId=${commentId}&accountId=${accountId}`);
         return response;
     } catch (error) {
         throw error;
@@ -185,7 +178,7 @@ export const unlikeComment = async (commentId, accountId) => {
 // Lấy số lượng like của bình luận
 export const getCommentLikeCount = async (commentId) => {
     try {
-        const response = await axiosClient.get(`GetCommentLikeCount?commentId=${commentId}`);
+        const response = await axiosClient.get(`api/post/GetCommentLikeCount?commentId=${commentId}`);
         return response;
     } catch (error) {
         throw error;
@@ -196,7 +189,7 @@ export const getCommentLikeCount = async (commentId) => {
 // Like post
 export const likePost = async (likeData) => {
     try {
-        const response = await axiosClient.post('like', likeData);
+        const response = await axiosClient.post('api/post/like', likeData);
         return response;
     } catch (error) {
         throw error;
@@ -206,7 +199,7 @@ export const likePost = async (likeData) => {
 // Unlike post
 export const unlikePost = async (likeData) => {
     try {
-        const response = await axiosClient.post('unlike', likeData);
+        const response = await axiosClient.post('api/post/unlike', likeData);
         return response;
     } catch (error) {
         throw error;
@@ -216,7 +209,7 @@ export const unlikePost = async (likeData) => {
 // Cập nhật bài viết
 export const updatePost = async (postId, updatePostDTO) => {
     try {
-        const response = await axiosClient.put(`update-post/${postId}`, updatePostDTO);
+        const response = await axiosClient.put(`api/post/update-post/${postId}`, updatePostDTO);
         return response.data;
     } catch (error) {
         console.error('Error updating post:', error);
@@ -227,7 +220,7 @@ export const updatePost = async (postId, updatePostDTO) => {
 // Xóa bài viết
 export const deletePost = async (postId) => {
     try {
-        const response = await axiosClient.delete(`delete-post${postId}`);
+        const response = await axiosClient.delete(`api/post/delete-post${postId}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting post:', error);
@@ -254,7 +247,7 @@ export const deletePost = async (postId) => {
 
 export const hidePost = async (accountId, postId) => {
     try {
-        const response = await axiosClient.post('/hide', {
+        const response = await axiosClient.post('/api/post/hide', {
             accountId: accountId,
             postId: postId
         });
@@ -268,7 +261,7 @@ export const hidePost = async (accountId, postId) => {
 // Chia sẻ bài viết
 export const sharePost = async (shareData) => {
     try {
-        const response = await axiosClient.post('share', shareData);
+        const response = await axiosClient.post('api/post/share', shareData);
         return response;
     } catch (error) {
         console.error('Lỗi khi chia sẻ bài viết:', error);
@@ -279,7 +272,7 @@ export const sharePost = async (shareData) => {
 // Lấy bài viết theo ID
 export const getPostById = async (postId) => {
     try {
-        const response = await axiosClient.get(`post/${postId}`);
+        const response = await axiosClient.get(`api/post/post/${postId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy bài viết theo ID:', error);
@@ -290,7 +283,7 @@ export const getPostById = async (postId) => {
 // Tìm kiếm bài viết
 export const searchPosts = async (searchText, currentAccountId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`search-posts?searchText=${encodeURIComponent(searchText)}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/search-posts?searchText=${encodeURIComponent(searchText)}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi tìm kiếm bài viết:', error);
@@ -301,7 +294,7 @@ export const searchPosts = async (searchText, currentAccountId, pageNumber = 1, 
 // Lấy tất cả lý do báo cáo
 export const getAllReportReasons = async () => {
     try {
-        const response = await axiosClient.get('report-reasons');
+        const response = await axiosClient.get('api/post/report-reasons');
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy danh sách lý do báo cáo:', error);
@@ -312,7 +305,7 @@ export const getAllReportReasons = async () => {
 // Lấy lý do báo cáo theo ID
 export const getReportReasonById = async (id) => {
     try {
-        const response = await axiosClient.get(`report-reasons/${id}`);
+        const response = await axiosClient.get(`api/post/report-reasons/${id}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy lý do báo cáo theo ID:', error);
@@ -323,7 +316,7 @@ export const getReportReasonById = async (id) => {
 // Tạo lý do báo cáo mới
 export const createReportReason = async (reasonData) => {
     try {
-        const response = await axiosClient.post('report-reasons', reasonData);
+        const response = await axiosClient.post('api/post/report-reasons', reasonData);
         return response;
     } catch (error) {
         console.error('Lỗi khi tạo lý do báo cáo mới:', error);
@@ -334,7 +327,7 @@ export const createReportReason = async (reasonData) => {
 // Cập nhật lý do báo cáo
 export const updateReportReason = async (id, reasonData) => {
     try {
-        const response = await axiosClient.put(`report-reasons/${id}`, reasonData);
+        const response = await axiosClient.put(`api/post/report-reasons/${id}`, reasonData);
         return response;
     } catch (error) {
         console.error('Lỗi khi cập nhật lý do báo cáo:', error);
@@ -345,7 +338,7 @@ export const updateReportReason = async (id, reasonData) => {
 // Xóa lý do báo cáo
 export const deleteReportReason = async (id) => {
     try {
-        const response = await axiosClient.delete(`report-reasons/${id}`);
+        const response = await axiosClient.delete(`api/post/report-reasons/${id}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi xóa lý do báo cáo:', error);
@@ -356,7 +349,7 @@ export const deleteReportReason = async (id) => {
 // Báo cáo bài viết
 export const reportPost = async (reportData) => {
     try {
-        const response = await axiosClient.post('post-reports', reportData);
+        const response = await axiosClient.post('api/post/post-reports', reportData);
         return response;
     } catch (error) {
         console.error('Lỗi khi báo cáo bài viết:', error);
@@ -367,7 +360,7 @@ export const reportPost = async (reportData) => {
 // Tạo bài đăng tuyển dụng thực tập
 export const createInternshipPost = async (internshipData) => {
     try {
-        const response = await axiosClient.post('create-internship-post', internshipData);
+        const response = await axiosClient.post('api/post/create-internship-post', internshipData);
         return response;
     } catch (error) {
         console.error('Lỗi khi tạo bài đăng tuyển dụng:', error);
@@ -378,7 +371,7 @@ export const createInternshipPost = async (internshipData) => {
 // Lấy feed của startup
 export const getStartupFeed = async (startupId, page = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`startup-feeds/${startupId}?page=${page}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/startup-feeds/${startupId}?page=${page}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy feed của startup:', error);
@@ -389,7 +382,7 @@ export const getStartupFeed = async (startupId, page = 1, pageSize = 10) => {
 // Lấy thống kê tương tác hàng ngày của startup
 export const getStartupDailyStats = async (startupId) => {
     try {
-        const response = await axiosClient.get(`startup/${startupId}/interactions/daily`);
+        const response = await axiosClient.get(`api/post/startup/${startupId}/interactions/daily`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy thống kê tương tác của startup:', error);
@@ -400,7 +393,7 @@ export const getStartupDailyStats = async (startupId) => {
 // Lấy các bài viết đã lên lịch
 export const getScheduledPosts = async () => {
     try {
-        const response = await axiosClient.get('scheduled');
+        const response = await axiosClient.get('api/post/scheduled');
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy các bài viết đã lên lịch:', error);
@@ -411,7 +404,7 @@ export const getScheduledPosts = async () => {
 // Đăng bài viết đã lên lịch
 export const publishPost = async (postId) => {
     try {
-        const response = await axiosClient.put(`publish/${postId}`);
+        const response = await axiosClient.put(`api/post/publish/${postId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi đăng bài viết đã lên lịch:', error);
@@ -422,7 +415,7 @@ export const publishPost = async (postId) => {
 // Cập nhật trạng thái bài đăng tuyển dụng
 export const updateInternshipPostStatus = async (internshipPostId) => {
     try {
-        const response = await axiosClient.put(`update-internshippost-status?internshipPostId=${internshipPostId}`);
+        const response = await axiosClient.put(`api/post/update-internshippost-status?internshipPostId=${internshipPostId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi cập nhật trạng thái bài đăng tuyển dụng:', error);
@@ -433,7 +426,7 @@ export const updateInternshipPostStatus = async (internshipPostId) => {
 // Nộp CV ứng tuyển
 export const applyCv = async (cvData) => {
     try {
-        const response = await axiosClient.post('apply-cv', cvData, {
+        const response = await axiosClient.post('api/post/apply-cv', cvData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -448,7 +441,7 @@ export const applyCv = async (cvData) => {
 // Lấy danh sách CV theo startup
 export const getCvsByStartup = async (startupId, page = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`candidateCv/${startupId}?page=${page}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/candidateCv/${startupId}?page=${page}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy danh sách CV theo startup:', error);
@@ -459,7 +452,7 @@ export const getCvsByStartup = async (startupId, page = 1, pageSize = 10) => {
 // Lấy bài viết theo ID của startup
 export const getPostsByStartupId = async (startupId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetPostsByStartupId?startupId=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/GetPostsByStartupId?startupId=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy bài viết của startup:', error);
@@ -470,7 +463,7 @@ export const getPostsByStartupId = async (startupId, pageNumber = 1, pageSize = 
 // Lấy tất cả bài đăng tuyển dụng thực tập
 export const getAllInternshipPosts = async (startupId, pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`GetAllInternshipPosts?startupid=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/GetAllInternshipPosts?startupid=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy tất cả bài đăng tuyển dụng:', error);
@@ -481,7 +474,7 @@ export const getAllInternshipPosts = async (startupId, pageNumber = 1, pageSize 
 // Lấy chi tiết bài đăng tuyển dụng thực tập theo ID
 export const getInternshipPostDetail = async (internshipPostId) => {
     try {
-        const response = await axiosClient.get(`internshippost/${internshipPostId}`);
+        const response = await axiosClient.get(`api/post/internshippost/${internshipPostId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy chi tiết bài đăng tuyển dụng:', error);
@@ -492,7 +485,7 @@ export const getInternshipPostDetail = async (internshipPostId) => {
 // Cập nhật  bài đăng tuyển dụng
 export const updateInternshipPost = async (internshipPostId, updateData) => {
     try {
-        const response = await axiosClient.put(`internshippost/${internshipPostId}`, updateData);
+        const response = await axiosClient.put(`api/post/internshippost/${internshipPostId}`, updateData);
         return response;
     } catch (error) {
         console.error('Lỗi khi cập nhật bài đăng tuyển dụng:', error);
@@ -503,7 +496,7 @@ export const updateInternshipPost = async (internshipPostId, updateData) => {
 // Tìm kiếm bài viết theo startupId
 export const searchStartupPosts = async (startupId, keyword = '', pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`search-startup-posts?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/search-startup-posts?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi tìm kiếm bài viết của startup:', error);
@@ -514,7 +507,7 @@ export const searchStartupPosts = async (startupId, keyword = '', pageNumber = 1
 // Tìm kiếm bài đăng tuyển dụng theo startupId
 export const searchStartupInternshipPosts = async (startupId, keyword = '', pageNumber = 1, pageSize = 10) => {
     try {
-        const response = await axiosClient.get(`search-startup-internship-post?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        const response = await axiosClient.get(`api/post/search-startup-internship-post?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi tìm kiếm bài tuyển dụng của startup:', error);

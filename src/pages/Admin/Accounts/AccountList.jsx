@@ -9,8 +9,12 @@ import {
     faTimesCircle,
     faSort,
     faSortUp,
-    faSortDown
+    faSortDown,
+    faPlus
 } from '@fortawesome/free-solid-svg-icons';
+import { getAllAccounts } from '@/apis/accountService';
+import { createAdmin } from '@/apis/adminService';
+import { toast } from 'react-toastify';
 
 const AccountList = () => {
     const [accounts, setAccounts] = useState([]);
@@ -22,45 +26,48 @@ const AccountList = () => {
     const [selectedRole, setSelectedRole] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [loading, setLoading] = useState(true);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createLoading, setCreateLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
 
     useEffect(() => {
-        // Giả lập dữ liệu từ API
-        const fetchAccounts = () => {
+        const fetchAccounts = async () => {
             setLoading(true);
-            // Trong thực tế, đây sẽ là cuộc gọi API
-            setTimeout(() => {
-                const mockAccounts = Array.from({ length: 50 }, (_, i) => ({
-                    id: i + 1,
-                    username: `user${i + 1}`,
-                    fullName: `Người dùng ${i + 1}`,
-                    email: `user${i + 1}@example.com`,
-                    role: i % 5 === 0 ? 'Admin' : i % 3 === 0 ? 'Moderator' : 'User',
-                    status: i % 10 === 0 ? 'Locked' : 'Active',
-                    verified: i % 4 !== 0,
-                    createdAt: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toLocaleDateString('vi-VN')
-                }));
+            try {
+                const response = await getAllAccounts();
+                // API trả về trực tiếp array, không có .data
+                const accountsData = Array.isArray(response) ? response : [];
 
                 // Lọc và sắp xếp dữ liệu
-                let filteredAccounts = mockAccounts.filter(account => {
+                let filteredAccounts = accountsData.filter(account => {
+                    const fullName = `${account.firstName || ''} ${account.lastName || ''}`.trim();
                     const matchesSearch =
-                        account.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        account.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        account.username.toLowerCase().includes(searchTerm.toLowerCase());
+                        fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (account.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
                     const matchesRole = selectedRole === 'all' || account.role === selectedRole;
                     const matchesStatus = selectedStatus === 'all' ||
-                        (selectedStatus === 'active' && account.status === 'Active') ||
-                        (selectedStatus === 'locked' && account.status === 'Locked');
+                        (selectedStatus === 'verified' && account.status === 'verified') ||
+                        (selectedStatus === 'unverified' && account.status === 'unverified');
 
                     return matchesSearch && matchesRole && matchesStatus;
                 });
 
-                // Sắp xếp
+                // Sắp xếp theo firstName thay vì fullName
                 filteredAccounts.sort((a, b) => {
-                    let valueA = a[sortField];
-                    let valueB = b[sortField];
+                    let valueA, valueB;
 
-                    // Đảm bảo so sánh chuỗi nếu là chuỗi
+                    if (sortField === 'fullName') {
+                        valueA = `${a.firstName || ''} ${a.lastName || ''}`.trim();
+                        valueB = `${b.firstName || ''} ${b.lastName || ''}`.trim();
+                    } else {
+                        valueA = a[sortField];
+                        valueB = b[sortField];
+                    }
+
                     if (typeof valueA === 'string') {
                         valueA = valueA.toLowerCase();
                         valueB = valueB.toLowerCase();
@@ -79,8 +86,12 @@ const AccountList = () => {
 
                 setAccounts(paginatedAccounts);
                 setTotalPages(totalPages);
+            } catch (error) {
+                console.error('Lỗi khi tải danh sách tài khoản:', error);
+                setAccounts([]);
+            } finally {
                 setLoading(false);
-            }, 500); // Giả lập độ trễ mạng
+            }
         };
 
         fetchAccounts();
@@ -119,9 +130,42 @@ const AccountList = () => {
         ));
     };
 
+    const handleCreateAdmin = async (e) => {
+        e.preventDefault();
+        if (!formData.email || !formData.password) {
+            toast.error('Vui lòng nhập đầy đủ thông tin');
+            return;
+        }
+
+        setCreateLoading(true);
+        try {
+            await createAdmin(formData);
+            toast.success('Tạo tài khoản admin thành công');
+            setShowCreateModal(false);
+            setFormData({ email: '', password: '' });
+            // Refresh danh sách
+            const response = await getAllAccounts();
+            const accountsData = Array.isArray(response) ? response : [];
+            setAccounts(accountsData.slice(0, 10)); // Hiển thị trang đầu
+        } catch (error) {
+            toast.error('Có lỗi khi tạo tài khoản admin');
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     return (
         <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Quản Lý Tài Khoản</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Quản Lý Tài Khoản</h1>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center"
+                >
+                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                    Tạo Admin
+                </button>
+            </div>
 
             {/* Bộ lọc và tìm kiếm */}
             <div className="bg-white p-4 rounded-lg shadow-md mb-6">
@@ -144,9 +188,8 @@ const AccountList = () => {
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         >
                             <option value="all">Tất cả vai trò</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Moderator">Moderator</option>
-                            <option value="User">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="startup">Startup</option>
                         </select>
 
                         <select
@@ -155,8 +198,8 @@ const AccountList = () => {
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         >
                             <option value="all">Tất cả trạng thái</option>
-                            <option value="active">Đang hoạt động</option>
-                            <option value="locked">Đã khóa</option>
+                            <option value="verified">Đã xác thực</option>
+                            <option value="unverified">Chưa xác thực</option>
                         </select>
                     </div>
                 </div>
@@ -193,7 +236,7 @@ const AccountList = () => {
                                         Trạng thái {getSortIcon('status')}
                                     </div>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Xác thực
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('createdAt')}>
@@ -203,7 +246,7 @@ const AccountList = () => {
                                 </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Thao tác
-                                </th>
+                                </th> */}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -220,13 +263,13 @@ const AccountList = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                accounts.map(account => (
-                                    <tr key={account.id} className="hover:bg-gray-50">
+                                accounts.map((account, index) => (
+                                    <tr key={index} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {account.id}
+                                            {(currentPage - 1) * 10 + index + 1}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {account.fullName}
+                                            {`${account.firstName || ''} ${account.lastName || ''}`.trim() || 'Chưa có tên'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {account.email}
@@ -234,28 +277,28 @@ const AccountList = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                                 ${account.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
-                                                    account.role === 'Moderator' ? 'bg-blue-100 text-blue-800' :
+                                                    account.role === 'startup' ? 'bg-blue-100 text-blue-800' :
                                                         'bg-green-100 text-green-800'}`}>
                                                 {account.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                                ${account.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                {account.status === 'Active' ? 'Hoạt động' : 'Đã khóa'}
+                                                ${account.status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {account.status === 'verified' ? 'Đã xác thực' : 'Chưa xác thực'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {account.verified ? (
                                                 <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
                                             ) : (
                                                 <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        </td> */}
+                                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {account.createdAt}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        </td> */}
+                                        {/* <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end space-x-2">
                                                 <button className="text-indigo-600 hover:text-indigo-900">
                                                     <FontAwesomeIcon icon={faEdit} />
@@ -275,7 +318,7 @@ const AccountList = () => {
                                                     </button>
                                                 )}
                                             </div>
-                                        </td>
+                                        </td> */}
                                     </tr>
                                 ))
                             )}
@@ -308,6 +351,57 @@ const AccountList = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal tạo admin */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-96">
+                        <h2 className="text-xl font-bold mb-4">Tạo Tài Khoản Admin</h2>
+                        <form onSubmit={handleCreateAdmin}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    required
+                                />
+                            </div>
+                            <div className="mb-6">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                    Mật khẩu
+                                </label>
+                                <input
+                                    type="password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    required
+                                />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={createLoading}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                                >
+                                    {createLoading ? 'Đang tạo...' : 'Tạo Admin'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -15,6 +15,7 @@ import { getStartupIdByAccountId } from '@/apis/startupService';
 import updateSvg from '/update-icon-svgrepo-com.svg';
 import deleteSvg from '/delete-svgrepo-com.svg';
 import roleSvg from '/user-role-svgrepo-com.svg';
+import { canManageStartupChat } from '../../../apis/permissionService';
 
 const roleOptions = [
     { value: 'Founder', label: 'Founder' },
@@ -910,7 +911,7 @@ const Member = () => {
                                                 />
                                             </div>
                                         </div>
-
+                                        {/* 
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-700">Manage Members</span>
                                             <div
@@ -922,6 +923,21 @@ const Member = () => {
                                             >
                                                 <span
                                                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageMember ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </div>
+                                        </div> */}
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-700">Manage Startup Chat</span>
+                                            <div
+                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${selectedRolePermissions.canManageStartupChat ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                onClick={() => setSelectedRolePermissions({
+                                                    ...selectedRolePermissions,
+                                                    canManageStartupChat: !selectedRolePermissions.canManageStartupChat
+                                                })}
+                                            >
+                                                <span
+                                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selectedRolePermissions.canManageStartupChat ? 'translate-x-5' : 'translate-x-0'}`}
                                                 />
                                             </div>
                                         </div>

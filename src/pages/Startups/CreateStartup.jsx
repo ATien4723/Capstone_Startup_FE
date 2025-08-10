@@ -179,10 +179,10 @@ export default function CreateStartup() {
             });
             try {
                 await createStartup(formData);
-                alert('Tạo startup thành công!');
+                alert('Startup created successfully!');
                 resetForm();
             } catch (error) {
-                alert('Có lỗi khi tạo startup!');
+                alert('An error occurred while creating the startup!');
             }
         },
     });
@@ -321,7 +321,7 @@ export default function CreateStartup() {
                                 </select>
                                 {formik.touched.StageId && formik.errors.StageId && <p className="text-red-500 text-sm mt-1">{formik.errors.StageId}</p>}
                             </div>
-                            <div>
+                            {/* <div>
                                 <label className="block text-gray-700 font-semibold mb-1">Creator Account ID</label>
                                 <input
                                     type="number"
@@ -332,7 +332,7 @@ export default function CreateStartup() {
                                     placeholder="ID người tạo"
                                 />
                                 {formik.touched.CreatorAccountId && formik.errors.CreatorAccountId && <p className="text-red-500 text-sm mt-1">{formik.errors.CreatorAccountId}</p>}
-                            </div>
+                            </div> */}
                             <div className="md:col-span-2">
                                 <label className="block text-gray-700 font-semibold mb-1">Invite Account IDs</label>
                                 {!showInviteInput ? (
@@ -353,7 +353,7 @@ export default function CreateStartup() {
                                             }
                                         }}
                                     >
-                                        Mời thành viên
+                                        Invite members
                                     </Button>
                                 ) : (
                                     <Fade in={showInviteInput}>
@@ -368,7 +368,7 @@ export default function CreateStartup() {
                                             <CardContent>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                                     <Typography variant="h6" component="div" sx={{ fontWeight: 600, color: '#3b82f6' }}>
-                                                        Mời thành viên
+                                                        Invite members
                                                     </Typography>
                                                     <IconButton
                                                         size="small"
@@ -405,7 +405,7 @@ export default function CreateStartup() {
                                                         ))
                                                     ) : (
                                                         <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic', py: 1 }}>
-                                                            Chưa có thành viên nào được chọn
+                                                            No members selected
                                                         </Typography>
                                                     )}
                                                 </Box>
@@ -426,7 +426,7 @@ export default function CreateStartup() {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Tìm kiếm theo email"
+                                                            label="Search by email"
                                                             variant="outlined"
                                                             fullWidth
                                                             InputProps={{
@@ -469,7 +469,7 @@ export default function CreateStartup() {
                                                     )}
                                                     noOptionsText={
                                                         <Typography sx={{ py: 1, textAlign: 'center', color: 'text.secondary' }}>
-                                                            Không tìm thấy người dùng
+                                                            No users found
                                                         </Typography>
                                                     }
                                                     isOptionEqualToValue={(option, value) => option.accountId === value.accountId}
@@ -490,7 +490,7 @@ export default function CreateStartup() {
                                     value={formik.values.CategoryIds[0] || ''}
                                     className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CategoryIds && formik.errors.CategoryIds ? 'border-red-500' : 'border-blue-200'}`}
                                 >
-                                    <option value="">Chọn danh mục</option>
+                                    <option value="">Select category</option>
                                     {categories.map(cat => (
                                         <option key={cat.category_ID} value={cat.category_ID}>
                                             {cat.category_Name}

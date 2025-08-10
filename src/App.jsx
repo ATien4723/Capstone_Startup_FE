@@ -65,11 +65,12 @@ function App() {
                   path={childRoute.path.replace(`${parentRoute.path}/`, '')}
                   element={
                     childRoute.protected ? (
-                      childRoute.requirePostPermission || childRoute.requireMemberManagement || childRoute.requireAdmin ? (
+                      childRoute.requirePostPermission || childRoute.requireMemberManagement || childRoute.requireStartupChatPermission || childRoute.requireAdmin ? (
                         <ProtectedRoute requireStartup={childRoute.requireStartup} preventIfMember={childRoute.preventIfMember}>
                           <PermissionRoute
                             requirePostPermission={childRoute.requirePostPermission}
                             requireMemberManagement={childRoute.requireMemberManagement}
+                            requireStartupChatPermission={childRoute.requireStartupChatPermission}
                             requireAdmin={childRoute.requireAdmin}
                           >
                             <childRoute.component />

@@ -28,8 +28,15 @@ class CallHubService {
         }
 
         // Tạo kết nối SignalR
+        // this.connection = new signalR.HubConnectionBuilder()
+        //     .withUrl(`${URL_API}callhub?userId=${getUserId()}`)
+        //     .withAutomaticReconnect()
+        //     .build();
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${URL_API}callhub?userId=${getUserId()}`)
+            .withUrl(`${URL_API}api/callhub?userId=${getUserId()}`, {
+                transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
+                skipNegotiation: false
+            })
             .withAutomaticReconnect()
             .build();
 

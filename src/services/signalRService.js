@@ -25,7 +25,10 @@ class SignalRService {
         if (this.connection && this.isConnected) return;
         // Tạo kết nối SignalR
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${URL_API}hubs/notification`)
+            .withUrl(`${URL_API}api/hubs/notification`, {
+                transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
+                skipNegotiation: false
+            })
             .withAutomaticReconnect()
             .build();
 
@@ -131,8 +134,16 @@ class SignalRService {
             await this.disconnectChat();
         }
 
+        // this.chatConnection = new signalR.HubConnectionBuilder()
+        //     .withUrl(`${URL_API}messagehub`)
+        //     .withAutomaticReconnect()
+        //     .build();
+
         this.chatConnection = new signalR.HubConnectionBuilder()
-            .withUrl(`${URL_API}messagehub`)
+            .withUrl(`${URL_API}api/messagehub`, {
+                transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
+                skipNegotiation: false
+            })
             .withAutomaticReconnect()
             .build();
 
@@ -149,7 +160,6 @@ class SignalRService {
         try {
             await this.chatConnection.start();
             // Nếu là mảng các phòng chat, tham gia tất cả
-
             if (Array.isArray(chatRoomId)) {
                 console.log('Tham gia vào nhiều phòng chat:', chatRoomId);
                 for (const roomId of chatRoomId) {

@@ -26,4 +26,11 @@ export const checkCanManageMember = async (accountId) => {
         params: { accountId }
     });
     return response;
-}; 
+};
+
+export const canManageStartupChat = async (accountId) => {
+    const response = await axiosClient.get('/api/Permission/can-manage-Startup-chat', {
+        params: { accountId }
+    });
+    return response;
+};

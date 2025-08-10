@@ -28,7 +28,8 @@ import useMilestone from '@/hooks/useMilestone';
 import { formatVietnameseDate, getRelativeTime } from '@/utils/dateUtils';
 import { getUserInfoFromToken } from '@/apis/authService';
 import { getAccountInfo } from '@/apis/accountService';
-import { getDashboardData } from '@/apis/taskService';
+import { getDashboardData, getMembersInMilestone } from '@/apis/taskService';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Component cho Task có thể kéo thả và sắp xếp
 const SortableTask = ({ task, milestoneId, onEdit, onDelete, onEditField, onTaskClick, teamMembers }) => {
@@ -973,6 +974,33 @@ const Milestone = () => {
     const { boardId } = useParams();
     const navigate = useNavigate();
 
+    // Lấy user từ AuthContext
+    const { user } = useAuth();
+    const [membershipChecked, setMembershipChecked] = useState(false);
+
+    // Chặn truy cập trực tiếp nếu user không phải member của milestone
+    useEffect(() => {
+        const verifyMembership = async () => {
+            try {
+                const userId = user?.id;
+                if (!userId || !boardId) return;
+                const members = await getMembersInMilestone(boardId);
+                const isMember = Array.isArray(members) && members.some(m => String(m.accountId) === String(userId));
+                if (!isMember) {
+                    toast.warning('Bạn không có quyền truy cập milestone này', { toastId: 'milestone-no-access' });
+                    navigate('/me/milestones', { replace: true });
+                    return;
+                }
+                setMembershipChecked(true);
+            } catch (err) {
+                console.error('Lỗi kiểm tra quyền truy cập milestone:', err);
+                toast.error('Không thể xác thực quyền truy cập milestone');
+                navigate('/me/milestone-boards');
+            }
+        };
+        verifyMembership();
+    }, [boardId, user]);
+
     // Thiết lập sensors cho DND Kit
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -1111,7 +1139,7 @@ const Milestone = () => {
                         onClick={() => setShowActivityLogs(true)}
                         className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2"
                     >
-                        <FontAwesomeIcon icon={faHistory} /> Nhật ký
+                        <FontAwesomeIcon icon={faHistory} /> Activity Log
                     </button>
 
                     {/* Toggle chế độ xem */}
@@ -1126,31 +1154,31 @@ const Milestone = () => {
                             className={`px-4 py-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
                             onClick={() => setViewMode('list')}
                         >
-                            <FontAwesomeIcon icon={faList} className="mr-2" /> Danh sách
+                            <FontAwesomeIcon icon={faList} className="mr-2" /> List
                         </button>
                         <button
                             className={`px-4 py-2 rounded-lg transition-colors ${viewMode === 'dashboard' ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
                             onClick={() => setViewMode('dashboard')}
                         >
-                            <FontAwesomeIcon icon={faChartBar} className="mr-2" /> Thống kê
+                            <FontAwesomeIcon icon={faChartBar} className="mr-2" /> Dashboard
                         </button>
                     </div>
                     <button
                         onClick={() => setShowNewMilestoneForm(true)}
                         className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow flex items-center gap-2 transition-all font-medium whitespace-nowrap"
                     >
-                        <FontAwesomeIcon icon={faPlus} className="text-sm" /> Thêm Milestone
+                        <FontAwesomeIcon icon={faPlus} className="text-sm" /> Add Collums
                     </button>
                 </div>
             </header>
 
-            {/* Form thêm milestone mới (dạng popup) */}
+            {/* Form add new milestone (popup) */}
             {showNewMilestoneForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-7 rounded-xl  shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-6 text-gray-800">Add New Milestone</h2>
+                        <h2 className="text-xl font-bold mb-6 text-gray-800">Add New Collums</h2>
                         <div className="mb-5">
-                            <label className="block text-gray-700 mb-2 font-medium">Milestone Name:</label>
+                            <label className="block text-gray-700 mb-2 font-medium">Collums Name:</label>
                             <input
                                 type="text"
                                 value={newMilestoneTitle}
@@ -1377,9 +1405,9 @@ const Milestone = () => {
             {editingTaskField === 'dueDate' && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Chỉnh sửa ngày hạn</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Edit due date</h2>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-1 font-medium">Ngày hạn hoàn thành:</label>
+                            <label className="block text-gray-700 mb-1 font-medium">Due date:</label>
                             <input
                                 type="date"
                                 value={editFieldData.currentValue}
@@ -1409,9 +1437,9 @@ const Milestone = () => {
             {editingTaskField === 'progress' && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Cập nhật tiến độ</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Update progress</h2>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-1 font-medium">Tiến độ (%):</label>
+                            <label className="block text-gray-700 mb-1 font-medium">Progress (%):</label>
                             <input
                                 type="number"
                                 min="0"
@@ -1474,7 +1502,7 @@ const Milestone = () => {
                         </div>
 
                         <div className="mb-4">
-                            <h3 className="text-sm font-medium text-gray-500 mb-2">Thành viên của thẻ</h3>
+                            <h3 className="text-sm font-medium text-gray-500 mb-2">Card Members</h3>
                             {(editFieldData.taskId && taskMembers.length > 0) ? (
                                 <div className="space-y-2">
                                     {taskMembers.map((member, idx) => (
@@ -1633,7 +1661,7 @@ const Milestone = () => {
                                         member.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
                                 }).length === 0 && (
                                         <div className="text-center py-3 text-gray-500">
-                                            {memberSearchQuery ? 'Không tìm thấy thành viên phù hợp' : 'Đã thêm tất cả thành viên'}
+                                            {memberSearchQuery ? 'No matching members found' : 'All members have been added'}
                                         </div>
                                     )}
                             </div>
@@ -1646,7 +1674,7 @@ const Milestone = () => {
             {editingTaskField === 'priority' && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Đổi độ ưu tiên</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Change Priority</h2>
                         <div className="mb-4">
                             <label className="block text-gray-700 mb-1 font-medium">Độ ưu tiên:</label>
                             <select
@@ -1654,7 +1682,7 @@ const Milestone = () => {
                                 onChange={(e) => setEditFieldData({ ...editFieldData, currentValue: e.target.value })}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
                             >
-                                <option value="high">Cao</option>
+                                <option value="high">High</option>
                                 <option value="medium">Trung bình</option>
                                 <option value="low">Thấp</option>
                             </select>
@@ -1681,7 +1709,7 @@ const Milestone = () => {
             {editingTaskField === 'note' && (
                 <div className="fixed inset-0  bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
                     <div className="bg-white p-4 rounded-xl shadow-xl w-full max-w-md transform transition-all animate-scaleIn">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Chỉnh sửa ghi chú</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Edit Note</h2>
                         <div className="mb-4">
                             <label className="block text-gray-700 mb-1 font-medium">Ghi chú:</label>
                             <textarea
@@ -1804,14 +1832,14 @@ const Milestone = () => {
                         {loading ? (
                             <div className="py-12 flex flex-col items-center justify-center">
                                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-                                <p className="text-gray-500">Đang tải thông tin chi tiết...</p>
+                                <p className="text-gray-500">Loading details...</p>
                             </div>
                         ) : (
                             <div className="flex h-full">
                                 {/* Phần thông tin chi tiết task - bên trái */}
                                 <div className="w-[60%] p-6 overflow-y-auto max-h-[90vh]">
                                     <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-xl font-bold text-gray-800">Chi tiết công việc</h2>
+                                        <h2 className="text-xl font-bold text-gray-800">Task Details</h2>
                                         <button
                                             onClick={() => setShowTaskDetailModal(false)}
                                             className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors btn-hover-effect"
@@ -1900,27 +1928,27 @@ const Milestone = () => {
                                     </div> */}
 
                                     <div className="mb-6">
-                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Mô tả</h4>
-                                        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">{viewingTask.description || "Không có mô tả"}</p>
+                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
+                                        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">{viewingTask.description || "No description"}</p>
                                     </div>
 
                                     <div className="mb-6">
-                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Ghi chú</h4>
+                                        <h4 className="text-sm font-medium text-gray-500 mb-2">Notes</h4>
                                         <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                            {viewingTask.note ? viewingTask.note : "Không có ghi chú"}
+                                            {viewingTask.note ? viewingTask.note : "No notes"}
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6 mb-6">
                                         <div>
                                             <div className="flex justify-between items-center mb-2">
-                                                <h4 className="text-sm font-medium text-gray-500">Người được giao</h4>
+                                                <h4 className="text-sm font-medium text-gray-500">Assignees</h4>
                                                 <button
                                                     onClick={() => setShowMemberDropdown(!showMemberDropdown)}
                                                     className="text-blue-600 hover:text-blue-800 text-sm flex items-center btn-hover-effect"
                                                 >
                                                     <FontAwesomeIcon icon={faPlus} className="mr-1" size="xs" />
-                                                    Thêm
+                                                    Add
                                                 </button>
                                             </div>
 
@@ -2131,16 +2159,16 @@ const Milestone = () => {
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="text-gray-500 text-sm italic">Chưa có người được giao</div>
+                                                    <div className="text-gray-500 text-sm italic">No assignees yet</div>
                                                 )}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-500 mb-2">Hạn hoàn thành</h4>
+                                            <h4 className="text-sm font-medium text-gray-500 mb-2">Due date</h4>
                                             <div className="flex items-center text-gray-800">
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-blue-500" />
-                                                {viewingTask.dueDate ? formatVietnameseDate(viewingTask.dueDate) : "Chưa đặt hạn"}
+                                                {viewingTask.dueDate ? formatVietnameseDate(viewingTask.dueDate) : "No due date"}
                                             </div>
                                         </div>
                                     </div>
@@ -2313,7 +2341,7 @@ const Milestone = () => {
                                 <div className="relative max-w-xs">
                                     <input
                                         type="text"
-                                        placeholder="Tìm kiếm task..."
+                                        placeholder="Search tasks..."
                                         value={filterParams.search}
                                         onChange={(e) => handleLocalSearch(e.target.value)}
                                         className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
@@ -2325,9 +2353,10 @@ const Milestone = () => {
                                 <select
                                     className="border border-gray-300 rounded-lg px-4 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-gray-700"
                                     value={filterParams.columnStatusId || ''}
-                                    onChange={(e) => handleLocalFilterByColumn(e.target.value === '' ? null : e.target.value)}
-                                >
-                                    <option value="">Tất cả cột</option>
+                                    onChange={(e) =>
+                                        handleFilterByColumn(e.target.value === '' ? null : Number(e.target.value))
+                                    }                                >
+                                    <option value="">All columns</option>
                                     {Object.values(columns).map(milestone => (
                                         <option key={milestone.id} value={milestone.columnId}>
                                             {milestone.title}
@@ -2357,25 +2386,25 @@ const Milestone = () => {
                                                     ID
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Tiêu đề
+                                                    Title
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Ưu tiên
+                                                    Priority
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Mô tả
+                                                    Description
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Hạn hoàn thành
+                                                    Due date
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Ghi chú
+                                                    Notes
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Người tạo
+                                                    Created by
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Người được giao
+                                                    Assignees
                                                 </th>
                                             </tr>
                                         </thead>
@@ -2389,8 +2418,14 @@ const Milestone = () => {
                                                     <tr
                                                         key={task.taskId || task.id}
                                                         className="hover:bg-gray-50 transition-colors cursor-pointer"
-                                                        onClick={() => handleTaskClick(task.milestoneId || task.columnStatusId, task)}
-                                                    >
+                                                        onClick={() => {
+                                                            const col = Object.values(columns).find(c =>
+                                                                (c.title || c.columnName)?.toLowerCase() === (task.columnStatus || '').toLowerCase()
+                                                            );
+                                                            const milestoneId = col?.id;                // 'milestone-<columnStatusId>'
+                                                            const normalizedTask = { ...task, id: `task-${task.taskId}` };
+                                                            handleTaskClick(milestoneId, normalizedTask);
+                                                        }}                                                    >
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm text-gray-900">{task.taskId || task.id}</div>
                                                         </td>
@@ -2407,7 +2442,7 @@ const Milestone = () => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm text-gray-900">
-                                                                {task.dueDate ? formatVietnameseDate(task.dueDate) : "Chưa đặt hạn"}
+                                                                {task.dueDate ? formatVietnameseDate(task.dueDate) : "No due date"}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
@@ -2621,23 +2656,23 @@ const Milestone = () => {
                         <div className="flex items-center justify-center h-64">
                             <div className="flex flex-col items-center">
                                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-3"></div>
-                                <p className="text-gray-500">Đang tải dữ liệu thống kê...</p>
+                                <p className="text-gray-500">Loading dashboard data...</p>
                             </div>
                         </div>
                     ) : (
                         <>
-                            {/* Thống kê trạng thái */}
+                            {/* Status statistics */}
                             <div className="bg-white rounded-xl shadow-md p-6">
                                 <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center">
                                     <FontAwesomeIcon icon={faLayerGroup} className="mr-3 text-blue-600" />
-                                    Thống kê theo trạng thái
+                                    Status Summary
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {dashboardData.statusCounts && dashboardData.statusCounts.map((status, index) => (
                                         <div key={index} className="bg-gray-50 p-5 rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <span className="text-sm font-medium text-gray-500">Trạng thái</span>
+                                                    <span className="text-sm font-medium text-gray-500">Status</span>
                                                     <h3 className="text-xl font-bold mt-1">{status.statusName}</h3>
                                                 </div>
                                                 <div className={`w-12 h-12 rounded-full ${getStatusColorClass(status.statusName)} flex items-center justify-center text-white`}>
@@ -2666,37 +2701,37 @@ const Milestone = () => {
                                 </div>
                             </div>
 
-                            {/* Thống kê thành viên */}
+                            {/* Members statistics */}
                             <div className="bg-white rounded-xl shadow-md p-6">
                                 <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center">
                                     <FontAwesomeIcon icon={faUsers} className="mr-3 text-indigo-600" />
-                                    Thống kê theo thành viên
+                                    Member Summary
                                 </h2>
                                 <div className="overflow-x-auto">
                                     <table className="w-full divide-y divide-gray-300">
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Thành viên
+                                                    Member
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center">
-                                                        <FontAwesomeIcon icon={faTasks} className="mr-1" /> Tổng công việc
+                                                        <FontAwesomeIcon icon={faTasks} className="mr-1" /> Total tasks
                                                     </div>
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center">
-                                                        <FontAwesomeIcon icon={faCheck} className="mr-1 text-green-500" /> Đã hoàn thành
+                                                        <FontAwesomeIcon icon={faCheck} className="mr-1 text-green-500" /> Completed
                                                     </div>
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center">
-                                                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1 text-yellow-500" /> Quá hạn
+                                                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1 text-yellow-500" /> Overdue
                                                     </div>
                                                 </th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center">
-                                                        <FontAwesomeIcon icon={faPercentage} className="mr-1 text-blue-500" /> Tỷ lệ hoàn thành
+                                                        <FontAwesomeIcon icon={faPercentage} className="mr-1 text-blue-500" /> Completion rate
                                                     </div>
                                                 </th>
                                             </tr>
@@ -2746,7 +2781,7 @@ const Milestone = () => {
                                             ) : (
                                                 <tr>
                                                     <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                                                        Không có dữ liệu về thành viên
+                                                        No member data
                                                     </td>
                                                 </tr>
                                             )}
