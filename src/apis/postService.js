@@ -286,7 +286,7 @@ export const searchPosts = async (searchText, currentAccountId, pageNumber = 1, 
         const response = await axiosClient.get(`api/post/search-posts?searchText=${encodeURIComponent(searchText)}&currentAccountId=${currentAccountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm bài viết:', error);
+        console.error('Error searching posts:', error);
         throw error;
     }
 };
@@ -297,7 +297,7 @@ export const getAllReportReasons = async () => {
         const response = await axiosClient.get('api/post/report-reasons');
         return response;
     } catch (error) {
-        console.error('Lỗi khi lấy danh sách lý do báo cáo:', error);
+        console.error('Error fetching report reasons:', error);
         throw error;
     }
 };

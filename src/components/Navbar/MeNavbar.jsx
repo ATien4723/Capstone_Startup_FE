@@ -148,7 +148,7 @@ export default function Navbar() {
         // Nếu đang loading hoặc chưa sẵn sàng, đợi một chút
         if (loading || !isReady) {
             // Hiển thị loading state tạm thời
-            const loadingToast = toast.loading('Đang kiểm tra trạng thái startup...');
+            const loadingToast = toast.loading('Checking startup status...');
 
             try {
                 // Đợi tối đa 5 giây để kiểm tra membership
@@ -174,7 +174,7 @@ export default function Navbar() {
                 }
             } catch (error) {
                 toast.dismiss(loadingToast);
-                toast.error('Có lỗi xảy ra khi kiểm tra trạng thái startup');
+                toast.error('An error occurred while checking startup status');
                 return;
             }
         }
@@ -210,7 +210,7 @@ export default function Navbar() {
                 if (inviteIdMatch && inviteIdMatch[1]) {
                     notification.inviteId = inviteIdMatch[1];
                 } else {
-                    toast.error('Không thể mở lời mời. Vui lòng làm mới trang và thử lại.');
+                    toast.error('Unable to open the invite. Please refresh the page and try again.');
                     return;
                 }
             }
@@ -251,8 +251,8 @@ export default function Navbar() {
             closeInviteModal();
 
         } catch (error) {
-            console.error('Lỗi khi phản hồi lời mời:', error);
-            toast.error('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại sau.');
+            console.error('Error responding to invite:', error);
+            toast.error('An error occurred while processing the invite. Please try again later.');
         } finally {
             setProcessingResponse(false);
         }
@@ -289,7 +289,7 @@ export default function Navbar() {
                     {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
                     <p className="text-gray-800 text-sm">
                         <span className="font-semibold">
-                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'Hệ thống' : 'Người dùng')}
+                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'System' : 'User')}
                         </span>{' '}
                         {/* Nội dung thông báo */}
                         {notification.content || notification.message}
@@ -326,7 +326,7 @@ export default function Navbar() {
         } else {
             return (
                 <div className="text-center py-6 text-gray-500">
-                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
+                    {showingUnreadOnly ? 'No unread notifications' : 'No notifications'}
                 </div>
             );
         }
@@ -347,7 +347,7 @@ export default function Navbar() {
         } else {
             return (
                 <div className="text-center py-6 text-gray-500">
-                    {showingUnreadOnly ? 'Không có thông báo chưa đọc' : 'Không có thông báo nào'}
+                    {showingUnreadOnly ? 'No unread notifications' : 'No notifications'}
                 </div>
             );
         }
@@ -389,7 +389,7 @@ export default function Navbar() {
                                                     className="text-sm text-blue-600 hover:text-blue-800"
                                                     onClick={markAllAsRead}
                                                 >
-                                                    Đánh dấu đã đọc
+                                                    Mark all as read
                                                 </button>
                                             </div>
                                         </div>
@@ -398,18 +398,18 @@ export default function Navbar() {
                                                 className={`flex-1 py-1 font-medium ${!showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                                                 onClick={() => setShowingUnreadOnly(false)}
                                             >
-                                                Tất cả
+                                                All
                                             </button>
                                             <button
                                                 className={`flex-1 py-1 ${showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                                                 onClick={toggleUnreadOnly}
                                             >
-                                                Chưa đọc
+                                                Unread
                                             </button>
                                         </div>
                                     </div>
                                     <div className="text-sm text-gray-600 px-3 py-2 border-b border-gray-100">
-                                        Trước đó
+                                        Earlier
                                     </div>
                                     <div className="max-h-96 overflow-y-auto">
                                         {renderNotificationsMobile()}
@@ -424,14 +424,14 @@ export default function Navbar() {
                                                     className="text-blue-600 text-sm hover:underline"
                                                     onClick={loadMoreNotifications}
                                                 >
-                                                    Tải thêm
+                                                    Load more
                                                 </button>
                                             </div>
                                         )}
                                     </div>
                                     <div className="p-3 text-center border-t border-gray-100">
                                         <Link to="/notifications" className="text-blue-600 hover:underline text-sm font-medium">
-                                            Xem tất cả
+                                            View all
                                         </Link>
                                     </div>
                                 </div>
@@ -551,7 +551,7 @@ export default function Navbar() {
                                     >
                                         <div className="p-3 border-b border-gray-200">
                                             <div className="flex justify-between items-center">
-                                                <h3 className="font-bold text-gray-800 text-lg">Thông báo</h3>
+                                                <h3 className="font-bold text-gray-800 text-lg">Notifications</h3>
                                                 {/* <div className="flex space-x-2">
                                                     <button
                                                         className="text-sm text-blue-600 hover:text-blue-800"
@@ -566,13 +566,13 @@ export default function Navbar() {
                                                     className={`flex-1 py-1 font-medium ${!showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                                                     onClick={() => setShowingUnreadOnly(false)}
                                                 >
-                                                    Tất cả
+                                                    All
                                                 </button>
                                                 <button
                                                     className={`flex-1 py-1 ${showingUnreadOnly ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                                                     onClick={toggleUnreadOnly}
                                                 >
-                                                    Chưa đọc
+                                                    Unread
                                                 </button>
                                             </div>
                                         </div>
@@ -594,7 +594,7 @@ export default function Navbar() {
                                                         className="text-blue-600 text-sm hover:underline"
                                                         onClick={loadMoreNotifications}
                                                     >
-                                                        Tải thêm
+                                                        Load more
                                                     </button>
                                                 </div>
                                             )}
@@ -602,7 +602,6 @@ export default function Navbar() {
 
                                         <div className="p-3 text-center border-t border-gray-100">
                                             <Link to="/notifications" className="text-blue-600 hover:underline text-sm font-medium">
-                                                Xem tất cả
                                             </Link>
                                         </div>
                                     </div>
@@ -739,7 +738,7 @@ export default function Navbar() {
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="flex justify-between items-center pb-3 border-b">
                                     <h3 className="text-lg font-medium text-gray-900" id="modal-title">
-                                        Lời mời tham gia startup
+                                        Startup Invitation
                                     </h3>
                                     <button
                                         className="text-gray-400 hover:text-gray-500"
@@ -755,12 +754,12 @@ export default function Navbar() {
                                         <div className="flex-shrink-0 h-12 w-12 rounded-full overflow-hidden">
                                             <img
                                                 src={inviteDetails.senderAvatar || '/placeholder-avatar.png'}
-                                                alt="Người gửi"
+                                                alt="Sender"
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
                                         <div className="ml-4">
-                                            <h4 className="text-md font-semibold text-gray-900">Người gửi lời mời</h4>
+                                            <h4 className="text-md font-semibold text-gray-900">Sender</h4>
                                             <p className="text-sm text-gray-600">{inviteDetails.senderEmail}</p>
                                         </div>
                                     </div>
@@ -770,12 +769,12 @@ export default function Navbar() {
                                         <div className="flex-shrink-0 h-12 w-12 rounded-full overflow-hidden">
                                             <img
                                                 src={inviteDetails.receiveravatar || '/placeholder-avatar.png'}
-                                                alt="Người nhận"
+                                                alt="Receiver"
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
                                         <div className="ml-4">
-                                            <h4 className="text-md font-semibold text-gray-900">Người nhận lời mời</h4>
+                                            <h4 className="text-md font-semibold text-gray-900">Receiver</h4>
                                             <p className="text-sm text-gray-600">{inviteDetails.receiverEmail}</p>
                                         </div>
                                     </div>
@@ -783,23 +782,23 @@ export default function Navbar() {
                                     {/* Thông tin vai trò và startup */}
                                     <div className="bg-blue-50 p-4 rounded-lg mb-4">
                                         <div className="flex justify-between mb-2">
-                                            <span className="text-sm font-medium text-gray-700">Vai trò:</span>
+                                            <span className="text-sm font-medium text-gray-700">Role:</span>
                                             <span className="text-sm font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                                                 {inviteDetails.roleName}
                                             </span>
                                         </div>
                                         <div className="flex justify-between mb-2">
-                                            <span className="text-sm font-medium text-gray-700">ID Startup:</span>
+                                            <span className="text-sm font-medium text-gray-700">Startup ID:</span>
                                             <span className="text-sm text-gray-900">{inviteDetails.startupId}</span>
                                         </div>
                                         <div className="flex justify-between mb-2">
-                                            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+                                            <span className="text-sm font-medium text-gray-700">Status:</span>
                                             <span className="text-sm font-semibold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
                                                 {inviteDetails.inviteStatus}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-sm font-medium text-gray-700">Thời gian gửi:</span>
+                                            <span className="text-sm font-medium text-gray-700">Sent at:</span>
                                             <span className="text-sm text-gray-900">
                                                 {new Date(inviteDetails.inviteSentAt).toLocaleString('vi-VN')}
                                             </span>
@@ -808,7 +807,7 @@ export default function Navbar() {
 
                                     <div className="mt-4">
                                         <p className="text-sm text-gray-600 mb-2">
-                                            Bạn có muốn tham gia startup này không?
+                                            Do you want to join this startup?
                                         </p>
                                     </div>
                                 </div>
@@ -826,7 +825,7 @@ export default function Navbar() {
                                     ) : (
                                         <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
                                     )}
-                                    Chấp nhận
+                                    Accept
                                 </button>
                                 <button
                                     type="button"
@@ -839,7 +838,7 @@ export default function Navbar() {
                                     ) : (
                                         <FontAwesomeIcon icon={faTimesCircle} className="mr-2" />
                                     )}
-                                    Từ chối
+                                    Decline
                                 </button>
                             </div>
                         </div>

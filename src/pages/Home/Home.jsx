@@ -636,7 +636,7 @@ const Home = () => {
                                                 onClick={() => goToPostDetail(post.postId, post.type, post.startupId)}
                                             >
                                                 <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
-                                                    Internship
+                                                    Jobs
                                                 </div>
                                                 <div className="flex items-center mb-4">
                                                     <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
@@ -656,7 +656,7 @@ const Home = () => {
                                                                 <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                                                     <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
                                                                 </Link>
-                                                                <div className="text-right text-xs text-gray-500 mt-2">
+                                                                <div className="text-xs text-gray-500 mt-2">
                                                                     {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                                                 </div>
                                                                 <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
@@ -918,7 +918,7 @@ const Home = () => {
                                                     />
                                                     <div>
                                                         <h6 className="font-semibold text-sm">
-                                                            {post.positionTitle || "Internship"}
+                                                            {post.positionTitle || "Job"}
                                                         </h6>
                                                         <div className="text-xs text-gray-500 flex items-center mt-1">
                                                             <FontAwesomeIcon icon={faFileAlt} className="mr-1" />

@@ -159,7 +159,7 @@ const StartupDetail = () => {
                     onClick={() => goToPostDetail(post.postId, post.type, post.startupId)}
                 >
                     <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
-                        Internship
+                        Jobs
                     </div>
                     <div className="flex items-center mb-4">
                         <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
@@ -179,7 +179,7 @@ const StartupDetail = () => {
                                     <Link to={post.type === 'StartupPost' ? `/startup-detail/${post.startupId}` : `/profile/${post.accountID || post.userId}`}>
                                         <h5 className="font-medium">{post.name || post.fullName || post.firstName || "Unknown User"}</h5>
                                     </Link>
-                                    <div className="text-right text-xs text-gray-500 mt-2">
+                                    <div className="text-xs text-gray-500 mt-2">
                                         {post.createdAt ? formatPostTime(post.createdAt) : (post.createAt ? formatPostTime(post.createAt) : "Unknown date")}
                                     </div>
                                     <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
@@ -192,7 +192,13 @@ const StartupDetail = () => {
                         </div>
                     </div>
 
+
                     <h3 className="font-bold text-xl mb-3 text-gray-800 mt-2">{post.title || post.content.substring(0, 50)}</h3>
+
+                    <div className={`mb-4 ${!expandedPosts[post.postId] ? 'line-clamp-2' : ''}`}>
+                        {post.content}
+                    </div>
+
 
                     <div className="mb-4 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg mt-4">
                         <div className="text-gray-600 flex items-center text-sm">
@@ -437,7 +443,7 @@ const StartupDetail = () => {
 
                         {/* Tabs Navigation */}
                         <ul className="flex border-b border-gray-200 mb-4">
-                            {['overview', 'posts', 'bmc', 'team', 'events'].map((tab) => (
+                            {['overview', 'posts', 'team'].map((tab) => (
                                 <li key={tab} className="mr-1">
                                     <button
                                         className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
@@ -577,7 +583,7 @@ const StartupDetail = () => {
                                 </div>
                             )}
 
-                            {activeTab === 'bmc' && (
+                            {/* {activeTab === 'bmc' && (
                                 <div className="bg-white p-6 rounded-lg shadow-md">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {['Đối tác chính', 'Hoạt động chính', 'Giá trị cung cấp', 'Quan hệ khách hàng', 'Phân khúc khách hàng', 'Nguồn lực chính'].map((section) => (
@@ -597,7 +603,7 @@ const StartupDetail = () => {
                                         <p className="text-gray-600">Nội dung cho Nguồn thu...</p>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
                             {activeTab === 'team' && (
                                 <div>
@@ -639,8 +645,8 @@ const StartupDetail = () => {
                                                                     }`}
                                                                 onClick={() =>
                                                                     isFollowing(member.accountId)
-                                                                        ? handleUnfollowAction(member.accountId)
-                                                                        : handleFollowAction(member.accountId)
+                                                                        ? handleUnfollow(member.accountId)
+                                                                        : handleFollow(member.accountId)
                                                                 }
                                                                 disabled={processingId === member.accountId}
                                                             >
@@ -655,16 +661,15 @@ const StartupDetail = () => {
                                                                             className="mr-2 hidden group-hover:inline-block"
                                                                         />
                                                                         <span className="group-hover:hidden">
-                                                                            {processingId === member.accountId ? 'Đang xử lý...' : 'Đang theo dõi'}
+                                                                            {processingId === member.accountId ? 'Processing...' : 'Following'}
                                                                         </span>
                                                                         <span className="hidden group-hover:inline">
-                                                                            Bỏ theo dõi
-                                                                        </span>
+                                                                            Unfollow                                                                        </span>
                                                                     </>
                                                                 ) : (
                                                                     <>
                                                                         <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                                                                        {processingId === member.accountId ? 'Đang xử lý...' : 'Theo dõi'}
+                                                                        {processingId === member.accountId ? 'Processing...' : 'Follow'}
                                                                     </>
                                                                 )}
                                                             </button>

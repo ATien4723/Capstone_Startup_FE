@@ -34,6 +34,13 @@ const PolicyManagement = () => {
         typeName: ''
     });
     const [activeTab, setActiveTab] = useState('policies');
+    const [confirmState, setConfirmState] = useState({
+        open: false,
+        entity: null, // 'policy' or 'policyType'
+        id: null,
+        message: ''
+    });
+
 
     useEffect(() => {
         fetchData();
@@ -51,7 +58,7 @@ const PolicyManagement = () => {
             setPolicies(policiesResponse || []);
             setPolicyTypes(typesResponse || []);
         } catch (error) {
-            toast.error('Lỗi khi tải dữ liệu');
+            toast.error('Error loading data');
         } finally {
             setLoading(false);
         }
@@ -68,16 +75,16 @@ const PolicyManagement = () => {
 
             if (editingPolicy) {
                 await updatePolicy(editingPolicy.policyId, submitData);
-                toast.success('Cập nhật chính sách thành công');
+                toast.success('Policy updated successfully');
             } else {
                 await createPolicy(submitData);
-                toast.success('Tạo chính sách thành công');
+                toast.success('Policy created successfully');
             }
             setShowModal(false);
             resetForm();
             fetchData();
         } catch (error) {
-            toast.error('Có lỗi xảy ra');
+            toast.error('An error occurred');
         }
     };
 
@@ -86,16 +93,16 @@ const PolicyManagement = () => {
         try {
             if (editingPolicyType) {
                 await updatePolicyType(editingPolicyType.policyTypeId, typeFormData);
-                toast.success('Cập nhật loại chính sách thành công');
+                toast.success('Policy type updated successfully');
             } else {
                 await createPolicyType(typeFormData);
-                toast.success('Tạo loại chính sách thành công');
+                toast.success('Policy type created successfully');
             }
             setShowTypeModal(false);
             resetTypeForm();
             fetchData();
         } catch (error) {
-            toast.error('Có lỗi xảy ra');
+            toast.error('An error occurred');
         }
     };
 
@@ -117,28 +124,22 @@ const PolicyManagement = () => {
         setShowTypeModal(true);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa chính sách này?')) {
-            try {
-                await deletePolicy(id);
-                toast.success('Xóa chính sách thành công');
-                fetchData();
-            } catch (error) {
-                toast.error('Lỗi khi xóa chính sách');
-            }
-        }
+    const handleDelete = (id) => {
+        setConfirmState({
+            open: true,
+            entity: 'policy',
+            id,
+            message: 'Are you sure you want to delete this policy?'
+        });
     };
 
-    const handleDeleteType = async (policyTypeId) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa loại chính sách này?')) {
-            try {
-                await deletePolicyType(policyTypeId);
-                toast.success('Xóa loại chính sách thành công');
-                fetchData();
-            } catch (error) {
-                toast.error('Lỗi khi xóa loại chính sách');
-            }
-        }
+    const handleDeleteType = (policyTypeId) => {
+        setConfirmState({
+            open: true,
+            entity: 'policyType',
+            id: policyTypeId,
+            message: 'Are you sure you want to delete this policy type?'
+        });
     };
 
     const handleToggleStatus = async (policy) => {
@@ -147,7 +148,7 @@ const PolicyManagement = () => {
             // toast.success(`${!policy.isActive ? 'Kích hoạt' : 'Vô hiệu hóa'} chính sách thành công`);
             fetchData();
         } catch (error) {
-            toast.error('Lỗi khi cập nhật trạng thái');
+            toast.error('Error updating status');
         }
     };
 
@@ -181,13 +182,13 @@ const PolicyManagement = () => {
 
     const getPolicyTypeName = (policyTypeId) => {
         const type = policyTypes.find(t => t.policyTypeId === policyTypeId);
-        return type?.typeName || 'Không xác định';
+        return type?.typeName || 'Unknown';
     };
 
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Quản lý Chính sách</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Policy Management</h1>
                 <button
                     onClick={() => activeTab === 'policies' ? setShowModal(true) : setShowTypeModal(true)}
                     className={`${activeTab === 'policies'
@@ -196,7 +197,7 @@ const PolicyManagement = () => {
                         } text-white px-6 py-3 rounded-xl flex items-center gap-3 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200`}
                 >
                     <FontAwesomeIcon icon={faPlus} className="text-lg" />
-                    {activeTab === 'policies' ? 'Thêm chính sách' : 'Thêm loại chính sách'}
+                    {activeTab === 'policies' ? 'Add Policy' : 'Add Policy Type'}
                 </button>
             </div>
 
@@ -212,7 +213,7 @@ const PolicyManagement = () => {
                                 }`}
                         >
                             <FontAwesomeIcon icon={faFileAlt} className="mr-2" />
-                            Chính sách
+                            Policies
                         </button>
                         <button
                             onClick={() => setActiveTab('types')}
@@ -222,7 +223,7 @@ const PolicyManagement = () => {
                                 }`}
                         >
                             <FontAwesomeIcon icon={faTags} className="mr-2" />
-                            Loại chính sách
+                            Policy Types
                         </button>
                     </nav>
                 </div>
@@ -236,7 +237,7 @@ const PolicyManagement = () => {
                             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Tìm kiếm chính sách..."
+                                placeholder="Search policies..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full"
@@ -247,7 +248,7 @@ const PolicyManagement = () => {
                             onChange={(e) => setSelectedType(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg"
                         >
-                            <option value="">Tất cả loại chính sách</option>
+                            <option value="">All policy types</option>
                             {policyTypes.map(type => (
                                 <option key={type.policyTypeId} value={type.policyTypeId}>{type.typeName}</option>
                             ))}
@@ -260,21 +261,21 @@ const PolicyManagement = () => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loại</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày tạo</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-4 text-center">Đang tải...</td>
+                                        <td colSpan="6" className="px-6 py-4 text-center">Loading...</td>
                                     </tr>
                                 ) : filteredPolicies.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">Không có dữ liệu</td>
+                                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No data</td>
                                     </tr>
                                 ) : (
                                     filteredPolicies.map((policy) => (
@@ -294,7 +295,7 @@ const PolicyManagement = () => {
                                                     ? 'bg-green-100 text-green-800'
                                                     : 'bg-red-100 text-red-800'
                                                     }`}>
-                                                    {policy.isActive ? 'Hoạt động' : 'Vô hiệu'}
+                                                    {policy.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -305,21 +306,21 @@ const PolicyManagement = () => {
                                                             ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                             : 'text-green-600 hover:text-green-700 hover:bg-green-50'
                                                             }`}
-                                                        title={policy.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                                                        title={policy.isActive ? 'Deactivate' : 'Activate'}
                                                     >
                                                         <FontAwesomeIcon icon={policy.isActive ? faToggleOff : faToggleOn} className="text-lg" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(policy)}
                                                         className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                                                        title="Chỉnh sửa"
+                                                        title="Edit"
                                                     >
                                                         <FontAwesomeIcon icon={faEdit} className="text-lg" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(policy.policyId)}
                                                         className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
-                                                        title="Xóa"
+                                                        title="Delete"
                                                     >
                                                         <FontAwesomeIcon icon={faTrash} className="text-lg" />
                                                     </button>
@@ -340,18 +341,18 @@ const PolicyManagement = () => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên loại</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="3" className="px-6 py-4 text-center">Đang tải...</td>
+                                        <td colSpan="3" className="px-6 py-4 text-center">Loading...</td>
                                     </tr>
                                 ) : policyTypes.length === 0 ? (
                                     <tr>
-                                        <td colSpan="3" className="px-6 py-4 text-center text-gray-500">Không có dữ liệu</td>
+                                        <td colSpan="3" className="px-6 py-4 text-center text-gray-500">No data</td>
                                     </tr>
                                 ) : (
                                     policyTypes.map((type) => (
@@ -390,12 +391,12 @@ const PolicyManagement = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold mb-4">
-                            {editingPolicy ? 'Chỉnh sửa chính sách' : 'Thêm chính sách mới'}
+                            {editingPolicy ? 'Edit Policy' : 'Add New Policy'}
                         </h2>
                         <form onSubmit={handleSubmit}>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Mô tả *
+                                    Description *
                                 </label>
                                 <textarea
                                     required
@@ -407,7 +408,7 @@ const PolicyManagement = () => {
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Loại chính sách *
+                                    Policy Type *
                                 </label>
                                 <select
                                     required
@@ -415,7 +416,7 @@ const PolicyManagement = () => {
                                     onChange={(e) => setFormData({ ...formData, policyTypeId: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
-                                    <option value="">Chọn loại chính sách</option>
+                                    <option value="">Select policy type</option>
                                     {policyTypes.map(type => (
                                         <option key={type.policyTypeId} value={type.policyTypeId}>{type.typeName}</option>
                                     ))}
@@ -429,7 +430,7 @@ const PolicyManagement = () => {
                                         onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                                         className="mr-2"
                                     />
-                                    <span className="text-sm font-medium text-gray-700">Kích hoạt</span>
+                                    <span className="text-sm font-medium text-gray-700">Activate</span>
                                 </label>
                             </div>
                             <div className="flex justify-end gap-3">
@@ -441,13 +442,13 @@ const PolicyManagement = () => {
                                     }}
                                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                                 >
-                                    {editingPolicy ? 'Cập nhật' : 'Tạo mới'}
+                                    {editingPolicy ? 'Update' : 'Create'}
                                 </button>
                             </div>
                         </form>
@@ -460,12 +461,12 @@ const PolicyManagement = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-full max-w-md">
                         <h2 className="text-xl font-bold mb-4">
-                            {editingPolicyType ? 'Chỉnh sửa loại chính sách' : 'Thêm loại chính sách mới'}
+                            {editingPolicyType ? 'Edit Policy Type' : 'Add New Policy Type'}
                         </h2>
                         <form onSubmit={handleTypeSubmit}>
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Tên loại chính sách *
+                                    Policy Type Name *
                                 </label>
                                 <input
                                     type="text"
@@ -484,19 +485,62 @@ const PolicyManagement = () => {
                                     }}
                                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                 >
-                                    {editingPolicyType ? 'Cập nhật' : 'Tạo mới'}
+                                    {editingPolicyType ? 'Update' : 'Create'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Confirm Modal */}
+            {confirmState.open && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                        <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
+                        <p className="text-gray-700 mb-6">{confirmState.message}</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                onClick={() => setConfirmState({ open: false, entity: null, id: null, message: '' })}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                onClick={async () => {
+                                    try {
+                                        if (confirmState.entity === 'policy') {
+                                            await deletePolicy(confirmState.id);
+                                            toast.success('Policy deleted successfully');
+                                        } else if (confirmState.entity === 'policyType') {
+                                            await deletePolicyType(confirmState.id);
+                                            toast.success('Policy type deleted successfully');
+                                        }
+                                        setConfirmState({ open: false, entity: null, id: null, message: '' });
+                                        fetchData();
+                                    } catch (error) {
+                                        toast.error('Error deleting');
+                                        setConfirmState({ open: false, entity: null, id: null, message: '' });
+                                    }
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 

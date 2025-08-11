@@ -45,7 +45,7 @@ const Login = () => {
                 //         sameSite: 'Strict'
                 //     });
                 // }
-                toast.success('Đăng nhập thành công!');
+                toast.success('Logged in successfully!');
 
                 // Kiểm tra nếu là admin thì chuyển hướng đến trang admin
                 if (response.redirectToAdmin) {
@@ -55,12 +55,12 @@ const Login = () => {
                     navigate(from);
                 }
             } else {
-                console.error('Không nhận được token:', response);
-                toast.error('Đăng nhập thất bại, vui lòng thử lại');
+                console.error('Token not received:', response);
+                toast.error('Login failed, please try again');
             }
         } catch (error) {
-            console.error('Lỗi đăng nhập:', error);
-            toast.error(error?.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng');
+            console.error('Login error:', error);
+            toast.error(error?.response?.data?.message || 'Incorrect username or password');
         } finally {
             setSubmitting(false);
         }

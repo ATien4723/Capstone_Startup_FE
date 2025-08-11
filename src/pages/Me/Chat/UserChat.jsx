@@ -425,7 +425,7 @@ export default function UserChat() {
                             <div className="px-4 py-3 text-center text-gray-500">
                                 <div className="flex flex-col items-center justify-center py-4">
                                     <i className="fas fa-search text-4xl text-gray-300 mb-2"></i>
-                                    <p className="text-sm">Không tìm thấy cuộc trò chuyện nào</p>
+                                    <p className="text-sm">No conversations found</p>
                                 </div>
                             </div>
                         )}
@@ -456,7 +456,7 @@ export default function UserChat() {
                                             <h2 className="font-medium text-gray-900">
                                                 {chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName}
                                             </h2>
-                                            <p className="text-xs text-gray-500">Online</p>
+                                            {/* <p className="text-xs text-gray-500">Online</p> */}
                                         </div>
                                     </div>
                                 )}
@@ -657,13 +657,13 @@ export default function UserChat() {
                         // Hiển thị khi chưa chọn cuộc trò chuyện
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fas fa-building text-6xl mb-4 text-green-300"></i>
-                            <p className="text-lg font-medium">Chọn một cuộc trò chuyện để bắt đầu</p>
-                            <p className="text-sm mt-2">Hoặc tạo một cuộc trò chuyện mới</p>
+                            <p className="text-lg font-medium">Select a conversation to start</p>
+                            <p className="text-sm mt-2">Or create a new conversation</p>
                             <button
                                 className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                                onClick={() => toast.info('Tính năng đang được phát triển')}
+                                onClick={() => toast.info('This feature is under development')}
                             >
-                                Tạo cuộc trò chuyện mới
+                                Create new conversation
                             </button>
                         </div>
                     )}
@@ -675,7 +675,7 @@ export default function UserChat() {
                         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-100">
                             <h2 className="font-bold text-gray-800 flex items-center">
                                 <i className="fas fa-address-book text-blue-500 mr-2"></i>
-                                Danh bạ
+                                Contacts
                             </h2>
                         </div>
                         <div className="px-3 py-3 border-b border-gray-200 bg-gray-50">
@@ -683,14 +683,14 @@ export default function UserChat() {
                                 <input
                                     type="text"
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Tìm kiếm liên hệ..."
+                                    placeholder="Search contacts..."
                                 />
                                 <i className="fas fa-search text-gray-400 absolute left-2 top-2.5 text-sm"></i>
                             </div>
                         </div>
                         <div className="overflow-y-auto flex-1">
                             <div className="mb-4 mt-2">
-                                <div className="font-bold text-xs text-gray-500 mb-1 px-4 uppercase tracking-wider">Liên hệ gần đây</div>
+                                <div className="font-bold text-xs text-gray-500 mb-1 px-4 uppercase tracking-wider">Recent contacts</div>
                                 {[1, 2, 3].map(id => (
                                     <li key={id} className="group list-none">
                                         <div className="flex items-center justify-between p-3 rounded-lg mx-2 hover:bg-white hover:shadow-sm transition-all">
@@ -704,8 +704,8 @@ export default function UserChat() {
                                                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-sm">Người dùng {id}</div>
-                                                    <div className="text-xs text-gray-500">Trực tuyến</div>
+                                                    <div className="font-medium text-sm">User {id}</div>
+                                                    <div className="text-xs text-gray-500">Online</div>
                                                 </div>
                                             </div>
                                             <button

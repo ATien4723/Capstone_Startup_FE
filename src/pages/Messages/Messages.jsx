@@ -380,14 +380,14 @@ export default function Messages() {
     const initiateVideoCall = () => {
         // Kiểm tra nếu không có phòng chat được chọn
         if (!selectedChatRoom) {
-            toast.error("Vui lòng chọn một cuộc trò chuyện trước khi gọi");
+            toast.error("Please select a conversation before calling");
             return;
         }
 
         // Lấy thông tin người nhận cuộc gọi
         const chatRoom = chatRooms.find(r => r.chatRoomId === selectedChatRoom);
         if (!chatRoom) {
-            toast.error("Không tìm thấy thông tin cuộc trò chuyện");
+            toast.error("Conversation information not found");
             return;
         }
 
@@ -521,7 +521,7 @@ export default function Messages() {
                                 <div className="px-4 py-3 text-center text-gray-500">
                                     <div className="flex flex-col items-center justify-center py-4">
                                         <i className="fas fa-search text-4xl text-gray-300 mb-2"></i>
-                                        <p className="text-sm">Không tìm thấy cuộc trò chuyện nào</p>
+                                        <p className="text-sm">No conversations found</p>
                                     </div>
                                 </div>
                             )}
@@ -561,7 +561,7 @@ export default function Messages() {
                                                 <h2 className="font-medium text-gray-900">
                                                     {chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName}
                                                 </h2>
-                                                <p className="text-xs text-gray-500">Online</p>
+                                                {/* <p className="text-xs text-gray-500">Online</p> */}
                                             </div>
                                         </div>
                                     )}
@@ -935,7 +935,7 @@ export default function Messages() {
                         </button>
                         <img
                             src={imagePreview.url}
-                            alt="Xem ảnh"
+                            alt="View image"
                             className="max-w-full max-h-[90vh] object-contain"
                         />
                     </div>
@@ -963,8 +963,8 @@ export default function Messages() {
                                             }}
                                         />
                                         <div>
-                                            <div className="text-sm">{callerInfo.name} đang gọi cho bạn</div>
-                                            <div className="text-xs text-gray-300">Cuộc gọi video</div>
+                                            <div className="text-sm">{callerInfo.name} is calling you</div>
+                                            <div className="text-xs text-gray-300">Video call</div>
                                         </div>
                                     </div>
                                 ) : calleeInfo ? (
@@ -980,22 +980,22 @@ export default function Messages() {
                                         <div>
                                             <div className="text-sm">
                                                 {connectionEstablished
-                                                    ? `Đang trong cuộc gọi với ${calleeInfo.name}`
-                                                    : `Đang gọi ${calleeInfo.name}...`
+                                                    ? `In a call with ${calleeInfo.name}`
+                                                    : `Calling ${calleeInfo.name}...`
                                                 }
                                             </div>
-                                            <div className="text-xs text-gray-300">Cuộc gọi video</div>
+                                            <div className="text-xs text-gray-300">Video call</div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div>
                                         {isCallIncoming
-                                            ? "Cuộc gọi đến"
+                                            ? "Incoming call"
                                             : isCallActive
                                                 ? connectionEstablished
-                                                    ? "Đang trong cuộc gọi"
-                                                    : "Đang kết nối cuộc gọi..."
-                                                : "Đang gọi..."
+                                                    ? "In a call"
+                                                    : "Connecting call..."
+                                                : "Calling..."
                                         }
                                     </div>
                                 )}
@@ -1075,8 +1075,8 @@ export default function Messages() {
                                             {isCallIncoming ? (
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium">
-                                                        {/* {callerInfo?.name || "Ai đó"} đang gọi cho bạn */}
-                                                        Tien dz test cuoc goi den hihihi
+                                                        {callerInfo?.name || "Someone"} is calling you
+                                                        {/* Tien dz test cuoc goi den hihihi */}
                                                     </h3>
                                                     <div className="flex justify-center mt-6 space-x-4">
                                                         <button
@@ -1084,7 +1084,7 @@ export default function Messages() {
                                                             onClick={rejectCall}
                                                         >
                                                             <i className="fas fa-phone-slash mr-2"></i>
-                                                            Từ chối
+                                                            Decline
                                                         </button>
                                                         <button
                                                             className="px-6 py-2 bg-green-500 rounded-full text-white hover:bg-green-600"
@@ -1093,7 +1093,7 @@ export default function Messages() {
                                                             }}
                                                         >
                                                             <i className="fas fa-phone mr-2"></i>
-                                                            Trả lời
+                                                            Answer
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1101,28 +1101,28 @@ export default function Messages() {
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium mb-3">
                                                         {connectionEstablished
-                                                            ? `Đang trong cuộc gọi với ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
-                                                            : `Đang kết nối với ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
+                                                            ? `In a call with ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
+                                                            : `Connecting to ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
                                                         }
                                                     </h3>
                                                     {!connectionEstablished && (
                                                         <div className="flex items-center justify-center">
                                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                                                            <span className="ml-3 text-white">Đang kết nối...</span>
+                                                            <span className="ml-3 text-white">Connecting...</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
                                                 <div>
                                                     <h3 className="text-white text-xl font-medium mb-3">
-                                                        Đang gọi{" "}
+                                                        Calling{" "}
                                                         {calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}
                                                     </h3>
                                                     <div className="flex items-center justify-center">
                                                         <div className="animate-pulse">
                                                             <i className="fas fa-phone text-white text-2xl"></i>
                                                         </div>
-                                                        <span className="ml-3 text-white">Đang gọi...</span>
+                                                        <span className="ml-3 text-white">Calling...</span>
                                                     </div>
                                                 </div>
                                             )}

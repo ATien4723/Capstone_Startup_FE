@@ -87,7 +87,7 @@ const AccountList = () => {
                 setAccounts(paginatedAccounts);
                 setTotalPages(totalPages);
             } catch (error) {
-                console.error('Lỗi khi tải danh sách tài khoản:', error);
+                console.error('Error loading account list:', error);
                 setAccounts([]);
             } finally {
                 setLoading(false);
@@ -133,14 +133,14 @@ const AccountList = () => {
     const handleCreateAdmin = async (e) => {
         e.preventDefault();
         if (!formData.email || !formData.password) {
-            toast.error('Vui lòng nhập đầy đủ thông tin');
+            toast.error('Please enter all required information');
             return;
         }
 
         setCreateLoading(true);
         try {
             await createAdmin(formData);
-            toast.success('Tạo tài khoản admin thành công');
+            toast.success('Admin account created successfully');
             setShowCreateModal(false);
             setFormData({ email: '', password: '' });
             // Refresh danh sách
@@ -148,7 +148,7 @@ const AccountList = () => {
             const accountsData = Array.isArray(response) ? response : [];
             setAccounts(accountsData.slice(0, 10)); // Hiển thị trang đầu
         } catch (error) {
-            toast.error('Có lỗi khi tạo tài khoản admin');
+            toast.error('An error occurred while creating the admin account');
         } finally {
             setCreateLoading(false);
         }
@@ -157,13 +157,13 @@ const AccountList = () => {
     return (
         <div className="px-6 py-4">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Quản Lý Tài Khoản</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Account Management</h1>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center"
                 >
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                    Tạo Admin
+                    Create Admin
                 </button>
             </div>
 
@@ -173,7 +173,7 @@ const AccountList = () => {
                     <div className="w-full md:w-1/3 relative">
                         <input
                             type="text"
-                            placeholder="Tìm kiếm tài khoản..."
+                            placeholder="Search accounts..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -182,25 +182,29 @@ const AccountList = () => {
                     </div>
 
                     <div className="flex space-x-4">
-                        <select
-                            value={selectedRole}
-                            onChange={e => setSelectedRole(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                            <option value="all">Tất cả vai trò</option>
-                            <option value="admin">Admin</option>
-                            <option value="startup">Startup</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={selectedRole}
+                                onChange={e => setSelectedRole(e.target.value)}
+                                className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500  bg-white"
+                            >
+                                <option value="all">All roles</option>
+                                <option value="admin">Admin</option>
+                                <option value="startup">Startup</option>
+                            </select>
+                        </div>
 
-                        <select
-                            value={selectedStatus}
-                            onChange={e => setSelectedStatus(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                            <option value="all">Tất cả trạng thái</option>
-                            <option value="verified">Đã xác thực</option>
-                            <option value="unverified">Chưa xác thực</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={selectedStatus}
+                                onChange={e => setSelectedStatus(e.target.value)}
+                                className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                            >
+                                <option value="all">All statuses</option>
+                                <option value="verified">Verified</option>
+                                <option value="unverified">Unverified</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -218,7 +222,7 @@ const AccountList = () => {
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('fullName')}>
                                     <div className="flex items-center">
-                                        Tên người dùng {getSortIcon('fullName')}
+                                        Full Name {getSortIcon('fullName')}
                                     </div>
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('email')}>
@@ -228,12 +232,12 @@ const AccountList = () => {
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('role')}>
                                     <div className="flex items-center">
-                                        Vai trò {getSortIcon('role')}
+                                        Role {getSortIcon('role')}
                                     </div>
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('status')}>
                                     <div className="flex items-center">
-                                        Trạng thái {getSortIcon('status')}
+                                        Status {getSortIcon('status')}
                                     </div>
                                 </th>
                                 {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -253,13 +257,13 @@ const AccountList = () => {
                             {loading ? (
                                 <tr>
                                     <td colSpan="8" className="px-6 py-4 text-center text-sm text-gray-500">
-                                        Đang tải dữ liệu...
+                                        Loading data...
                                     </td>
                                 </tr>
                             ) : accounts.length === 0 ? (
                                 <tr>
                                     <td colSpan="8" className="px-6 py-4 text-center text-sm text-gray-500">
-                                        Không tìm thấy tài khoản nào
+                                        No accounts found
                                     </td>
                                 </tr>
                             ) : (
@@ -269,7 +273,7 @@ const AccountList = () => {
                                             {(currentPage - 1) * 10 + index + 1}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {`${account.firstName || ''} ${account.lastName || ''}`.trim() || 'Chưa có tên'}
+                                            {`${account.firstName || ''} ${account.lastName || ''}`.trim() || 'No name'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {account.email}
@@ -285,7 +289,7 @@ const AccountList = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                                 ${account.status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                {account.status === 'verified' ? 'Đã xác thực' : 'Chưa xác thực'}
+                                                {account.status === 'verified' ? 'Verified' : 'Unverified'}
                                             </span>
                                         </td>
                                         {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -335,10 +339,10 @@ const AccountList = () => {
                             className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md 
                                 ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                         >
-                            Trước
+                            Previous
                         </button>
                         <span className="text-sm text-gray-700">
-                            Trang <span className="font-medium">{currentPage}</span> / <span className="font-medium">{totalPages}</span>
+                            Page <span className="font-medium">{currentPage}</span> / <span className="font-medium">{totalPages}</span>
                         </span>
                         <button
                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -346,7 +350,7 @@ const AccountList = () => {
                             className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md 
                                 ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                         >
-                            Tiếp
+                            Next
                         </button>
                     </div>
                 </div>
@@ -356,7 +360,7 @@ const AccountList = () => {
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-96">
-                        <h2 className="text-xl font-bold mb-4">Tạo Tài Khoản Admin</h2>
+                        <h2 className="text-xl font-bold mb-4">Create Admin Account</h2>
                         <form onSubmit={handleCreateAdmin}>
                             <div className="mb-4">
                                 <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -372,7 +376,7 @@ const AccountList = () => {
                             </div>
                             <div className="mb-6">
                                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                                    Mật khẩu
+                                    Password
                                 </label>
                                 <input
                                     type="password"
@@ -388,14 +392,14 @@ const AccountList = () => {
                                     onClick={() => setShowCreateModal(false)}
                                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={createLoading}
                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                                 >
-                                    {createLoading ? 'Đang tạo...' : 'Tạo Admin'}
+                                    {createLoading ? 'Creating...' : 'Create Admin'}
                                 </button>
                             </div>
                         </form>

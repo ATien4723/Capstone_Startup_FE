@@ -29,15 +29,15 @@ const AdminNavbar = () => {
         };
     }, [dropdownOpen, notificationOpen]);
 
-    // Mẫu thông báo
-    useEffect(() => {
-        // Trong thực tế, bạn sẽ lấy thông báo từ API
-        setNotifications([
-            { id: 1, text: 'Có 5 tài khoản mới đang chờ xác thực', time: '5 phút trước', isRead: false },
-            { id: 2, text: 'Chính sách mới vừa được tạo', time: '1 giờ trước', isRead: false },
-            { id: 3, text: 'Báo cáo thống kê hàng tuần đã sẵn sàng', time: '1 ngày trước', isRead: true },
-        ]);
-    }, []);
+    // // Mẫu thông báo
+    // useEffect(() => {
+    //     // Trong thực tế, bạn sẽ lấy thông báo từ API
+    //     setNotifications([
+    //         { id: 1, text: 'Có 5 tài khoản mới đang chờ xác thực', time: '5 phút trước', isRead: false },
+    //         { id: 2, text: 'Chính sách mới vừa được tạo', time: '1 giờ trước', isRead: false },
+    //         { id: 3, text: 'Báo cáo thống kê hàng tuần đã sẵn sàng', time: '1 ngày trước', isRead: true },
+    //     ]);
+    // }, []);
 
     const handleLogout = () => {
         // Xử lý đăng xuất thực sự
@@ -47,11 +47,11 @@ const AdminNavbar = () => {
     return (
         <nav className="bg-white shadow-md py-3 px-6 flex justify-between items-center">
             <div className="flex items-center">
-                <h1 className="text-xl font-bold text-purple-800">Trang Quản Trị</h1>
+                <h1 className="text-xl font-bold text-purple-800">Simes Admin</h1>
             </div>
 
             <div className="flex items-center space-x-4">
-                {/* Notification Dropdown */}
+                {/* Notification Dropdown
                 <div className="relative notification-dropdown">
                     <button
                         className="relative p-2 text-gray-600 hover:text-purple-700 focus:outline-none"
@@ -93,7 +93,7 @@ const AdminNavbar = () => {
                             )}
                         </div>
                     )}
-                </div>
+                </div> */}
 
                 {/* User Dropdown */}
                 <div className="relative user-dropdown">
@@ -112,7 +112,7 @@ const AdminNavbar = () => {
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-100"
                             >
                                 <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
-                                Đăng xuất
+                                Logout
                             </button>
                         </div>
                     )}

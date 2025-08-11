@@ -55,7 +55,7 @@ export const checkSubmittedCV = async (accountId, internshipId) => {
         const response = await axiosClient.get(`api/CV/submitted?accountId=${accountId}&internshipId=${internshipId}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi kiểm tra tình trạng nộp CV:', error);
+        console.error('Error checking CV submission status:', error);
         throw error;
     }
 };
@@ -66,7 +66,7 @@ export const getTopCVSubmittedInternshipPosts = async (top = 5) => {
         const response = await axiosClient.get(`api/CV/top-internship-post-cv-submitted?top=${top}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi lấy danh sách top internship post:', error);
+        console.error('Error fetching top internship posts:', error);
         throw error;
     }
 }; 

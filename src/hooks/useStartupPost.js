@@ -183,7 +183,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi lấy danh sách bài đăng tuyển dụng thực tập:', error);
-            toast.error('Không thể tải danh sách bài đăng tuyển dụng');
+            toast.error('Unable to load internship postings');
             setInternshipPosts([]);
         } finally {
             setLoadingPosts(false);
@@ -212,7 +212,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi tìm kiếm bài đăng tuyển dụng:', error);
-            toast.error('Không thể tìm kiếm bài đăng tuyển dụng');
+            toast.error('Unable to search internship postings');
             setInternshipPosts([]);
         } finally {
             setLoadingPosts(false);
@@ -251,7 +251,7 @@ export const useStartupPost = () => {
             } else {
                 console.error('Cấu trúc dữ liệu không như mong đợi:', response);
                 setPosts([]);
-                toast.info('Không tìm thấy bài viết nào');
+                toast.info('No posts found');
             }
         } catch (error) {
             console.error('Lỗi khi tìm kiếm bài viết:', error);
@@ -309,7 +309,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi lấy danh sách position requirements:', error);
-            toast.error('Không thể tải danh sách vị trí');
+            toast.error('Unable to load positions');
             setPositionRequirements([]);
         } finally {
             setLoadingPositions(false);
@@ -338,7 +338,7 @@ export const useStartupPost = () => {
         e.preventDefault();
 
         if (!positionFormData.title || !positionFormData.description || !positionFormData.requirement) {
-            toast.error('Vui lòng điền đầy đủ thông tin vị trí');
+            toast.error('Please fill in all required position fields');
             return;
         }
 
@@ -357,11 +357,11 @@ export const useStartupPost = () => {
             if (positionFormData.isEditing) {
                 // Cập nhật position
                 response = await updatePositionRequirement(positionFormData.positionId, positionData);
-                toast.success('Cập nhật vị trí thành công!');
+                toast.success('Position updated successfully');
             } else {
                 // Tạo position mới
                 response = await createPositionRequirement(positionData);
-                toast.success('Tạo vị trí mới thành công!');
+                toast.success('Position created successfully');
             }
 
             // Reset form và fetch lại danh sách
@@ -370,7 +370,7 @@ export const useStartupPost = () => {
 
         } catch (error) {
             console.error('Lỗi khi xử lý vị trí:', error);
-            toast.error('Có lỗi xảy ra khi xử lý vị trí');
+            toast.error('An error occurred while processing the position');
         } finally {
             setLoadingPositions(false);
         }
@@ -392,22 +392,22 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi lấy thông tin vị trí:', error);
-            toast.error('Không thể lấy thông tin vị trí');
+            toast.error('Unable to get position information');
         }
     };
 
     // Hàm xử lý xóa position
     const handleDeletePosition = async (positionId) => {
-        if (!confirm('Bạn có chắc chắn muốn xóa vị trí này?')) return;
+        if (!confirm('Are you sure you want to delete this position?')) return;
 
         try {
             setLoadingPositions(true);
             await deletePositionRequirement(positionId);
-            toast.success('Xóa vị trí thành công!');
+            toast.success('Position deleted successfully');
             fetchPositionRequirements();
         } catch (error) {
             console.error('Lỗi khi xóa vị trí:', error);
-            toast.error('Không thể xóa vị trí');
+            toast.error('Unable to delete position');
         } finally {
             setLoadingPositions(false);
         }
@@ -441,7 +441,7 @@ export const useStartupPost = () => {
         // Kiểm tra các trường bắt buộc
         if (!formData.title || !formData.description || !formData.requirement ||
             !formData.benefits || !formData.deadline || !formData.address || !formData.salary) {
-            toast.error('Vui lòng điền đầy đủ thông tin');
+            toast.error('Please fill in all required fields');
             return;
         }
 
@@ -468,7 +468,7 @@ export const useStartupPost = () => {
             const response = await createInternshipPost(internshipData);
 
             // Xử lý kết quả thành công
-            toast.success('Tạo bài đăng thực tập thành công!');
+            toast.success('Internship posting created successfully');
 
             // Đóng modal và reset form
             setShowCreateModal(false);
@@ -479,7 +479,7 @@ export const useStartupPost = () => {
 
         } catch (error) {
             console.error('Lỗi khi tạo bài đăng thực tập:', error);
-            toast.error('Có lỗi xảy ra khi tạo bài đăng thực tập');
+            toast.error('An error occurred while creating the internship posting');
         } finally {
             setLoading(false);
         }
@@ -522,7 +522,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi lấy danh sách bài viết:', error);
-            toast.error('Không thể tải danh sách bài viết');
+            toast.error('Unable to load posts');
             setPosts([]);
         } finally {
             setIsLoadingPosts(false);
@@ -564,7 +564,7 @@ export const useStartupPost = () => {
     const handleCreatePost = async () => {
         // Kiểm tra nếu bài viết trống
         if (!newPost.content.trim() && newPost.files.length === 0) {
-            setPostError('Vui lòng nhập nội dung hoặc thêm hình ảnh cho bài viết');
+            setPostError('Please enter content or add images for the post');
             return;
         }
 
@@ -586,7 +586,7 @@ export const useStartupPost = () => {
             const response = await createPost(formData);
 
             // Xử lý kết quả thành công
-            toast.success('Đã đăng bài viết thành công!');
+            toast.success('Post published successfully');
 
             // Đóng modal và reset form
             setShowPostModal(false);
@@ -597,7 +597,7 @@ export const useStartupPost = () => {
 
         } catch (error) {
             console.error('Lỗi khi tạo bài viết:', error);
-            setPostError('Có lỗi xảy ra khi đăng bài viết. Vui lòng thử lại sau.');
+            setPostError('An error occurred while publishing the post. Please try again later.');
         } finally {
             setIsCreatingPost(false);
         }
@@ -608,7 +608,7 @@ export const useStartupPost = () => {
         try {
             setLoadingPosts(true);
             await updateInternshipPostStatus(internshipPostId);
-            toast.success('Đã cập nhật trạng thái bài đăng thành công!');
+            toast.success('Post status updated successfully');
 
             // Cập nhật lại danh sách bài đăng
             if (searchKeyword) {
@@ -618,7 +618,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi cập nhật trạng thái bài đăng:', error);
-            toast.error('Không thể cập nhật trạng thái bài đăng');
+            toast.error('Unable to update post status');
         } finally {
             setLoadingPosts(false);
         }
@@ -648,7 +648,7 @@ export const useStartupPost = () => {
             }
         } catch (error) {
             console.error('Lỗi khi lấy thông tin bài đăng:', error);
-            toast.error('Không thể lấy thông tin bài đăng');
+            toast.error('Unable to get post information');
         } finally {
             setLoadingEdit(false);
         }
@@ -670,7 +670,7 @@ export const useStartupPost = () => {
         // Kiểm tra các trường bắt buộc
         if (!editFormData.description || !editFormData.requirement ||
             !editFormData.benefits || !editFormData.deadline || !editFormData.address || !editFormData.salary) {
-            toast.error('Vui lòng điền đầy đủ thông tin');
+            toast.error('Please fill in all required fields');
             return;
         }
 
@@ -691,7 +691,7 @@ export const useStartupPost = () => {
             await updateInternshipPost(editFormData.internshipId, updateData);
 
             // Xử lý kết quả thành công
-            toast.success('Cập nhật bài đăng thành công!');
+            toast.success('Post updated successfully');
 
             // Đóng modal và reset form
             setShowEditModal(false);
@@ -706,7 +706,7 @@ export const useStartupPost = () => {
 
         } catch (error) {
             console.error('Lỗi khi cập nhật bài đăng:', error);
-            toast.error('Có lỗi xảy ra khi cập nhật bài đăng');
+            toast.error('An error occurred while updating the post');
         } finally {
             setLoadingEdit(false);
         }
@@ -728,7 +728,7 @@ export const useStartupPost = () => {
     // Xử lý cập nhật bài viết
     const handleUpdatePost = async (postId, content) => {
         if (!content.trim()) {
-            toast.error('Nội dung bài viết không được để trống');
+            toast.error('Post content cannot be empty');
             return false;
         }
 
@@ -739,11 +739,11 @@ export const useStartupPost = () => {
             // Refresh posts sau khi cập nhật
             fetchStartupPosts(userStartupId);
 
-            toast.success('Bài viết đã được cập nhật thành công');
+            toast.success('Post updated successfully');
             return true;
         } catch (error) {
             console.error('Error updating post:', error);
-            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
+            toast.error('Unable to update the post. Please try again later.');
             return false;
         }
     };
@@ -756,11 +756,11 @@ export const useStartupPost = () => {
             // Refresh posts sau khi xóa
             fetchStartupPosts(userStartupId);
 
-            toast.success('Bài viết đã được xóa thành công');
+            toast.success('Post deleted successfully');
             return true;
         } catch (error) {
             console.error('Error deleting post:', error);
-            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+            toast.error('Unable to delete the post. Please try again later.');
             return false;
         }
     };

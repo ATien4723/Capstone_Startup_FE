@@ -32,7 +32,6 @@ const Milestone = lazy(() => import('@/pages/Me/Milestone/Milestone'));
 const CV = lazy(() => import('@/pages/Me/CV/CV'));
 const StartupInfo = lazy(() => import('@/pages/Me/StartupInfo/StartupInfo'));
 const MeAnalytics = lazy(() => import('@/pages/Me/Analytics/Analytics'));
-const nhap = lazy(() => import('@/pages/Test/Nhap'));
 
 // Thêm các component Admin
 const Admin = lazy(() => import('@/pages/Admin/Admin'));
@@ -236,11 +235,6 @@ const routers = [
     {
         path: "/internship/:id",
         component: InternshipDetail,
-        protected: true
-    },
-    {
-        path: "/nhap",
-        component: nhap,
         protected: true
     },
     // Thêm các đường dẫn Admin

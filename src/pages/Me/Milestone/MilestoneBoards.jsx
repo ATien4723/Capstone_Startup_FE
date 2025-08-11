@@ -69,12 +69,6 @@ const MilestoneBoards = () => {
     // Lấy user hiện tại
     const { user } = useAuth();
 
-    // Tính toán quyền Founder cho user hiện tại
-    const isFounder = React.useMemo(() => {
-        return startupMembers?.some(m =>
-            (m.roleName?.toLowerCase() === 'founder') && (String(m.accountId) === String(user?.id))
-        );
-    }, [startupMembers, user]);
 
     // Helper: kiểm tra member đã được chọn hoặc đã thuộc board hiện tại chưa
     const isMemberAlreadyAdded = (member) => {
@@ -141,9 +135,7 @@ const MilestoneBoards = () => {
     }, [filteredBoards, user]);
 
     // Thêm hàm xác định màu dựa trên ID
-    const getBoardColor = (id) => {
-        // Chuyển đổi id thành string để xử lý an toàn
-        const boardId = String(id);
+    const getBoardColor = () => {
         return 'bg-blue-500';
     };
 
@@ -152,15 +144,13 @@ const MilestoneBoards = () => {
             {/* Tiêu đề và nút thêm bảng */}
             <header className="bg-white shadow-md px-6 py-5 flex justify-between items-center mb-8 rounded-xl">
                 <h1 className="text-2xl font-bold text-gray-800">Project Management</h1>
-                {/* Chỉ Founder (user hiện tại) mới thấy nút Add New Board */}
-                {isFounder && (
-                    <button
-                        onClick={handleAddBoard}
-                        className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
-                    >
-                        <FontAwesomeIcon icon={faPlus} /> Add New Board
-                    </button>
-                )}
+                {/* Nút Add New Board */}
+                <button
+                    onClick={handleAddBoard}
+                    className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
+                >
+                    <FontAwesomeIcon icon={faPlus} /> Add New Board
+                </button>
             </header>
 
             {/* Thanh tìm kiếm và lọc */}
@@ -502,15 +492,13 @@ const MilestoneBoards = () => {
                                     className="dropdown relative"
                                     ref={el => dropdownRefs.current[board.milestoneId || board.id] = el}
                                 >
-                                    {/* Chỉ Founder (user hiện tại) mới thấy menu ellipsis */}
-                                    {isFounder && (
-                                        <button
-                                            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-                                            onClick={() => toggleDropdown(board.milestoneId || board.id)}
-                                        >
-                                            <FontAwesomeIcon icon={faEllipsisV} />
-                                        </button>
-                                    )}
+                                    {/* Menu ellipsis */}
+                                    <button
+                                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                        onClick={() => toggleDropdown(board.milestoneId || board.id)}
+                                    >
+                                        <FontAwesomeIcon icon={faEllipsisV} />
+                                    </button>
                                     {openDropdownId === (board.milestoneId || board.id) && (
                                         <div className="absolute right-0 mt-2 bg-white shadow-xl rounded-lg z-50 py-1 min-w-[160px] border border-gray-100 animate-fadeIn">
                                             <button

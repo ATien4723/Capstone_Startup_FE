@@ -18,6 +18,7 @@ const CategoryManagement = () => {
     const [formData, setFormData] = useState({
         name: ''
     });
+    const [confirmState, setConfirmState] = useState({ open: false, id: null, message: '' });
 
     useEffect(() => {
         fetchCategories();
@@ -29,11 +30,12 @@ const CategoryManagement = () => {
             const response = await getAllCategories();
             setCategories(response || []);
         } catch (error) {
-            toast.error('Lỗi khi tải danh sách danh mục');
+            toast.error('Error loading category list');
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -42,19 +44,19 @@ const CategoryManagement = () => {
                 await updateCategory(editingCategory.category_ID, {
                     category_Name: formData.name
                 });
-                toast.success('Cập nhật danh mục thành công');
+                toast.success('Category updated successfully');
             } else {
                 await createCategory({
                     category_Name: formData.name
                 });
-                toast.success('Tạo danh mục thành công');
+                toast.success('Category created successfully');
             }
             setShowModal(false);
             setFormData({ name: '' });
             setEditingCategory(null);
             fetchCategories();
         } catch (error) {
-            toast.error('Có lỗi xảy ra');
+            toast.error('An error occurred');
         }
     };
 
@@ -66,16 +68,8 @@ const CategoryManagement = () => {
         setShowModal(true);
     };
 
-    const handleDelete = async (categoryId) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa danh mục này?')) {
-            try {
-                await deleteCategory(categoryId);
-                toast.success('Xóa danh mục thành công');
-                fetchCategories();
-            } catch (error) {
-                toast.error('Lỗi khi xóa danh mục');
-            }
-        }
+    const handleDelete = (categoryId) => {
+        setConfirmState({ open: true, id: categoryId, message: 'Are you sure you want to delete this category?' });
     };
 
     const filteredCategories = categories.filter(category =>
@@ -85,13 +79,13 @@ const CategoryManagement = () => {
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Quản lý Danh mục</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Category Management</h1>
                 <button
                     onClick={() => setShowModal(true)}
                     className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
                 >
                     <FontAwesomeIcon icon={faPlus} />
-                    Thêm danh mục
+                    Add Category
                 </button>
             </div>
 
@@ -101,7 +95,7 @@ const CategoryManagement = () => {
                     <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Tìm kiếm danh mục..."
+                        placeholder="Search categories..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full max-w-md"
@@ -115,18 +109,18 @@ const CategoryManagement = () => {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên danh mục</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {loading ? (
                             <tr>
-                                <td colSpan="3" className="px-6 py-4 text-center">Đang tải...</td>
+                                <td colSpan="3" className="px-6 py-4 text-center">Loading...</td>
                             </tr>
                         ) : filteredCategories.length === 0 ? (
                             <tr>
-                                <td colSpan="3" className="px-6 py-4 text-center text-gray-500">Không có dữ liệu</td>
+                                <td colSpan="3" className="px-6 py-4 text-center text-gray-500">No data</td>
                             </tr>
                         ) : (
                             filteredCategories.map((category) => (
@@ -159,12 +153,12 @@ const CategoryManagement = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-full max-w-md">
                         <h2 className="text-xl font-bold mb-4">
-                            {editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
+                            {editingCategory ? 'Edit Category' : 'Add New Category'}
                         </h2>
                         <form onSubmit={handleSubmit}>
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Tên danh mục *
+                                    Category Name *
                                 </label>
                                 <input
                                     type="text"
@@ -184,26 +178,59 @@ const CategoryManagement = () => {
                                     }}
                                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                                 >
-                                    {editingCategory ? 'Cập nhật' : 'Tạo mới'}
+                                    {editingCategory ? 'Update' : 'Create'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Confirm Modal */}
+            {confirmState.open && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                        <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
+                        <p className="text-gray-700 mb-6">{confirmState.message}</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                onClick={() => setConfirmState({ open: false, id: null, message: '' })}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                onClick={async () => {
+                                    try {
+                                        await deleteCategory(confirmState.id);
+                                        toast.success('Category deleted successfully');
+                                        setConfirmState({ open: false, id: null, message: '' });
+                                        fetchCategories();
+                                    } catch (error) {
+                                        toast.error('Error deleting category');
+                                        setConfirmState({ open: false, id: null, message: '' });
+                                    }
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
 
 export default CategoryManagement;
-
-
-
-
 

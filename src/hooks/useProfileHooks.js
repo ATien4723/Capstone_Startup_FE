@@ -120,7 +120,7 @@ export const useProfileData = (profileId) => {
             setFollowLoading(true);
 
             if (currentUserId === profileId) {
-                toast.warning("Bạn không thể theo dõi chính mình");
+                toast.warning("You cannot follow yourself");
                 return;
             }
 
@@ -128,7 +128,7 @@ export const useProfileData = (profileId) => {
                 // Gọi API unfollow
                 await unfollowUser(currentUserId, profileId);
                 setIsFollowing(false);
-                toast.success(`Đã hủy theo dõi ${profileData.firstName} ${profileData.lastName}`);
+                toast.success(`Unfollowed ${profileData.firstName} ${profileData.lastName}`);
 
                 // Refetch lại danh sách followers từ server
                 const updatedFollowers = await getFollowers(profileId);
@@ -137,7 +137,7 @@ export const useProfileData = (profileId) => {
                 // Gọi API follow
                 await followUser(currentUserId, profileId);
                 setIsFollowing(true);
-                toast.success(`Đã theo dõi ${profileData.firstName} ${profileData.lastName}`);
+                toast.success(`Followed ${profileData.firstName} ${profileData.lastName}`);
 
                 // Refetch lại danh sách followers từ server
                 const updatedFollowers = await getFollowers(profileId);
@@ -145,7 +145,7 @@ export const useProfileData = (profileId) => {
             }
         } catch (error) {
             console.error('Error toggling follow:', error);
-            toast.error('Không thể thực hiện thao tác. Vui lòng thử lại sau.');
+            toast.error('Unable to perform this action. Please try again later.');
         } finally {
             setFollowLoading(false);
         }
@@ -182,10 +182,10 @@ export const useProfileData = (profileId) => {
             formData.append('backgroundUrl', file);
             const updatedProfile = await updateProfile(profileId, formData);
             setProfileData(updatedProfile);
-            toast.success('Cập nhật cover thành công');
+            toast.success('Cover updated successfully');
             return true;
         } catch (error) {
-            toast.error('Cập nhật cover thất bại');
+            toast.error('Failed to update cover');
             return false;
         }
     };
@@ -197,10 +197,10 @@ export const useProfileData = (profileId) => {
             formData.append('avatarUrl', file);
             const updatedProfile = await updateProfile(profileId, formData);
             setProfileData(updatedProfile);
-            toast.success('Cập nhật avatar thành công');
+            toast.success('Avatar updated successfully');
             return true;
         } catch (error) {
-            toast.error('Cập nhật avatar thất bại');
+            toast.error('Failed to update avatar');
             return false;
         }
     };
@@ -435,7 +435,7 @@ export const usePostActions = (accountId, refreshPosts) => {
             formData.append('accountId', accountId);
 
             // Hiển thị thông báo đang xử lý
-            toast.info('Đang tạo bài viết...');
+            toast.info('Creating post...');
 
             // Tạo post mới
             await createPost(formData);
@@ -448,7 +448,7 @@ export const usePostActions = (accountId, refreshPosts) => {
             // Refresh posts
             refreshPosts(1);
 
-            toast.success('Bài viết đã được tạo thành công');
+            toast.success('Post created successfully');
             return true;
         } catch (error) {
             console.error('Error creating post:', error);
@@ -459,15 +459,15 @@ export const usePostActions = (accountId, refreshPosts) => {
                 const errorData = error.response.data;
 
                 if (status === 400 && errorData) {
-                    setPostError(errorData.message || 'Bài viết vi phạm nguyên tắc cộng đồng');
+                    setPostError(errorData.message || 'The post violates community guidelines');
                 } else {
-                    setPostError('Có lỗi xảy ra khi tạo bài viết. Vui lòng thử lại.');
+                    setPostError('An error occurred while creating the post. Please try again.');
                 }
             } else {
-                setPostError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+                setPostError('Cannot connect to the server. Please check your network connection.');
             }
 
-            toast.error('Không thể tạo bài viết');
+            toast.error('Unable to create post');
             return false;
         } finally {
             setIsCreatingPost(false);
@@ -495,7 +495,7 @@ export const usePostActions = (accountId, refreshPosts) => {
 
         try {
             await deletePost(postToDelete);
-            toast.success('Bài viết đã được xóa thành công');
+            toast.success('Post deleted successfully');
 
             // Refresh posts sau khi xóa
             refreshPosts(1);
@@ -503,7 +503,7 @@ export const usePostActions = (accountId, refreshPosts) => {
             return true;
         } catch (error) {
             console.error('Error deleting post:', error);
-            toast.error('Không thể xóa bài viết. Vui lòng thử lại sau.');
+            toast.error('Unable to delete the post. Please try again later.');
             return false;
         } finally {
             setShowDeleteConfirmModal(false);
@@ -519,7 +519,7 @@ export const usePostActions = (accountId, refreshPosts) => {
             const content = editedPostContent || editingPost.content;
 
             if (!content.trim()) {
-                toast.error('Nội dung bài viết không được để trống');
+                toast.error('Post content cannot be empty');
                 return false;
             }
 
@@ -529,11 +529,11 @@ export const usePostActions = (accountId, refreshPosts) => {
             // Refresh posts sau khi cập nhật
             refreshPosts(1);
 
-            toast.success('Bài viết đã được cập nhật thành công');
+            toast.success('Post updated successfully');
             return true;
         } catch (error) {
             console.error('Error updating post:', error);
-            toast.error('Không thể cập nhật bài viết. Vui lòng thử lại sau.');
+            toast.error('Unable to update the post. Please try again later.');
             return false;
         } finally {
             setEditingPost(null);
@@ -722,7 +722,7 @@ export const useBlockUser = (currentUserId, targetUserId) => {
                 setIsBlocked(!!isUserBlocked);
             } catch (error) {
                 console.error('Lỗi khi kiểm tra trạng thái chặn:', error);
-                toast.error('Không thể kiểm tra trạng thái chặn');
+                toast.error('Unable to check block status');
             } finally {
                 setIsBlockLoading(false);
             }
@@ -743,7 +743,7 @@ export const useBlockUser = (currentUserId, targetUserId) => {
                 // Bỏ chặn người dùng
                 await unblockAccount(currentUserId, targetUserId);
                 setIsBlocked(false);
-                toast.success('Đã bỏ chặn người dùng thành công');
+                toast.success('User unblocked successfully');
 
                 // Cập nhật danh sách người dùng bị chặn
                 const updatedBlockedList = await getBlockedAccounts(currentUserId);
@@ -752,7 +752,7 @@ export const useBlockUser = (currentUserId, targetUserId) => {
                 // Chặn người dùng
                 await blockAccount(currentUserId, targetUserId);
                 setIsBlocked(true);
-                toast.success('Đã chặn người dùng thành công');
+                toast.success('User blocked successfully');
 
                 // Cập nhật danh sách người dùng bị chặn
                 const updatedBlockedList = await getBlockedAccounts(currentUserId);
@@ -760,7 +760,7 @@ export const useBlockUser = (currentUserId, targetUserId) => {
             }
         } catch (error) {
             console.error('Lỗi khi thay đổi trạng thái chặn:', error);
-            toast.error('Không thể thay đổi trạng thái chặn. Vui lòng thử lại sau.');
+            toast.error('Unable to change block status. Please try again later.');
         } finally {
             setIsBlockLoading(false);
         }
