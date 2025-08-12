@@ -1,53 +1,39 @@
-# 🚀 React Startup Platform
+🚀 Startup Platform – (React + ASP.NET Core)
+A comprehensive platform for startups built with React 19 + Vite for the frontend and ASP.NET Core for the backend.
+It provides powerful tools for startup management, social interactions, and real-time communication.
 
-A comprehensive platform for startups built with React and Vite.
+✨ Features
+📱 Post management with media upload support
 
-## ✨ Features
+👥 Social interaction: comments, likes, and messaging
 
-- 📱 Post management with media support
-- 👥 Social interaction and messaging
-- 💼 Startup management tools
-- 🎨 Modern responsive interface
+💼 Startup management tools for teams
 
-## 🛠️ Tech Stack
+🔔 Real-time notifications via SignalR
 
-- **React 19** + **Vite 6**
-- **Tailwind CSS** + **Material-UI**
-- **TanStack Query** + **Axios**
-- **SignalR** for real-time features
+🎨 Modern responsive UI using Tailwind CSS & Material-UI
 
-## 🚀 Quick Start
+🔐 Authentication & Authorization with JWT
 
-```bash
-# Clone and install
-git clone <repository-url>
-cd react-startup
-npm install
+🗄 Database integration with Entity Framework Core
 
-# Run development
-npm run dev
+🛠️ Tech Stack
+Frontend
+React 19 + Vite 6
 
-# Build for production
-npm run build
-```
+Tailwind CSS + Material-UI
 
-## 📁 Structure
+TanStack Query + Axios
 
-```
-src/
-├── components/     # Reusable components
-├── pages/         # Page components
-├── hooks/         # Custom hooks
-├── apis/          # API services
-└── utils/         # Utilities
-```
+SignalR Client for real-time updates
 
-## 🔧 Environment
+Backend
+ASP.NET Core 8 Web API
 
-```env
-VITE_API_BASE_URL=your_api_url
-VITE_SIGNALR_HUB_URL=your_signalr_url
-```
----
+Entity Framework Core + SQL Server
 
-⭐ Star this project if you find it helpful! hihihi Tiendz
+SignalR for real-time communication
+
+JWT Authentication
+
+AutoMapper for object mapping
