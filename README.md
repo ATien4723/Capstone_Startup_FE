@@ -1,4 +1,4 @@
-🚀 Startup Platform – (React + ASP.NET Core)
+🚀 Startup Platform – Fullstack (React + ASP.NET Core)
 A comprehensive platform for startups built with React 19 + Vite for the frontend and ASP.NET Core for the backend.
 It provides powerful tools for startup management, social interactions, and real-time communication.
 
@@ -37,3 +37,5 @@ SignalR for real-time communication
 JWT Authentication
 
 AutoMapper for object mapping
+
+🚀 Quick Start
