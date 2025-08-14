@@ -43,6 +43,7 @@ const StartupInfo = () => {
         handleCancel,
         getStatusBadge,
         setIsEditing,
+        isFounder,
         pitchings,
         loadingPitchings,
         addPitchingMode,
@@ -96,9 +97,19 @@ const StartupInfo = () => {
     return (
         <>
             <div className="container mx-auto py-6 px-4">
+                {/* Thông báo quyền hạn */}
+                {!isFounder && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
+                        <p className="text-sm">
+                            <FontAwesomeIcon icon={faInfoCircle} className="mr-2" />
+                            Only founders can edit startup profile and pitching documents.
+                        </p>
+                    </div>
+                )}
+
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold text-gray-800">Startup Information</h1>
-                    {!isEditing ? (
+                    {isFounder && !isEditing ? (
                         <button
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
                             onClick={() => setIsEditing(true)}
@@ -106,7 +117,7 @@ const StartupInfo = () => {
                             <FontAwesomeIcon icon={faPencilAlt} className="mr-2" />
                             Edit Information
                         </button>
-                    ) : (
+                    ) : isFounder && isEditing ? (
                         <div className="flex space-x-2">
                             <button
                                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
@@ -134,7 +145,7 @@ const StartupInfo = () => {
                                 )}
                             </button>
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Main Card */}
@@ -153,7 +164,7 @@ const StartupInfo = () => {
                         )}
 
                         {/* Change background button when in edit mode */}
-                        {isEditing && (
+                        {isFounder && isEditing && (
                             <div className="absolute top-4 right-4">
                                 <input
                                     type="file"
@@ -187,7 +198,7 @@ const StartupInfo = () => {
                                 />
 
                                 {/* Change logo button when in edit mode */}
-                                {isEditing && (
+                                {isFounder && isEditing && (
                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
                                         <input
                                             type="file"
@@ -423,7 +434,7 @@ const StartupInfo = () => {
                         <div className="mt-10">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-xl font-bold text-gray-800">Pitching Documents</h2>
-                                {!addPitchingMode ? (
+                                {isFounder && !addPitchingMode ? (
                                     <button
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
                                         onClick={() => setAddPitchingMode(true)}
@@ -431,7 +442,7 @@ const StartupInfo = () => {
                                         <FontAwesomeIcon icon={faPlus} className="mr-2" />
                                         Add Pitching Document
                                     </button>
-                                ) : (
+                                ) : isFounder && addPitchingMode ? (
                                     <button
                                         className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center transition duration-200"
                                         onClick={() => setAddPitchingMode(false)}
@@ -439,11 +450,11 @@ const StartupInfo = () => {
                                         <FontAwesomeIcon icon={faTimes} className="mr-2" />
                                         Cancel
                                     </button>
-                                )}
+                                ) : null}
                             </div>
 
                             {/* Form thêm pitching */}
-                            {addPitchingMode && (
+                            {isFounder && addPitchingMode && (
                                 <div className="bg-white p-6 rounded-lg shadow-md mb-6 border border-gray-200">
                                     <h3 className="text-lg font-semibold mb-4">Add New Pitching Document</h3>
                                     <div className="space-y-4">
@@ -532,32 +543,36 @@ const StartupInfo = () => {
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center space-x-2">
-                                                            <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
-                                                                <FontAwesomeIcon icon={faPencilAlt} />
-                                                                <input
-                                                                    type="file"
-                                                                    className="hidden"
-                                                                    accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files[0];
-                                                                        if (file) {
-                                                                            handleUpdatePitching(pitching.pitchingId, file);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
+                                                            {isFounder && (
+                                                                <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
+                                                                    <FontAwesomeIcon icon={faPencilAlt} />
+                                                                    <input
+                                                                        type="file"
+                                                                        className="hidden"
+                                                                        accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files[0];
+                                                                            if (file) {
+                                                                                handleUpdatePitching(pitching.pitchingId, file);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleOpenPdfViewer(pitching.link)}
                                                                 className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
                                                             >
                                                                 <FontAwesomeIcon icon={faEye} />
                                                             </button>
-                                                            <button
-                                                                className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
-                                                                onClick={() => handleDeletePitching(pitching.pitchingId)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faTrash} />
-                                                            </button>
+                                                            {isFounder && (
+                                                                <button
+                                                                    className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                                                                    onClick={() => handleDeletePitching(pitching.pitchingId)}
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </li>
                                                 ))}
@@ -593,32 +608,36 @@ const StartupInfo = () => {
                                                         </div>
 
                                                         <div className="flex items-center space-x-2">
-                                                            <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
-                                                                <FontAwesomeIcon icon={faPencilAlt} />
-                                                                <input
-                                                                    type="file"
-                                                                    className="hidden"
-                                                                    accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files[0];
-                                                                        if (file) {
-                                                                            handleUpdatePitching(pitching.pitchingId, file);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
+                                                            {isFounder && (
+                                                                <label className="cursor-pointer text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
+                                                                    <FontAwesomeIcon icon={faPencilAlt} />
+                                                                    <input
+                                                                        type="file"
+                                                                        className="hidden"
+                                                                        accept={pitching.type === 'PDF' ? ".pdf" : "video/*"}
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files[0];
+                                                                            if (file) {
+                                                                                handleUpdatePitching(pitching.pitchingId, file);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleOpenVideoPlayer(pitching.link)}
                                                                 className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
                                                             >
                                                                 <FontAwesomeIcon icon={faEye} />
                                                             </button>
-                                                            <button
-                                                                className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
-                                                                onClick={() => handleDeletePitching(pitching.pitchingId)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faTrash} />
-                                                            </button>
+                                                            {isFounder && (
+                                                                <button
+                                                                    className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                                                                    onClick={() => handleDeletePitching(pitching.pitchingId)}
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </li>
                                                 ))}

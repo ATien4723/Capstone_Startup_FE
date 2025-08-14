@@ -14,11 +14,11 @@ const PolicyDetail = () => {
 
     // Hàm trích xuất tiêu đề từ description
     const extractTitle = (description) => {
-        if (!description) return 'Chính sách không có tiêu đề';
+        if (!description) return 'Policy without title';
 
         // Lấy dòng đầu tiên làm tiêu đề
         const firstLine = description.split('.')[0].trim();
-        return firstLine || 'Chính sách';
+        return firstLine || 'Policy';
     };
 
     // Hàm trích xuất nội dung từ description (bỏ phần tiêu đề)
@@ -44,9 +44,9 @@ const PolicyDetail = () => {
                 // const typeData = await getPolicyTypeById(data.policyTypeId);
                 // setPolicyType(typeData);
             } catch (error) {
-                console.error('Lỗi khi lấy chi tiết chính sách:', error);
-                setError('Không thể tải thông tin chính sách. Vui lòng thử lại sau.');
-                toast.error('Có lỗi xảy ra khi tải chi tiết chính sách');
+                console.error('Error fetching policy details:', error);
+                setError('Unable to load policy information. Please try again later.');
+                toast.error('An error occurred while loading policy details');
             } finally {
                 setLoading(false);
             }
@@ -71,13 +71,13 @@ const PolicyDetail = () => {
                 <div className="max-w-3xl mx-auto bg-red-50 text-red-800 p-4 rounded-lg">
                     <div className="flex items-center mb-2">
                         <FontAwesomeIcon icon={faExclamationCircle} className="text-red-600 mr-2" />
-                        <h2 className="text-xl font-bold">Lỗi</h2>
+                        <h2 className="text-xl font-bold">Error</h2>
                     </div>
-                    <p>{error || 'Không tìm thấy chính sách này.'}</p>
+                    <p>{error || 'Policy not found.'}</p>
                     <div className="mt-4">
                         <Link to="/policy" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                            Quay lại danh sách chính sách
+                            Back to Policy List
                         </Link>
                     </div>
                 </div>
@@ -95,11 +95,11 @@ const PolicyDetail = () => {
                 <div className="flex justify-between items-center mb-6">
                     <Link to="/policy" className="inline-flex items-center text-blue-600 hover:text-blue-800">
                         <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                        Quay lại danh sách chính sách
+                        Back to Policy List
                     </Link>
                     <Link to="/home" className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300">
                         <FontAwesomeIcon icon={faHome} className="mr-2" />
-                        <span>Quay về trang chủ</span>
+                        <span>Back to Home</span>
                     </Link>
                 </div>
 
@@ -111,12 +111,12 @@ const PolicyDetail = () => {
                             {policy.isActive ? (
                                 <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full flex items-center">
                                     <span className="w-2 h-2 bg-green-600 rounded-full mr-2"></span>
-                                    Đang áp dụng
+                                    Active
                                 </span>
                             ) : (
                                 <span className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full flex items-center">
                                     <span className="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
-                                    Không áp dụng
+                                    Inactive
                                 </span>
                             )}
                         </div>
@@ -126,7 +126,7 @@ const PolicyDetail = () => {
                     <div className="p-6">
                         {policy.description && (
                             <div className="mb-6">
-                                <h2 className="text-lg font-semibold text-gray-700 mb-2">Mô tả</h2>
+                                <h2 className="text-lg font-semibold text-gray-700 mb-2">Description</h2>
                                 <p className="text-gray-600">{policy.description}</p>
                             </div>
                         )}
@@ -135,7 +135,7 @@ const PolicyDetail = () => {
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6">
                             <div className="flex items-center">
                                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
-                                <span>Cập nhật: {new Date(policy.updatedAt || policy.createAt || policy.createdAt || new Date()).toLocaleDateString('vi-VN')}</span>
+                                <span>Updated: {new Date(policy.updatedAt || policy.createAt || policy.createdAt || new Date()).toLocaleDateString('en-US')}</span>
                             </div>
                             {policy.policyTypeName && (
                                 <div className="flex items-center">
@@ -149,7 +149,7 @@ const PolicyDetail = () => {
                                 <div className="flex items-center">
                                     <FontAwesomeIcon icon={faTags} className="mr-1" />
                                     <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                                        Loại ID: {policy.policyTypeId}
+                                        Type ID: {policy.policyTypeId}
                                     </span>
                                 </div>
                             )}
@@ -157,7 +157,7 @@ const PolicyDetail = () => {
 
                         {/* Nội dung chính */}
                         <div className="border-t border-gray-100 pt-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Nội dung chính sách</h2>
+                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Policy Content</h2>
                             <div className="prose max-w-none">
                                 {policy.content ? (
                                     <div
@@ -175,7 +175,7 @@ const PolicyDetail = () => {
                         {/* Các tệp đính kèm nếu có */}
                         {policy.attachments && policy.attachments.length > 0 && (
                             <div className="mt-8 border-t border-gray-100 pt-6">
-                                <h3 className="text-lg font-semibold text-gray-700 mb-3">Tệp đính kèm</h3>
+                                <h3 className="text-lg font-semibold text-gray-700 mb-3">Attachments</h3>
                                 <ul className="space-y-2">
                                     {policy.attachments.map((attachment, index) => (
                                         <li key={index} className="flex items-center bg-gray-50 p-2 rounded-md border border-gray-200">
@@ -185,7 +185,7 @@ const PolicyDetail = () => {
                                                 rel="noopener noreferrer"
                                                 className="text-blue-600 hover:text-blue-800 hover:underline"
                                             >
-                                                {attachment.name || `Tệp đính kèm ${index + 1}`}
+                                                {attachment.name || `Attachment ${index + 1}`}
                                             </a>
                                         </li>
                                     ))}

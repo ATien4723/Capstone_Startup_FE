@@ -6,7 +6,8 @@ import {
     getPitchingsByStartupAndType,
     createStartupPitching,
     updateStartupPitching,
-    deleteStartupPitching
+    deleteStartupPitching,
+    getStartupMembers
 } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { toast } from 'react-toastify';
@@ -17,6 +18,8 @@ const useStartupInfo = () => {
     const [error, setError] = useState(null);
     const [accountId, setAccountId] = useState(null);
     const [startupId, setStartupId] = useState(null);
+    const [currentUserRole, setCurrentUserRole] = useState(null);
+    const [isFounder, setIsFounder] = useState(false);
 
     // Refs cho file inputs
     const logoInputRef = useRef(null);
@@ -161,6 +164,33 @@ const useStartupInfo = () => {
 
         fetchStartupInfo();
     }, [startupId]);
+
+    // Lấy thông tin role của user hiện tại trong startup
+    useEffect(() => {
+        const fetchCurrentUserRole = async () => {
+            if (!startupId || !accountId) return;
+
+            try {
+                const membersResponse = await getStartupMembers(startupId);
+                if (membersResponse) {
+                    const currentMember = membersResponse.find(member =>
+                        member.accountId == accountId
+                    );
+
+                    // console.log("Current member:", currentMember);
+
+                    if (currentMember) {
+                        setCurrentUserRole(currentMember.roleName);
+                        setIsFounder(currentMember.roleName?.toLowerCase() === 'founder');
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi lấy thông tin role:", err);
+            }
+        };
+
+        fetchCurrentUserRole();
+    }, [startupId, accountId]);
 
     // Lấy thông tin pitching của startup
     useEffect(() => {
@@ -450,6 +480,8 @@ const useStartupInfo = () => {
         handleCancel,
         getStatusBadge,
         setIsEditing,
+        // Thêm thông tin role
+        isFounder,
         // Thêm các trường liên quan đến pitching
         pitchings,
         loadingPitchings,

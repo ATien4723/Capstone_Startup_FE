@@ -18,6 +18,14 @@ const Startups = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
 
+    // Pagination states for Featured Startups
+    const [featuredCurrentPage, setFeaturedCurrentPage] = useState(1);
+    const [featuredItemsPerPage] = useState(6); // 6 items per page cho featured (2 rows x 3 cols)
+
+    // Arrow navigation states for All Startups
+    const [allCurrentIndex, setAllCurrentIndex] = useState(0);
+    const [allItemsPerView] = useState(9); // Hiển thị tối đa 9 startups (3 rows x 3 cols)
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -26,7 +34,6 @@ const Startups = () => {
                 // Fetch startups
                 const startupResponse = await getAllStartups();
                 const startupData = startupResponse?.items;
-                // console.log("Startups data:", startupData);
                 setStartups(startupData);
 
                 const categoryResponse = await getAllCategories();
@@ -93,22 +100,76 @@ const Startups = () => {
     // Xử lý khi thay đổi từ khóa tìm kiếm
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
+        // Reset về đầu khi tìm kiếm
+        setFeaturedCurrentPage(1);
+        setAllCurrentIndex(0);
     };
 
     // Xử lý khi nhấn nút tìm kiếm
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         // Tìm kiếm đã được thực hiện trong filteredStartups
+        setFeaturedCurrentPage(1);
+        setAllCurrentIndex(0);
     };
 
     // Xóa từ khóa tìm kiếm
     const clearSearch = () => {
         setSearchTerm('');
+        setFeaturedCurrentPage(1);
+        setAllCurrentIndex(0);
     };
 
     // Chia startups thành featured và all (sử dụng status verified làm tiêu chí)
-    const featuredStartups = filteredStartups.filter(startup => startup && startup.status === "verified");
-    const allStartups = filteredStartups.filter(startup => startup && startup.status == "verified");
+    const allStartupsFiltered = filteredStartups.filter(startup => startup && startup.status == "verified");
+
+    // Featured Startups - Pagination
+    const featuredTotalItems = allStartupsFiltered.length;
+    const featuredTotalPages = Math.ceil(featuredTotalItems / featuredItemsPerPage);
+    const featuredStartIndex = (featuredCurrentPage - 1) * featuredItemsPerPage;
+    const featuredEndIndex = featuredStartIndex + featuredItemsPerPage;
+    const featuredStartups = allStartupsFiltered.slice(featuredStartIndex, featuredEndIndex);
+
+    // All Startups - Arrow Navigation (hiển thị tối đa 3)
+    const allTotalItems = allStartupsFiltered.length;
+    const allMaxIndex = Math.max(0, allTotalItems - allItemsPerView);
+    const allStartIndex = Math.min(allCurrentIndex, allMaxIndex);
+    const allEndIndex = Math.min(allStartIndex + allItemsPerView, allTotalItems);
+    const allStartups = allStartupsFiltered.slice(allStartIndex, allEndIndex);
+
+
+
+    // Featured Startups Pagination handlers
+    const handleFeaturedPageChange = (page) => {
+        if (page >= 1 && page <= featuredTotalPages) {
+            setFeaturedCurrentPage(page);
+        }
+    };
+
+    const handleFeaturedPreviousPage = () => {
+        if (featuredCurrentPage > 1) {
+            setFeaturedCurrentPage(featuredCurrentPage - 1);
+        }
+    };
+
+    const handleFeaturedNextPage = () => {
+        if (featuredCurrentPage < featuredTotalPages) {
+            setFeaturedCurrentPage(featuredCurrentPage + 1);
+        }
+    };
+
+    // All Startups Arrow Navigation handlers
+    const handleAllPrevious = () => {
+        if (allCurrentIndex > 0) {
+            setAllCurrentIndex(Math.max(0, allCurrentIndex - allItemsPerView));
+        }
+    };
+
+    const handleAllNext = () => {
+        if (allCurrentIndex < allMaxIndex) {
+            setAllCurrentIndex(Math.min(allMaxIndex, allCurrentIndex + allItemsPerView));
+        }
+    };
 
     // Xử lý khi chọn danh mục
     const handleCategoryClick = (categoryName) => {
@@ -118,6 +179,9 @@ const Startups = () => {
         } else {
             setActiveCategory(categoryName);
         }
+        // Reset về đầu khi thay đổi filter
+        setFeaturedCurrentPage(1);
+        setAllCurrentIndex(0);
     };
 
     // Xử lý khi chọn giai đoạn
@@ -128,6 +192,9 @@ const Startups = () => {
         } else {
             setActiveFundingStage(stage.stageName);
         }
+        // Reset về đầu khi thay đổi filter
+        setFeaturedCurrentPage(1);
+        setAllCurrentIndex(0);
     };
 
     // Hiển thị loading hoặc error message
@@ -186,7 +253,7 @@ const Startups = () => {
                                 placeholder="Search startups by name, category, or location..."
                                 value={searchTerm}
                                 onChange={handleSearch}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
                             />
                             <button
                                 className="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 transition-all"
@@ -327,8 +394,12 @@ const Startups = () => {
                                 </div>
                             ))}
                         </div>
+
+
                     </>
                 )}
+
+
 
                 {/* All Startups Section */}
                 <h4 className="text-xl font-bold mb-4">All Startups</h4>
@@ -337,77 +408,149 @@ const Startups = () => {
                         <p className="text-gray-600">No startups match your filter criteria.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {allStartups.map((startup) => (
-                            <div
-                                key={startup.startup_ID}
-                                className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                    <div className="relative">
+                        {/* Left Arrow */}
+                        {allTotalItems > allItemsPerView && (
+                            <button
+                                onClick={handleAllPrevious}
+                                disabled={allCurrentIndex === 0}
+                                className={`absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 rounded-full border-2 border-gray-300 bg-white shadow-lg transition-all ${allCurrentIndex === 0
+                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                    : 'text-gray-600 hover:bg-gray-100 hover:border-blue-500'
+                                    }`}
                             >
-                                <div className="relative h-48">
-                                    {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
-                                        <span
-                                            className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
-                                        >
-                                            {startup.categories[0]}
-                                        </span>
-                                    )}
-                                    <img
-                                        src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
-                                        alt={startup.startup_Name || "Startup"}
-                                        className="w-full h-full object-cover rounded-t-xl"
-                                    />
-                                    {startup.status === "verified" && (
-                                        <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
-                                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4">
-                                    <h5 className="text-lg font-bold">{startup.startup_Name}</h5>
-                                    <p className="text-gray-600 mb-2 line-clamp-1">{startup.description}</p>
-                                    <div className="flex justify-between py-3 border-t border-gray-200 mt-3">
-                                        <div className="text-center">
-                                            <div className="font-bold text-blue-600">{startup.followerCount}</div>
-                                            <div className="text-gray-600 text-sm">Followers</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="font-bold text-blue-600">{startup.abbreviationName || 'N/A'}</div>
-                                            <div className="text-gray-600 text-sm">Short Name</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="font-bold text-blue-600">{startup.stage || 'N/A'}</div>
-                                            <div className="text-gray-600 text-sm">Stage</div>
-                                        </div>
+                                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        )}
+
+                        {/* Startups Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mx-8">
+                            {allStartups.map((startup) => (
+                                <div
+                                    key={startup.startup_ID}
+                                    className="bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                                >
+                                    <div className="relative h-48">
+                                        {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
+                                            <span
+                                                className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
+                                            >
+                                                {startup.categories[0]}
+                                            </span>
+                                        )}
+                                        <img
+                                            src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
+                                            alt={startup.startup_Name || "Startup"}
+                                            className="w-full h-full object-cover rounded-t-xl"
+                                        />
+                                        {startup.status === "verified" && (
+                                            <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-full text-sm flex items-center">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1" /> Verified
+                                            </div>
+                                        )}
                                     </div>
-                                    <Link
-                                        to={`/startup-detail/${startup.startup_ID}`}
-                                        className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all mt-3"
-                                    >
-                                        View Details
-                                    </Link>
+                                    <div className="p-4">
+                                        <h5 className="text-lg font-bold">{startup.startup_Name}</h5>
+                                        <p className="text-gray-600 mb-2 line-clamp-1">{startup.description}</p>
+                                        <div className="flex justify-between py-3 border-t border-gray-200 mt-3">
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.followerCount}</div>
+                                                <div className="text-gray-600 text-sm">Followers</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.abbreviationName || 'N/A'}</div>
+                                                <div className="text-gray-600 text-sm">Short Name</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="font-bold text-blue-600">{startup.stage || 'N/A'}</div>
+                                                <div className="text-gray-600 text-sm">Stage</div>
+                                            </div>
+                                        </div>
+                                        <Link
+                                            to={`/startup-detail/${startup.startup_ID}`}
+                                            className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all mt-3"
+                                        >
+                                            View Details
+                                        </Link>
+                                    </div>
                                 </div>
+                            ))}
+                        </div>
+
+                        {/* Right Arrow */}
+                        {allTotalItems > allItemsPerView && (
+                            <button
+                                onClick={handleAllNext}
+                                disabled={allCurrentIndex >= allMaxIndex}
+                                className={`absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 z-10 w-12 h-12 rounded-full border-2 border-gray-300 bg-white shadow-lg transition-all ${allCurrentIndex >= allMaxIndex
+                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                    : 'text-gray-600 hover:bg-gray-100 hover:border-blue-500'
+                                    }`}
+                            >
+                                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        )}
+
+                        {/* Current View Info */}
+                        {allTotalItems > allItemsPerView && (
+                            <div className="text-center mt-4 text-sm text-gray-600">
+                                Showing {allStartIndex + 1} - {allEndIndex} of {allTotalItems} startups
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
 
-                {/* Pagination */}
-                {allStartups.length > 0 && (
+                {/* Featured Startups Pagination - Moved to bottom */}
+                {featuredTotalPages > 1 && (
                     <nav className="mt-8">
-                        <div className="flex justify-center space-x-2">
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed">
+                        <div className="flex justify-center items-center space-x-2">
+                            {/* Previous Button */}
+                            <button
+                                onClick={handleFeaturedPreviousPage}
+                                disabled={featuredCurrentPage === 1}
+                                className={`px-4 py-2 border border-gray-300 rounded-lg transition-all ${featuredCurrentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                            >
                                 Previous
                             </button>
-                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">1</button>
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                                2
-                            </button>
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                                3
-                            </button>
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
+
+                            {/* Page Numbers */}
+                            {Array.from({ length: featuredTotalPages }, (_, i) => i + 1).map(page => (
+                                <button
+                                    key={page}
+                                    onClick={() => handleFeaturedPageChange(page)}
+                                    className={`px-4 py-2 rounded-lg transition-all ${featuredCurrentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            {/* Next Button */}
+                            <button
+                                onClick={handleFeaturedNextPage}
+                                disabled={featuredCurrentPage === featuredTotalPages}
+                                className={`px-4 py-2 border border-gray-300 rounded-lg transition-all ${featuredCurrentPage === featuredTotalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                            >
                                 Next
                             </button>
+                        </div>
+
+                        {/* Featured Pagination Info */}
+                        <div className="text-center mt-4 text-sm text-gray-600">
+                            Featured: Showing {featuredStartIndex + 1} to {Math.min(featuredEndIndex, featuredTotalItems)} of {featuredTotalItems} startups
+                            (Page {featuredCurrentPage} of {featuredTotalPages})
                         </div>
                     </nav>
                 )}

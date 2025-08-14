@@ -27,9 +27,9 @@ const Policy = () => {
                 setFilteredPolicies(policiesData || []);
                 setPolicyTypes(policyTypesData || []);
             } catch (error) {
-                console.error('Lỗi khi lấy dữ liệu:', error);
-                setError('Không thể tải dữ liệu chính sách. Vui lòng thử lại sau.');
-                toast.error('Có lỗi xảy ra khi tải dữ liệu chính sách');
+                console.error('Error fetching data:', error);
+                setError('Unable to load policy data. Please try again later.');
+                toast.error('An error occurred while loading policy data');
                 // Đặt giá trị mặc định cho mảng để tránh lỗi
                 setPolicies([]);
                 setFilteredPolicies([]);
@@ -69,8 +69,8 @@ const Policy = () => {
 
                 setFilteredPolicies(filteredData);
             } catch (error) {
-                console.error('Lỗi khi lọc chính sách:', error);
-                toast.error('Có lỗi xảy ra khi lọc dữ liệu');
+                console.error('Error filtering policies:', error);
+                toast.error('An error occurred while filtering data');
             } finally {
                 setLoading(false);
             }
@@ -107,7 +107,7 @@ const Policy = () => {
                     onClick={() => window.location.reload()}
                     className="mt-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
                 >
-                    Thử lại
+                    Try Again
                 </button>
             </div>
         );
@@ -118,10 +118,10 @@ const Policy = () => {
         <div className="container mx-auto px-4 py-8 mt-16">
             <Navbar />
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Chính sách công ty</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Company Policies</h1>
                 {/* <Link to="/home" className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300">
                     <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                    <span>Quay về trang chủ</span>
+                    <span>Back to Home</span>
                 </Link> */}
             </div>
 
@@ -134,7 +134,7 @@ const Policy = () => {
                         </div>
                         <input
                             type="text"
-                            placeholder="Tìm kiếm chính sách..."
+                            placeholder="Search policies..."
                             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={searchTerm}
                             onChange={handleSearch}
@@ -145,7 +145,7 @@ const Policy = () => {
                         <span className="mr-2 text-gray-600">
                             <FontAwesomeIcon icon={faFilter} />
                         </span>
-                        <span className="mr-2 text-gray-600">Lọc theo:</span>
+                        <span className="mr-2 text-gray-600">Filter by:</span>
                         <div className="flex flex-wrap gap-2">
                             {policyTypes && policyTypes.length > 0 ? policyTypes.map((type) => (
                                 <button
@@ -173,7 +173,7 @@ const Policy = () => {
 
             {!loading && filteredPolicies.length === 0 && (
                 <div className="bg-yellow-50 border border-yellow-100 text-yellow-800 p-4 rounded-lg text-center">
-                    Không tìm thấy chính sách nào phù hợp với tiêu chí tìm kiếm
+                    No policies found matching the search criteria
                 </div>
             )}
 
@@ -190,11 +190,11 @@ const Policy = () => {
                                 <h3 className="text-lg font-semibold text-gray-800">{policy.title}</h3>
                                 {policy.isActive ? (
                                     <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full">
-                                        Đang áp dụng
+                                        Active
                                     </span>
                                 ) : (
                                     <span className="bg-gray-100 text-gray-800 text-xs px-2.5 py-0.5 rounded-full">
-                                        Không áp dụng
+                                        Inactive
                                     </span>
                                 )}
                             </div>
@@ -206,8 +206,8 @@ const Policy = () => {
                             <div className="flex items-center text-xs text-gray-500 mb-4">
                                 <span className="bg-blue-100 text-blue-800 rounded-full px-3 py-1 mr-2">
                                     {policyTypes && policyTypes.length > 0 && policy.policyTypeId
-                                        ? policyTypes.find(type => type.id === policy.policyTypeId)?.name || 'Loại chính sách không xác định'
-                                        : 'Loại chính sách không xác định'}
+                                        ? policyTypes.find(type => type.id === policy.policyTypeId)?.name || 'Policy type undefined'
+                                        : 'Policy type undefined'}
                                 </span>
                                 <span>
                                     Date: {new Date(policy.createAt).toLocaleDateString('vi-VN')}
@@ -218,7 +218,7 @@ const Policy = () => {
                                 to={`/policy/${policy.policyId}`}
                                 className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
                             >
-                                Xem chi tiết <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1 text-xs" />
+                                View Details <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1 text-xs" />
                             </Link>
                         </div>
                     </div>

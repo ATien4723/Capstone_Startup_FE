@@ -107,6 +107,8 @@ const Home = () => {
         followingIds
     } = useFollow(currentUserId);
 
+
+
     // Hàm xử lý khi bấm nút follow
     const handleConnectUser = async (userId) => {
         if (isFollowing(userId)) {
@@ -117,6 +119,8 @@ const Home = () => {
         // Cập nhật lại danh sách gợi ý sau khi follow/unfollow
         refetchSuggestions();
     };
+
+
 
     const {
         posts, postLikes, userLikedPosts, postCommentCounts, openCommentPosts, refreshCommentTrigger,
@@ -963,8 +967,7 @@ const Home = () => {
                                         {chatRooms.slice(0, 3).map((room) => (
                                             <div
                                                 key={room.chatRoomId}
-                                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => goToChat(room.chatRoomId)}
+                                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
                                             >
                                                 <div className="relative">
                                                     <img
@@ -979,7 +982,10 @@ const Home = () => {
                                                         />
                                                     )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
+                                                <div
+                                                    className="flex-1 min-w-0 cursor-pointer"
+                                                    onClick={() => goToChat(room.chatRoomId)}
+                                                >
                                                     <h6 className="font-semibold text-sm truncate">{room.targetName || "User"}</h6>
                                                     <p className="text-xs text-gray-500 truncate">
                                                         {room.latestMessageContent && (

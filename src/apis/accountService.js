@@ -207,3 +207,12 @@ export const getAllAccounts = async () => {
         throw error;
     }
 };
+
+export const CheckIsBlocked = async (accountId, targetAccountId) => {
+    try {
+        const response = await axiosClient.get(`api/Account/CheckBlockAccount?currentAccountId=${accountId}&targetAccountId=${targetAccountId}`);
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};

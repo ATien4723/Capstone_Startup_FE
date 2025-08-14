@@ -48,14 +48,18 @@ export const getPostLikesByPostId = async (postId, pageNumber = 1, pageSize = 10
     }
 };
 
-// Create post comment
 export const createPostComment = async (commentData) => {
     try {
-        let url = `api/post/CreatePostComment?AccountId=${commentData.accountId}&PostId=${commentData.postId}&Content=${encodeURIComponent(commentData.content)}`;
-        if (commentData.parentCommentId) {
-            url += `&ParentCommentId=${commentData.parentCommentId}`;
-        }
-        const response = await axiosClient.post(url);
+        const response = await axiosClient.post('api/post/CreatePostComment', {
+            accountId: commentData.accountId,
+            postId: commentData.postId,
+            content: commentData.content,
+            parentCommentId: commentData.parentCommentId || null
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
         return response;
     } catch (error) {
         throw error;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { createInternshipPost, getAllInternshipPosts, createPost, getPostsByStartupId, searchStartupInternshipPosts, searchStartupPosts, updateInternshipPostStatus, updateInternshipPost, getInternshipPostDetail, updatePost, deletePost } from '@/apis/postService';
 import { getUserId } from '@/apis/authService';
 
@@ -367,6 +367,7 @@ export const useStartupPost = () => {
             // Reset form và fetch lại danh sách
             resetPositionForm();
             fetchPositionRequirements();
+            setShowPositionModal(false);
 
         } catch (error) {
             console.error('Lỗi khi xử lý vị trí:', error);
@@ -380,15 +381,18 @@ export const useStartupPost = () => {
     const handleEditPosition = async (position) => {
         try {
             const response = await getPositionRequirementById(position.positionId);
-            if (response && response.data) {
+
+            if (response && response.positionId) {
                 setPositionFormData({
-                    positionId: response.data.positionId,
-                    startupId: response.data.startupId,
-                    title: response.data.title,
-                    description: response.data.description,
-                    requirement: response.data.requirement || '',
+                    positionId: response.positionId,
+                    startupId: response.startupId,
+                    title: response.title,
+                    description: response.description,
+                    requirement: response.requirement || '',
                     isEditing: true
                 });
+            } else {
+                toast.error('Unable to load position details');
             }
         } catch (error) {
             console.error('Lỗi khi lấy thông tin vị trí:', error);

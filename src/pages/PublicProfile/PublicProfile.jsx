@@ -17,11 +17,13 @@ import { formatPostTime } from '@/utils/dateUtils';
 import PostDropdownMenu from '@/components/Dropdown/PostDropdownMenu';
 import { useProfileData, usePostsData, usePostActions, useUIStates, useInfiniteScroll, useCheckIsFollowing } from '@/hooks/useProfileHooks';
 import LikesModal, { LikeCounter } from '@/components/Common/LikesModal';
-import { blockAccount, unblockAccount, getBlockedAccounts } from '@/apis/accountService';
+import { blockAccount, unblockAccount, CheckIsBlocked } from '@/apis/accountService';
 import { getUserId } from '@/apis/authService';
 import { toast } from 'react-toastify';
+
 import SharePostModal from '@/components/Common/SharePostModal';
 import SharedPost from '@/components/PostMedia/SharedPost';
+import { getPostsByAccountId } from '@/apis/postService';
 
 // Modal component
 const Modal = ({ children, onClose }) => (
@@ -39,7 +41,7 @@ const Modal = ({ children, onClose }) => (
 );
 
 // Profile Actions Dropdown Component
-const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleBlock }) => {
+const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleBlock, onSearchPosts }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const toggleDropdown = () => {
@@ -78,8 +80,7 @@ const ProfileActionsDropdown = ({ currentUserId, profileId, isBlocked, onToggleB
                         <button
                             className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             onClick={() => {
-                                // Handle search posts
-                                toast.info('Search functionality coming soon');
+                                onSearchPosts();
                                 setIsOpen(false);
                             }}
                         >
@@ -158,18 +159,27 @@ const PublicProfile = () => {
         const checkBlockStatus = async () => {
             if (currentUserId && id && currentUserId !== id) {
                 try {
-                    const blockedList = await getBlockedAccounts(currentUserId);
-                    // Cấu trúc mới: [{blockedAccountId, blockedFullName, blockedAvatar}]
-                    const isUserBlocked = blockedList?.some(blocked => blocked.blockedAccountId === parseInt(id));
-                    setIsBlocked(!!isUserBlocked);
+                    const response = await CheckIsBlocked(currentUserId, id);
+                    const isUserBlocked = !!response;
+                    setIsBlocked(isUserBlocked);
+
+                    // Nếu đã block user này, chuyển hướng về trang chủ
+                    if (isUserBlocked) {
+                        toast.info('You cant view this profile', {
+                            toastId: 'blocked-user-access'
+                        });
+                        navigate('/home'); // Chuyển về trang chủ
+                        return;
+                    }
                 } catch (error) {
                     console.error('Error checking block status:', error);
+                    setIsBlocked(false);
                 }
             }
         };
 
         checkBlockStatus();
-    }, [currentUserId, id]);
+    }, [currentUserId, id, navigate]);
 
     // Handle block/unblock
     const handleToggleBlock = async () => {
@@ -180,15 +190,20 @@ const PublicProfile = () => {
             if (isBlocked) {
                 await unblockAccount(currentUserId, id);
                 setIsBlocked(false);
-                toast.success(`Unblocked ${profileData?.firstName || 'user'} successfully`);
+                toast.success(`Đã bỏ chặn ${profileData?.firstName || 'người dùng'} thành công`);
             } else {
                 await blockAccount(currentUserId, id);
                 setIsBlocked(true);
-                toast.success(`Blocked ${profileData?.firstName || 'user'} successfully`);
+                toast.success(`Đã chặn ${profileData?.firstName || 'người dùng'} thành công. Đang chuyển về trang chủ...`);
+
+                // Chuyển hướng về trang chủ sau khi block
+                setTimeout(() => {
+                    navigate('/');
+                }, 100);
             }
         } catch (error) {
             console.error('Error toggling block status:', error);
-            toast.error('Failed to update block status');
+            toast.error('Không thể cập nhật trạng thái chặn');
         } finally {
             setIsBlockLoading(false);
         }
@@ -217,6 +232,18 @@ const PublicProfile = () => {
     const [showShareModal, setShowShareModal] = useState(false);
     const [postToShare, setPostToShare] = useState(null);
 
+    // State cho chức năng tìm kiếm bài viết
+    const [showSearchModal, setShowSearchModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchPagination, setSearchPagination] = useState({
+        currentPage: 1,
+        pageSize: 10,
+        totalItems: 0,
+        totalPages: 0
+    });
+
     // Hàm để lấy và hiển thị danh sách người đã thích bài viết
     const handleShowLikes = (postId) => {
         setCurrentPostId(postId);
@@ -227,6 +254,86 @@ const PublicProfile = () => {
     const handleSharePost = (post) => {
         setPostToShare(post);
         setShowShareModal(true);
+    };
+
+    // Hàm xử lý tìm kiếm bài viết của user này
+    const handleSearchPosts = async (query = searchQuery, page = 1) => {
+        if (!query.trim()) {
+            toast.warning('Please enter a search term');
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            // Lấy tất cả bài viết của user này với số lượng lớn để tìm kiếm
+            const response = await getPostsByAccountId(id, 1, 1000); // Lấy tối đa 1000 bài viết
+
+            if (response && response.items) {
+                // Tìm kiếm client-side trong bài viết của user
+                const allUserPosts = response.items;
+                const filteredPosts = allUserPosts.filter(post => {
+                    const searchLower = query.toLowerCase();
+                    return (
+                        (post.content && post.content.toLowerCase().includes(searchLower)) ||
+                        (post.title && post.title.toLowerCase().includes(searchLower))
+                    );
+                });
+
+                // Thực hiện phân trang client-side
+                const totalItems = filteredPosts.length;
+                const totalPages = Math.ceil(totalItems / searchPagination.pageSize);
+                const startIndex = (page - 1) * searchPagination.pageSize;
+                const endIndex = startIndex + searchPagination.pageSize;
+                const paginatedResults = filteredPosts.slice(startIndex, endIndex);
+
+                setSearchResults(paginatedResults);
+                setSearchPagination({
+                    currentPage: page,
+                    pageSize: searchPagination.pageSize,
+                    totalItems: totalItems,
+                    totalPages: totalPages
+                });
+
+                if (filteredPosts.length === 0) {
+                    toast.info('No posts found matching your search');
+                }
+            } else {
+                setSearchResults([]);
+                setSearchPagination({
+                    currentPage: 1,
+                    pageSize: searchPagination.pageSize,
+                    totalItems: 0,
+                    totalPages: 0
+                });
+                toast.info('No posts found');
+            }
+        } catch (error) {
+            console.error('Error searching posts:', error);
+            toast.error('Failed to search posts');
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // Hàm mở modal tìm kiếm
+    const handleOpenSearchModal = () => {
+        setShowSearchModal(true);
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchPagination({
+            currentPage: 1,
+            pageSize: 10,
+            totalItems: 0,
+            totalPages: 0
+        });
+    };
+
+    // Hàm đóng modal tìm kiếm
+    const handleCloseSearchModal = () => {
+        setShowSearchModal(false);
+        setSearchQuery('');
+        setSearchResults([]);
     };
 
     // Hook quản lý các action với post
@@ -295,6 +402,7 @@ const PublicProfile = () => {
                             profileId={id}
                             isBlocked={isBlocked}
                             onToggleBlock={handleToggleBlock}
+                            onSearchPosts={handleOpenSearchModal}
                         />
                     )}
 
@@ -704,6 +812,114 @@ const PublicProfile = () => {
                                         )}
                                         {isCreatingPost ? 'Posting...' : 'Post'}
                                     </button>
+                                </div>
+                            </Modal>
+                        )}
+
+                        {/* Search Posts Modal */}
+                        {showSearchModal && (
+                            <Modal onClose={handleCloseSearchModal}>
+                                <div className="p-6">
+                                    <h2 className="text-xl font-bold mb-4">Search Posts</h2>
+
+                                    {/* Search Input */}
+                                    <div className="mb-4">
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter search keywords..."
+                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSearchPosts()}
+                                            />
+                                            <button
+                                                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${isSearching
+                                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                    }`}
+                                                onClick={() => handleSearchPosts()}
+                                                disabled={isSearching}
+                                            >
+                                                {isSearching && (
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                )}
+                                                <FontAwesomeIcon icon={faSearch} />
+                                                {isSearching ? 'Searching...' : 'Search'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Search Results */}
+                                    <div className="max-h-96 overflow-y-auto">
+                                        {searchResults.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {searchResults.map((post) => (
+                                                    <div key={post.postId} className="border border-gray-200 rounded-lg p-4">
+                                                        <div className="flex items-start gap-3 mb-3">
+                                                            <img
+                                                                src={profileData?.avatarUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                                                                alt="Profile"
+                                                                className="w-10 h-10 rounded-full object-cover"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <h6 className="font-semibold">{profileData?.firstName} {profileData?.lastName}</h6>
+                                                                <small className="text-gray-600">
+                                                                    {post.createAt ? formatPostTime(post.createAt) : "Unknown date"}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+
+                                                        {post.title && <h5 className="font-bold mb-2">{post.title}</h5>}
+                                                        <p className="text-gray-800 mb-3 line-clamp-3">{post.content}</p>
+
+                                                        {post.postMedia && post.postMedia.length > 0 && (
+                                                            <PostMediaGrid media={post.postMedia} />
+                                                        )}
+
+                                                        <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
+                                                            <span>{post.likeCount || 0} likes</span>
+                                                            <span>{post.commentCount || 0} comments</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Pagination for search results */}
+                                                {searchPagination.totalPages > 1 && (
+                                                    <div className="flex justify-center items-center gap-2 mt-4">
+                                                        <button
+                                                            className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                                                            disabled={searchPagination.currentPage === 1 || isSearching}
+                                                            onClick={() => handleSearchPosts(searchQuery, searchPagination.currentPage - 1)}
+                                                        >
+                                                            Previous
+                                                        </button>
+                                                        <span className="text-sm text-gray-600">
+                                                            Page {searchPagination.currentPage} of {searchPagination.totalPages}
+                                                        </span>
+                                                        <button
+                                                            className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                                                            disabled={searchPagination.currentPage === searchPagination.totalPages || isSearching}
+                                                            onClick={() => handleSearchPosts(searchQuery, searchPagination.currentPage + 1)}
+                                                        >
+                                                            Next
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-gray-500">
+                                                {isSearching ? 'Searching...' : 'No posts found. Try different keywords.'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Search Info */}
+                                    {searchResults.length > 0 && (
+                                        <div className="mt-4 text-sm text-gray-600 text-center">
+                                            Found {searchPagination.totalItems} posts
+                                        </div>
+                                    )}
                                 </div>
                             </Modal>
                         )}

@@ -3,6 +3,8 @@ import { Suspense } from 'react';
 import routers from '@/routers/routers'
 import CustomToastContainer from '@/components/Common/CustomToastContainer';
 import { InteractionProvider } from '@/contexts/InteractionContext.jsx';
+import { VideoCallProvider } from '@/contexts/VideoCallContext.jsx';
+import GlobalVideoCallModal from '@/components/VideoCall/GlobalVideoCallModal.jsx';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import PermissionRoute from './components/Common/PermissionRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -97,20 +99,23 @@ function App() {
 
   return (
     <AuthProvider>
-      <InteractionProvider>
-        <BrowserRouter>
-          <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
-          }>
-            <Routes>
-              {renderRoutes()}
-            </Routes>
-          </Suspense>
-          <CustomToastContainer />
-        </BrowserRouter>
-      </InteractionProvider>
+      <VideoCallProvider>
+        <InteractionProvider>
+          <BrowserRouter>
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            }>
+              <Routes>
+                {renderRoutes()}
+              </Routes>
+            </Suspense>
+            <CustomToastContainer />
+            <GlobalVideoCallModal />
+          </BrowserRouter>
+        </InteractionProvider>
+      </VideoCallProvider>
     </AuthProvider>
   )
 }

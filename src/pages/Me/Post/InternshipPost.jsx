@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEye, faEdit, faTrashAlt, faListUl, faCalendarAlt, faMapMarkerAlt, faCoins, faUsers, faFileAlt, faSpinner, faSearch, faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons';
 import useStartupPost from '@/hooks/useStartupPost';
 import { getUserId } from '@/apis/authService';
 import { formatVietnameseDate } from '@/utils/dateUtils';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const InternshipPost = () => {
     const {
@@ -50,6 +51,31 @@ const InternshipPost = () => {
         handleEditSubmit,
         loadingEdit
     } = useStartupPost();
+
+    // State cho modal xác nhận xóa position
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [positionToDelete, setPositionToDelete] = useState(null);
+
+    // Hàm xử lý khi bấm nút xóa position
+    const handleDeleteClick = (position) => {
+        setPositionToDelete(position);
+        setShowDeleteModal(true);
+    };
+
+    // Hàm xác nhận xóa position
+    const confirmDeletePosition = () => {
+        if (positionToDelete) {
+            handleDeletePosition(positionToDelete.positionId);
+            setShowDeleteModal(false);
+            setPositionToDelete(null);
+        }
+    };
+
+    // Hàm hủy xóa position
+    const cancelDeletePosition = () => {
+        setShowDeleteModal(false);
+        setPositionToDelete(null);
+    };
 
     // Format date using dateUtils
     const formatDate = (dateString) => {
@@ -352,7 +378,10 @@ const InternshipPost = () => {
                                             <button
                                                 type="button"
                                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-medium"
-                                                onClick={resetPositionForm}
+                                                onClick={() => {
+                                                    resetPositionForm();
+                                                    setShowPositionModal(false);
+                                                }}
                                             >
                                                 Cancel Edit
                                             </button>
@@ -399,14 +428,16 @@ const InternshipPost = () => {
                                                 <div className="flex space-x-2 ml-4">
                                                     <button
                                                         className="text-gray-500 hover:text-blue-600 transition p-1.5 rounded-full hover:bg-blue-50"
-                                                        onClick={() => handleEditPosition(position)}
+                                                        onClick={() => {
+                                                            handleEditPosition(position);
+                                                        }}
                                                         title="Edit"
                                                     >
                                                         <FontAwesomeIcon icon={faEdit} />
                                                     </button>
                                                     <button
                                                         className="text-gray-500 hover:text-red-600 transition p-1.5 rounded-full hover:bg-red-50"
-                                                        onClick={() => handleDeletePosition(position.positionId)}
+                                                        onClick={() => handleDeleteClick(position)}
                                                         title="Delete"
                                                     >
                                                         <FontAwesomeIcon icon={faTrashAlt} />
@@ -803,6 +834,55 @@ const InternshipPost = () => {
                     background: #a0a0a0;
                 }
             `}</style> */}
+
+            {/* Modal xác nhận xóa position */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        {/* Overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={cancelDeletePosition}></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        {/* Modal content */}
+                        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-6 pt-6 pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <FontAwesomeIcon icon={faTrashAlt} className="h-6 w-6 text-red-600" />
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                            Delete Position
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500">
+                                                Are you sure you want to delete the position "{positionToDelete?.title}"? This action cannot be undone.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                                    onClick={confirmDeletePosition}
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                                    onClick={cancelDeletePosition}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

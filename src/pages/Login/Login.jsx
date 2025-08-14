@@ -7,6 +7,9 @@ import { isAuthenticated } from "@/apis/authService";
 import { toast } from 'react-toastify';
 import Cookies from 'js-cookie';
 import { useAuth } from '@/contexts/AuthContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+
 
 const Login = () => {
 
@@ -16,6 +19,8 @@ const Login = () => {
 
     // Lấy địa chỉ từ state nếu có, nếu không thì mặc định là '/home'
     const from = location.state?.from || '/home';
+    const [showPassword, setShowPassword] = useState(false);
+
 
     useEffect(() => {
         // Kiểm tra nếu người dùng đã đăng nhập thì chuyển hướng đến trang được yêu cầu hoặc trang chủ
@@ -126,7 +131,7 @@ const Login = () => {
                                 validationSchema={validationSchema}
                                 onSubmit={handleLogin}
                             >
-                                {({ isSubmitting, setFieldTouched, submitCount, errors, touched }) => (
+                                {({ isSubmitting, setFieldTouched, errors, touched }) => (
                                     <Form>
                                         <div className="mb-4">
                                             <label htmlFor="email" className="block text-gray-700 font-semibold text-sm mb-2">
@@ -150,15 +155,25 @@ const Login = () => {
                                             <label htmlFor="password" className="block text-gray-700 font-semibold text-sm mb-2">
                                                 Password
                                             </label>
-                                            <Field
-                                                type="password"
-                                                id="password"
-                                                name="password"
-                                                placeholder="Enter your password"
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50"
-                                                onFocus={() => setFieldTouched("password", false)} // Khi người dùng chạm vào input, lỗi sẽ không hiển thị
-                                            />
-                                            {/* Hiển thị lỗi password chỉ khi submitCount > 0 và trường đã được "chạm vào" */}
+                                            <div className="relative">
+                                                <Field
+                                                    type={showPassword ? "text" : "password"}
+                                                    id="password"
+                                                    name="password"
+                                                    placeholder="Enter your password"
+                                                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50"
+                                                    onFocus={() => setFieldTouched("password", false)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"}
+                                                    title={showPassword ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"}
+                                                    onClick={() => setShowPassword((v) => !v)}
+                                                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                                >
+                                                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                                                </button>
+                                            </div>
                                             {touched.password && errors.password && (
                                                 <div className="text-red-500 text-sm mt-1">{errors.password}</div>
                                             )}

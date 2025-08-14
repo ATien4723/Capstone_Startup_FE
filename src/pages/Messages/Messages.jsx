@@ -5,7 +5,7 @@ import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import Navbar from '@/components/Navbar/Navbar';
 import useMessage from '@/hooks/useMessage';
-import useVideoCall from '@/hooks/useVideoCall';
+import { useVideoCallContext } from '@/contexts/VideoCallContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
@@ -39,28 +39,8 @@ export default function Messages() {
         handleRemoveAttachment
     } = useMessage(currentUserId);
 
-    // Sử dụng hook useVideoCall
-    const {
-        isCallModalOpen,
-        isCallActive,
-        isCallIncoming,
-        callerInfo,
-        calleeInfo,
-        isMuted,
-        isVideoOff,
-        connectionEstablished,
-
-        localVideoRef,
-        remoteVideoRef,
-
-        startVideoCall,
-        endCall,
-        // checkIncomingCall,
-        answerCall,
-        rejectCall,
-        toggleMute,
-        toggleVideo,
-    } = useVideoCall(currentUserId);
+    // Sử dụng VideoCallContext
+    const { startVideoCall } = useVideoCallContext();
 
     const [showMembersSidebar, setShowMembersSidebar] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -942,207 +922,8 @@ export default function Messages() {
                 </div>
             )}
 
-            {/* Modal cuộc gọi video */}
-            {isCallModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-                    <div className="bg-gray-900 rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col">
-                        {/* Header của modal cuộc gọi */}
-                        <div className="bg-gray-800 px-6 py-4 flex justify-between items-center">
-                            <div className="text-white font-bold flex items-center">
-                                <i className="fas fa-video mr-3"></i>
 
-                                {/* Hiển thị avatar và tên */}
-                                {isCallIncoming && callerInfo ? (
-                                    <div className="flex items-center">
-                                        <img
-                                            src={callerInfo.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
-                                            alt={callerInfo.name}
-                                            className="w-8 h-8 rounded-full mr-3"
-                                            onError={(e) => {
-                                                e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-                                            }}
-                                        />
-                                        <div>
-                                            <div className="text-sm">{callerInfo.name} is calling you</div>
-                                            <div className="text-xs text-gray-300">Video call</div>
-                                        </div>
-                                    </div>
-                                ) : calleeInfo ? (
-                                    <div className="flex items-center">
-                                        <img
-                                            src={calleeInfo.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}
-                                            alt={calleeInfo.name}
-                                            className="w-8 h-8 rounded-full mr-3"
-                                            onError={(e) => {
-                                                e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-                                            }}
-                                        />
-                                        <div>
-                                            <div className="text-sm">
-                                                {connectionEstablished
-                                                    ? `In a call with ${calleeInfo.name}`
-                                                    : `Calling ${calleeInfo.name}...`
-                                                }
-                                            </div>
-                                            <div className="text-xs text-gray-300">Video call</div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        {isCallIncoming
-                                            ? "Incoming call"
-                                            : isCallActive
-                                                ? connectionEstablished
-                                                    ? "In a call"
-                                                    : "Connecting call..."
-                                                : "Calling..."
-                                        }
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex space-x-2">
-                                <button
-                                    className={`p-2 rounded-full ${isVideoOff ? 'bg-red-500' : 'bg-gray-700'} text-white hover:opacity-80`}
-                                    title={isVideoOff ? "Turn on camera" : "Turn off camera"}
-                                    onClick={toggleVideo}
-                                    disabled={!isCallActive}
-                                >
-                                    <i className={`fas ${isVideoOff ? 'fa-video-slash' : 'fa-video'}`}></i>
-                                </button>
-                                <button
-                                    className={`p-2 rounded-full ${isMuted ? 'bg-red-500' : 'bg-gray-700'} text-white hover:opacity-80`}
-                                    title={isMuted ? "Turn on microphone" : "Turn off microphone"}
-                                    onClick={toggleMute}
-                                    disabled={!isCallActive}
-                                >
-                                    <i className={`fas ${isMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
-                                </button>
-                                <button
-                                    className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
-                                    title="End call"
-                                    onClick={endCall}
-                                >
-                                    <i className="fas fa-phone-slash"></i>
-                                </button>
-                            </div>
-                        </div>
 
-                        {/* Nội dung modal cuộc gọi */}
-                        <div className="flex-1 flex flex-col md:flex-row">
-                            {/* Khu vực hiển thị video */}
-                            <div className="flex-1 relative">
-                                {/* Video người nhận */}
-                                <div className="h-full bg-gray-800 flex items-center justify-center">
-                                    {connectionEstablished ? (
-                                        <video
-                                            ref={remoteVideoRef}
-                                            className="h-full w-full object-cover"
-                                            autoPlay
-                                            playsInline
-                                        />
-                                    ) : (
-                                        <div className="text-center p-6">
-                                            {/* Avatar người gọi/người nhận */}
-                                            <div className="h-24 w-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-gray-600">
-                                                {isCallIncoming && callerInfo?.avatarUrl ? (
-                                                    <img
-                                                        src={callerInfo.avatarUrl}
-                                                        alt={callerInfo.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            e.target.nextSibling.style.display = 'flex';
-                                                        }}
-                                                    />
-                                                ) : calleeInfo?.avatarUrl ? (
-                                                    <img
-                                                        src={calleeInfo.avatarUrl}
-                                                        alt={calleeInfo.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            e.target.nextSibling.style.display = 'flex';
-                                                        }}
-                                                    />
-                                                ) : null}
-
-                                                {/* Fallback icon */}
-                                                <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                                                    <i className="fas fa-user text-4xl text-gray-400"></i>
-                                                </div>
-                                            </div>
-
-                                            {isCallIncoming ? (
-                                                <div>
-                                                    <h3 className="text-white text-xl font-medium">
-                                                        {callerInfo?.name || "Someone"} is calling you
-                                                        {/* Tien dz test cuoc goi den hihihi */}
-                                                    </h3>
-                                                    <div className="flex justify-center mt-6 space-x-4">
-                                                        <button
-                                                            className="px-6 py-2 bg-red-500 rounded-full text-white hover:bg-red-600"
-                                                            onClick={rejectCall}
-                                                        >
-                                                            <i className="fas fa-phone-slash mr-2"></i>
-                                                            Decline
-                                                        </button>
-                                                        <button
-                                                            className="px-6 py-2 bg-green-500 rounded-full text-white hover:bg-green-600"
-                                                            onClick={() => {
-                                                                answerCall();
-                                                            }}
-                                                        >
-                                                            <i className="fas fa-phone mr-2"></i>
-                                                            Answer
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ) : isCallActive ? (
-                                                <div>
-                                                    <h3 className="text-white text-xl font-medium mb-3">
-                                                        {connectionEstablished
-                                                            ? `In a call with ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
-                                                            : `Connecting to ${calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}`
-                                                        }
-                                                    </h3>
-                                                    {!connectionEstablished && (
-                                                        <div className="flex items-center justify-center">
-                                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                                                            <span className="ml-3 text-white">Connecting...</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <h3 className="text-white text-xl font-medium mb-3">
-                                                        Calling{" "}
-                                                        {calleeInfo?.name || chatRooms.find(r => r.chatRoomId === selectedChatRoom)?.targetName || "..."}
-                                                    </h3>
-                                                    <div className="flex items-center justify-center">
-                                                        <div className="animate-pulse">
-                                                            <i className="fas fa-phone text-white text-2xl"></i>
-                                                        </div>
-                                                        <span className="ml-3 text-white">Calling...</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="absolute bottom-4 right-4 w-1/4 aspect-video bg-gray-900 rounded-lg overflow-hidden shadow-lg border-2 border-gray-700">
-                                    <video
-                                        ref={localVideoRef}
-                                        className="h-full w-full object-cover"
-                                        autoPlay
-                                        muted
-                                        playsInline
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 } 
