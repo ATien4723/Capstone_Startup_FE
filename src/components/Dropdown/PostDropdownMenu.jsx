@@ -70,7 +70,7 @@ const PostDropdownMenu = ({
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faEdit} className="text-blue-500" />
-                                Chỉnh sửa bài viết
+                                Edit Post
                             </button>
                             <button
                                 onClick={() => {
@@ -80,7 +80,7 @@ const PostDropdownMenu = ({
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faTrash} className="text-red-500" />
-                                Xóa bài viết
+                                Delete Post
                             </button>
                         </div>
                     )}
@@ -94,7 +94,7 @@ const PostDropdownMenu = ({
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                         >
                             <FontAwesomeIcon icon={faEyeSlash} className="text-gray-500" />
-                            Ẩn bài viết này
+                            Hide Post
                         </button>
                     )}
 
@@ -107,7 +107,7 @@ const PostDropdownMenu = ({
                             }}
                         >
                             <FontAwesomeIcon icon={faShareSquare} className="text-green-500" />
-                            Chia sẻ bài viết
+                            Share Post
                         </button>
                     </div>
                 </div>

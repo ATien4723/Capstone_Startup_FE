@@ -730,14 +730,18 @@ export const useStartupPost = () => {
     };
 
     // Xử lý cập nhật bài viết
-    const handleUpdatePost = async (postId, content) => {
-        if (!content.trim()) {
-            toast.error('Post content cannot be empty');
-            return false;
-        }
-
+    const handleUpdatePost = async (postId, content, originalPost = null) => {
         try {
-            const updatePostDTO = { content };
+            // Cho phép content null hoặc empty
+            const finalContent = content || ''; // Chuyển null/undefined thành empty string
+
+            // Bao gồm cả title và content để tránh lỗi backend
+            const updatePostDTO = {
+                content: finalContent,
+                title: originalPost?.title || '' // Giữ nguyên title cũ hoặc để trống nếu không có
+            };
+
+            console.log('Updating startup post with data:', updatePostDTO);
             await updatePost(postId, updatePostDTO);
 
             // Refresh posts sau khi cập nhật
@@ -747,6 +751,7 @@ export const useStartupPost = () => {
             return true;
         } catch (error) {
             console.error('Error updating post:', error);
+            console.error('Error details:', error.response?.data);
             toast.error('Unable to update the post. Please try again later.');
             return false;
         }

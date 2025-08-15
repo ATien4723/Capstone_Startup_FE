@@ -20,7 +20,7 @@ const Startups = () => {
 
     // Pagination states for Featured Startups
     const [featuredCurrentPage, setFeaturedCurrentPage] = useState(1);
-    const [featuredItemsPerPage] = useState(6); // 6 items per page cho featured (2 rows x 3 cols)
+    const [featuredItemsPerPage] = useState(1); // 1 item per page để test phân trang
 
     // Arrow navigation states for All Startups
     const [allCurrentIndex, setAllCurrentIndex] = useState(0);
@@ -504,8 +504,18 @@ const Startups = () => {
                     </div>
                 )}
 
-                {/* Featured Startups Pagination - Moved to bottom */}
-                {featuredTotalPages > 1 && (
+                {/* Debug Info - Remove this after checking */}
+                <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+                    <p><strong>Debug Info:</strong></p>
+                    <p>Total Featured Startups: {featuredTotalItems}</p>
+                    <p>Items Per Page: {featuredItemsPerPage}</p>
+                    <p>Total Pages: {featuredTotalPages}</p>
+                    <p>Current Page: {featuredCurrentPage}</p>
+                    <p>All Startups Filtered Count: {allStartupsFiltered.length}</p>
+                </div>
+
+                {/* Featured Startups Pagination - Always show if there are startups */}
+                {featuredTotalItems > 0 && (
                     <nav className="mt-8">
                         <div className="flex justify-center items-center space-x-2">
                             {/* Previous Button */}

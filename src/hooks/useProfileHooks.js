@@ -516,14 +516,25 @@ export const usePostActions = (accountId, refreshPosts) => {
         if (!editingPost) return false;
 
         try {
-            const content = editedPostContent || editingPost.content;
+            // Sử dụng editedPostContent nếu có, không fallback về content cũ
+            const content = editedPostContent !== null && editedPostContent !== undefined
+                ? editedPostContent
+                : editingPost.content;
 
-            if (!content.trim()) {
-                toast.error('Post content cannot be empty');
-                return false;
-            }
+            // console.log('🔄 Current editedPostContent:', `"${editedPostContent}"`);
+            // console.log('🔄 Original post content:', `"${editingPost.content}"`);
+            // console.log('🔄 Final content to update:', `"${content}"`);
 
-            const updatePostDTO = { content };
+            // Cho phép content null hoặc empty
+            const finalContent = content || ''; // Chuyển null/undefined thành empty string
+
+            // Bao gồm cả title và content để tránh lỗi backend
+            const updatePostDTO = {
+                content: finalContent,
+                title: editingPost.title || '' // Giữ nguyên title cũ hoặc để trống nếu không có
+            };
+
+            console.log('🔄 Updating post with data:', updatePostDTO);
             await updatePost(editingPost.postId, updatePostDTO);
 
             // Refresh posts sau khi cập nhật
@@ -532,7 +543,8 @@ export const usePostActions = (accountId, refreshPosts) => {
             toast.success('Post updated successfully');
             return true;
         } catch (error) {
-            console.error('Error updating post:', error);
+            console.error('❌ Error updating post:', error);
+            console.error('❌ Error details:', error.response?.data);
             toast.error('Unable to update the post. Please try again later.');
             return false;
         } finally {

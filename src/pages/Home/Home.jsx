@@ -300,7 +300,7 @@ const Home = () => {
                                         <FontAwesomeIcon icon={faEdit} className="mr-2 text-blue-500" />
                                         About Me
                                     </h6>
-                                    <p className="text-gray-600 text-sm leading-relaxed">
+                                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 break-words">
                                         {profileData?.introTitle || "Share something about yourself..."}
                                     </p>
                                 </div>
@@ -343,7 +343,7 @@ const Home = () => {
                                                         {suggestion.fullName}
                                                     </Link>
                                                 </div>
-                                                <div className="text-gray-600 text-sm">{suggestion.position || "User"}</div>
+                                                <div className="text-gray-600 text-sm line-clamp-2">{suggestion.position || "User"}</div>
                                             </div>
                                             <button
                                                 className={`transition-all p-1.5 rounded-full flex items-center justify-center ${isFollowing(suggestion.accountId)
@@ -367,7 +367,7 @@ const Home = () => {
                                     <div className="text-center py-3 text-sm text-gray-500">No suggested connections</div>
                                 )}
 
-                                <Link to="/network" className="block text-center mt-3 text-blue-600 text-sm hover:underline">
+                                <Link to="/mynetwork" className="block text-center mt-3 text-blue-600 text-sm hover:underline">
                                     See more
                                 </Link>
                             </div>

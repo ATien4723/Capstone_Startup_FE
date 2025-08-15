@@ -116,7 +116,7 @@ export const isPostLiked = async (likeData) => {
 export const updatePostComment = async (commentData) => {
     try {
         const response = await axiosClient.put(
-            `api/post/update-post-comment`, {
+            `api/Post/update-post-comment`, {
             postcommentId: commentData.postcommentId,
             content: commentData.content
         }
@@ -216,7 +216,7 @@ export const updatePost = async (postId, updatePostDTO) => {
         const response = await axiosClient.put(`api/post/update-post/${postId}`, updatePostDTO);
         return response.data;
     } catch (error) {
-        console.error('Error updating post:', error);
+
         throw error;
     }
 };
@@ -276,7 +276,7 @@ export const sharePost = async (shareData) => {
 // Lấy bài viết theo ID
 export const getPostById = async (postId) => {
     try {
-        const response = await axiosClient.get(`api/post/post/${postId}`);
+        const response = await axiosClient.get(`api/post/sharepost/${postId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy bài viết theo ID:', error);

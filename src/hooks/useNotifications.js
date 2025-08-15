@@ -28,7 +28,8 @@ export default function useNotifications(currentUserId, isAuthenticated) {
         const initializeSignalR = async () => {
             signalRService.registerCallbacks({
                 onReceiveNotification: async (notification) => {
-                    const userId = notification.accountId || notification.senderId;
+                    // Lấy ID người gửi từ senderID thay vì accountId (người nhận)
+                    const userId = notification.senderID || notification.senderid || notification.senderId || notification.accountId;
                     if (userId) {
                         try {
                             const userInfo = await getAccountInfo(userId);
@@ -105,7 +106,8 @@ export default function useNotifications(currentUserId, isAuthenticated) {
                     } else {
                         processedItem = { ...item, id: `temp-id-${Date.now()}-${idx}` };
                     }
-                    const userId = processedItem.accountId || processedItem.senderId;
+                    // Lấy ID người gửi từ senderID thay vì accountId (người nhận)
+                    const userId = processedItem.senderID || processedItem.senderid || processedItem.senderId || processedItem.accountId;
                     if (userId) {
                         try {
                             const userInfo = await getAccountInfo(userId);

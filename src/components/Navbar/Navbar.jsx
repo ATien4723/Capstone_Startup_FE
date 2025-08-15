@@ -268,10 +268,10 @@ export default function Navbar() {
 
     // Thay đổi phần render thông báo để sử dụng hàm handleNotificationClick
     const renderNotification = (notification, index) => {
-        // Lấy userId từ accountId hoặc senderID (tùy API trả về)
-        const userId = notification.accountId || notification.senderID;
-        // Lấy thông tin người gửi nếu có, ưu tiên userInfo đính kèm, nếu không thì lấy từ userInfoMap
-        const senderInfo = notification.userInfo || (userId ? userInfoMap[userId] : null);
+        const userId = notification.senderID || notification.senderid || notification.senderId;
+        // Lấy thông tin người gửi từ userInfoMap
+        const senderInfo = userId ? userInfoMap[userId] : null;
+
         // Tạo key duy nhất cho mỗi thông báo (ưu tiên notificationId)
         const uniqueKey = notification.notificationId ? `notification-${notification.notificationId}` : `notification-index-${index}`;
 
@@ -297,7 +297,7 @@ export default function Navbar() {
                     {/* Hiển thị tên người gửi (nếu có), nếu là SYSTEM thì ghi 'Hệ thống', còn lại là 'Người dùng' */}
                     <p className="text-gray-800 text-sm">
                         <span className="font-semibold">
-                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'System' : 'User')}
+                            {senderInfo ? `${senderInfo.firstName} ${senderInfo.lastName}` : (notification.type?.toLowerCase() === 'system' ? 'System' : 'Unknown User')}
                         </span>{' '}
                         {/* Nội dung thông báo */}
                         {notification.content || notification.message}

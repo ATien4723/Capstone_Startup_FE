@@ -230,6 +230,9 @@ const PublicProfile = () => {
     const [showLikesModal, setShowLikesModal] = useState(false);
     const [currentPostId, setCurrentPostId] = useState(null);
     const [showShareModal, setShowShareModal] = useState(false);
+
+    // State cho About me expand/collapse
+    const [isAboutExpanded, setIsAboutExpanded] = useState(false);
     const [postToShare, setPostToShare] = useState(null);
 
     // State cho chức năng tìm kiếm bài viết
@@ -341,9 +344,9 @@ const PublicProfile = () => {
 
     // destructuring các biến cần thiết từ postActions
     const {
-        showPostModal, setShowPostModal, newPost, setNewPost, postError, isCreatingPost,
+        showPostModal, setShowPostModal, newPost, setNewPost, postError, setPostError, isCreatingPost,
         editingPost, setEditingPost, editedPostContent, setEditedPostContent,
-        showDeleteConfirmModal, setShowDeleteConfirmModal, postToDelete, openDropdownPostId,
+        showDeleteConfirmModal, setShowDeleteConfirmModal, postToDelete, setPostToDelete, openDropdownPostId,
         handleCreatePost, handleFileUpload, toggleDropdown, confirmDeletePost,
         handleDeletePost, handleUpdatePost, handleHidePost
     } = postActions;
@@ -570,7 +573,32 @@ const PublicProfile = () => {
                                     <div className="flex justify-between items-center mb-3">
                                         <h6 className="font-semibold">About Me</h6>
                                     </div>
-                                    <p className="text-gray-600">{profileData.introTitle}</p>
+                                    {profileData.introTitle && (
+                                        <div className="text-gray-600">
+                                            {(() => {
+                                                const maxLength = 100; // Giới hạn ký tự
+                                                const text = profileData.introTitle;
+
+                                                if (text.length <= maxLength) {
+                                                    return <p className="break-words whitespace-pre-wrap">{text}</p>;
+                                                }
+
+                                                return (
+                                                    <div>
+                                                        <p className="break-words whitespace-pre-wrap">
+                                                            {isAboutExpanded ? text : `${text.substring(0, maxLength)}...`}
+                                                        </p>
+                                                        <button
+                                                            onClick={() => setIsAboutExpanded(!isAboutExpanded)}
+                                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-1 transition-colors"
+                                                        >
+                                                            {isAboutExpanded ? 'See less' : 'See more'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
                                 </div>
                                 {/* Update Bio Button and Modal */}
                                 {currentUserId === id && editBio && (
@@ -953,7 +981,12 @@ const PublicProfile = () => {
                                                     currentUserId={currentUserId}
                                                     isOpen={openDropdownPostId === post.postId}
                                                     onToggle={(isOpen) => toggleDropdown(post.postId, isOpen)}
-                                                    onEdit={setEditingPost}
+                                                    onEdit={(post) => {
+                                                        console.log('🔄 Starting edit for post:', post);
+                                                        setEditingPost(post);
+                                                        setEditedPostContent(post.content || ''); // Khởi tạo với nội dung hiện tại
+                                                        console.log('🔄 Initialized editedPostContent with:', post.content);
+                                                    }}
                                                     onDelete={confirmDeletePost}
                                                     onHide={handleHidePost}
                                                     onShare={handleSharePost}

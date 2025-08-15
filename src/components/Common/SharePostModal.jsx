@@ -23,7 +23,7 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
             const currentUserId = getUserId();
 
             if (!currentUserId) {
-                toast.error('Bạn cần đăng nhập để chia sẻ bài viết');
+                toast.error('You need to login to share this post');
                 return;
             }
 
@@ -34,7 +34,7 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
             };
 
             const response = await sharePost(shareData);
-            toast.success('Chia sẻ bài viết thành công!');
+            toast.success('Post shared successfully!');
             setShareContent('');
             onClose();
 
@@ -43,7 +43,7 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
                 onShareSuccess();
             }
         } catch (error) {
-            toast.error('Có lỗi xảy ra khi chia sẻ bài viết');
+            toast.error('An error occurred while sharing the post');
             console.error('Lỗi chia sẻ bài viết:', error);
         } finally {
             setIsSharing(false);
@@ -62,7 +62,7 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
 
                 <div className="flex items-center gap-3 pb-4 border-b">
                     <FontAwesomeIcon icon={faShareSquare} className="text-blue-600" />
-                    <h3 className="text-xl font-semibold">Chia sẻ bài viết</h3>
+                    <h3 className="text-xl font-semibold">Share Post</h3>
                 </div>
 
                 <div className="py-4">
@@ -159,14 +159,14 @@ const SharePostModal = ({ isOpen, onClose, post, profileData, onShareSuccess }) 
                         onClick={onClose}
                         disabled={isSharing}
                     >
-                        Hủy
+                        Cancel
                     </button>
                     <button
                         className={`px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 ${isSharing ? 'opacity-70 cursor-not-allowed' : ''}`}
                         onClick={handleSharePost}
                         disabled={isSharing}
                     >
-                        {isSharing ? 'Đang chia sẻ...' : 'Chia sẻ ngay'}
+                        {isSharing ? 'Sharing...' : 'Share'}
                     </button>
                 </div>
             </div>
