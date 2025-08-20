@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useVideoCallContext } from '@/contexts/VideoCallContext';
 
 const GlobalVideoCallModal = () => {
@@ -19,6 +19,32 @@ const GlobalVideoCallModal = () => {
         toggleMute,
         toggleVideo,
     } = useVideoCallContext();
+
+    // State để theo dõi xem local video đã có stream chưa
+    const [hasLocalStream, setHasLocalStream] = useState(false);
+
+    // Theo dõi khi localVideoRef có stream
+    useEffect(() => {
+        const checkLocalStream = () => {
+            if (localVideoRef.current && localVideoRef.current.srcObject) {
+                const stream = localVideoRef.current.srcObject;
+                const videoTracks = stream.getVideoTracks();
+                if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
+                    setHasLocalStream(true);
+                } else {
+                    setHasLocalStream(false);
+                }
+            } else {
+                setHasLocalStream(false);
+            }
+        };
+
+        checkLocalStream();
+        const interval = setInterval(checkLocalStream, 500);
+        return () => clearInterval(interval);
+    }, [localVideoRef, isCallModalOpen]);
+
+
 
     // Không hiển thị modal nếu không có cuộc gọi
     if (!isCallModalOpen) return null;
@@ -76,94 +102,97 @@ const GlobalVideoCallModal = () => {
                 <div className="flex-1 flex flex-col md:flex-row min-h-[400px]">
                     {/* Khu vực hiển thị video */}
                     <div className="flex-1 relative">
-                        {/* Video người nhận */}
+                        {/* Video người nhận - luôn render để ref có thể được gán */}
                         <div className="h-full bg-gray-800 flex items-center justify-center">
-                            {connectionEstablished ? (
-                                <video
-                                    ref={remoteVideoRef}
-                                    className="h-full w-full object-cover"
-                                    autoPlay
-                                    playsInline
-                                />
-                            ) : (
-                                <div className="text-center p-6">
+                            <video
+                                ref={remoteVideoRef}
+                                className={`h-full w-full object-cover ${connectionEstablished ? 'block' : 'hidden'}`}
+                                autoPlay
+                                playsInline
+                            />
+
+                            {/* Overlay hiển thị khi chưa kết nối */}
+                            {!connectionEstablished && (
+                                <div className="absolute inset-0 flex items-center justify-center text-center p-6">
                                     {/* Avatar người gọi/người nhận */}
-                                    <div className="h-24 w-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-gray-600">
-                                        {isCallIncoming && callerInfo?.avatarUrl ? (
-                                            <img
-                                                src={callerInfo.avatarUrl}
-                                                alt={callerInfo.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.nextSibling.style.display = 'flex';
-                                                }}
-                                            />
-                                        ) : calleeInfo?.avatarUrl ? (
-                                            <img
-                                                src={calleeInfo.avatarUrl}
-                                                alt={calleeInfo.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.nextSibling.style.display = 'flex';
-                                                }}
-                                            />
-                                        ) : null}
-                                        <div className="w-full h-full bg-gray-600 flex items-center justify-center" style={{ display: 'none' }}>
-                                            <i className="fas fa-user text-gray-400 text-2xl"></i>
+                                    <div className="text-center">
+                                        <div className="h-24 w-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-gray-600">
+                                            {isCallIncoming && callerInfo?.avatarUrl ? (
+                                                <img
+                                                    src={callerInfo.avatarUrl}
+                                                    alt={callerInfo.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : calleeInfo?.avatarUrl ? (
+                                                <img
+                                                    src={calleeInfo.avatarUrl}
+                                                    alt={calleeInfo.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div className="w-full h-full bg-gray-600 flex items-center justify-center" style={{ display: 'none' }}>
+                                                <i className="fas fa-user text-gray-400 text-2xl"></i>
+                                            </div>
                                         </div>
+
+                                        {/* Trạng thái cuộc gọi */}
+                                        {isCallIncoming ? (
+                                            <div>
+                                                <h3 className="text-white text-xl font-medium mb-6">
+                                                    {callerInfo?.name || "Unknown"} is calling...
+                                                </h3>
+                                                <div className="flex items-center justify-center mb-6">
+                                                    <div className="animate-bounce">
+                                                        <i className="fas fa-phone text-green-400 text-2xl"></i>
+                                                    </div>
+                                                    <span className="ml-3 text-white">Incoming call</span>
+                                                </div>
+
+                                                {/* Nút trả lời và từ chối ở giữa */}
+                                                <div className="flex justify-center space-x-6">
+                                                    <button
+                                                        className="w-16 h-16 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center shadow-lg transition-all duration-200"
+                                                        title="Reject call"
+                                                        onClick={rejectCall}
+                                                    >
+                                                        <i className="fas fa-phone-slash text-xl"></i>
+                                                    </button>
+                                                    <button
+                                                        className="w-16 h-16 rounded-full bg-green-500 text-white hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200"
+                                                        title="Answer call"
+                                                        onClick={answerCall}
+                                                    >
+                                                        <i className="fas fa-phone text-xl"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <h3 className="text-white text-xl font-medium mb-3">
+                                                    Calling {calleeInfo?.name || "Unknown"}
+                                                </h3>
+                                                <div className="flex items-center justify-center">
+                                                    <div className="animate-pulse">
+                                                        <i className="fas fa-phone text-white text-2xl"></i>
+                                                    </div>
+                                                    <span className="ml-3 text-white">Calling...</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {/* Trạng thái cuộc gọi */}
-                                    {isCallIncoming ? (
-                                        <div>
-                                            <h3 className="text-white text-xl font-medium mb-6">
-                                                {callerInfo?.name || "Unknown"} is calling...
-                                            </h3>
-                                            <div className="flex items-center justify-center mb-6">
-                                                <div className="animate-bounce">
-                                                    <i className="fas fa-phone text-green-400 text-2xl"></i>
-                                                </div>
-                                                <span className="ml-3 text-white">Incoming call</span>
-                                            </div>
-
-                                            {/* Nút trả lời và từ chối ở giữa */}
-                                            <div className="flex justify-center space-x-6">
-                                                <button
-                                                    className="w-16 h-16 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center shadow-lg transition-all duration-200"
-                                                    title="Reject call"
-                                                    onClick={rejectCall}
-                                                >
-                                                    <i className="fas fa-phone-slash text-xl"></i>
-                                                </button>
-                                                <button
-                                                    className="w-16 h-16 rounded-full bg-green-500 text-white hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200"
-                                                    title="Answer call"
-                                                    onClick={answerCall}
-                                                >
-                                                    <i className="fas fa-phone text-xl"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <h3 className="text-white text-xl font-medium mb-3">
-                                                Calling {calleeInfo?.name || "Unknown"}
-                                            </h3>
-                                            <div className="flex items-center justify-center">
-                                                <div className="animate-pulse">
-                                                    <i className="fas fa-phone text-white text-2xl"></i>
-                                                </div>
-                                                <span className="ml-3 text-white">Calling...</span>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
 
-                        {/* Video local (góc dưới bên phải) */}
+                        {/* Video local (góc dưới bên phải) - luôn hiển thị khi modal mở */}
                         <div className="absolute bottom-4 right-4 w-1/4 aspect-video bg-gray-900 rounded-lg overflow-hidden shadow-lg border-2 border-gray-700">
                             <video
                                 ref={localVideoRef}
@@ -171,7 +200,19 @@ const GlobalVideoCallModal = () => {
                                 autoPlay
                                 muted
                                 playsInline
+                                onLoadedMetadata={() => setHasLocalStream(true)}
+                                onCanPlay={() => setHasLocalStream(true)}
+                                onLoadStart={() => setHasLocalStream(true)}
                             />
+                            {/* Placeholder hiển thị khi chưa có stream hoặc video bị tắt */}
+                            {(!hasLocalStream || isVideoOff) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white text-xs">
+                                    <div className="text-center">
+                                        <i className={`fas ${isVideoOff ? 'fa-video-slash' : 'fa-video'} text-lg mb-1`}></i>
+                                        <div>{isVideoOff ? 'Camera Off' : 'Camera'}</div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

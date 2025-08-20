@@ -249,13 +249,13 @@ export const useStartupPost = () => {
                     totalPages: response.data.totalPages || 1
                 });
             } else {
-                console.error('Cấu trúc dữ liệu không như mong đợi:', response);
+                console.error('Unexpected data structure:', response);
                 setPosts([]);
                 toast.info('No posts found');
             }
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm bài viết:', error);
-            toast.error('Không thể tìm kiếm bài viết');
+            console.error('Error searching posts:', error);
+            toast.error('Unable to search posts');
         } finally {
             setIsSearchingPosts(false);
         }

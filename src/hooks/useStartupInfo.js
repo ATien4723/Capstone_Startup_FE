@@ -7,7 +7,8 @@ import {
     createStartupPitching,
     updateStartupPitching,
     deleteStartupPitching,
-    getStartupMembers
+    getStartupMembers,
+    getStage
 } from '@/apis/startupService';
 import { getUserId } from '@/apis/authService';
 import { toast } from 'react-toastify';
@@ -18,6 +19,7 @@ const useStartupInfo = () => {
     const [error, setError] = useState(null);
     const [accountId, setAccountId] = useState(null);
     const [startupId, setStartupId] = useState(null);
+    const [stages, setStages] = useState([]);
     const [currentUserRole, setCurrentUserRole] = useState(null);
     const [isFounder, setIsFounder] = useState(false);
 
@@ -98,6 +100,26 @@ const useStartupInfo = () => {
         };
 
         fetchAccountId();
+    }, []);
+
+    // Lấy danh sách stages
+    useEffect(() => {
+        const fetchStages = async () => {
+            try {
+                const response = await getStage();
+                if (Array.isArray(response)) {
+                    setStages(response);
+                } else {
+                    console.error('Invalid stages response:', response);
+                    setStages([]);
+                }
+            } catch (err) {
+                console.error('Error fetching stages:', err);
+                setStages([]);
+            }
+        };
+
+        fetchStages();
     }, []);
 
     // Lấy startupId từ accountId
@@ -482,6 +504,8 @@ const useStartupInfo = () => {
         setIsEditing,
         // Thêm thông tin role
         isFounder,
+        // Thêm danh sách stages
+        stages,
         // Thêm các trường liên quan đến pitching
         pitchings,
         loadingPitchings,

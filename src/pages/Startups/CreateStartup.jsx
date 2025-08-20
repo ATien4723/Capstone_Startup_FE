@@ -321,18 +321,18 @@ export default function CreateStartup() {
                                 </select>
                                 {formik.touched.StageId && formik.errors.StageId && <p className="text-red-500 text-sm mt-1">{formik.errors.StageId}</p>}
                             </div>
-                            {/* <div>
-                                <label className="block text-gray-700 font-semibold mb-1">Creator Account ID</label>
+                            <div>
+                                {/* <label className="block text-gray-700 font-semibold mb-1">Creator Account ID</label> */}
                                 <input
                                     type="number"
                                     name="CreatorAccountId"
                                     value={formik.values.CreatorAccountId}
                                     readOnly
-                                    className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CreatorAccountId && formik.errors.CreatorAccountId ? 'border-red-500' : 'border-blue-200'}`}
+                                    className={`rounded-xl hidden border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CreatorAccountId && formik.errors.CreatorAccountId ? 'border-red-500' : 'border-blue-200'}`}
                                     placeholder="ID người tạo"
                                 />
                                 {formik.touched.CreatorAccountId && formik.errors.CreatorAccountId && <p className="text-red-500 text-sm mt-1">{formik.errors.CreatorAccountId}</p>}
-                            </div> */}
+                            </div>
                             <div className="md:col-span-2">
                                 <label className="block text-gray-700 font-semibold mb-1">Invite Account IDs</label>
                                 {!showInviteInput ? (
@@ -481,22 +481,58 @@ export default function CreateStartup() {
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-gray-700 font-semibold mb-1">Categories</label>
-                                <select
-                                    name="CategoryIds"
-                                    onChange={e => {
-                                        formik.setFieldValue('CategoryIds', [Number(e.target.value)]);
-                                    }}
-                                    onBlur={formik.handleBlur}
-                                    value={formik.values.CategoryIds[0] || ''}
-                                    className={`rounded-xl border-2 w-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${formik.touched.CategoryIds && formik.errors.CategoryIds ? 'border-red-500' : 'border-blue-200'}`}
-                                >
-                                    <option value="">Select category</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.category_ID} value={cat.category_ID}>
-                                            {cat.category_Name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className={`rounded-xl border-2 p-4 max-h-48 overflow-y-auto ${formik.touched.CategoryIds && formik.errors.CategoryIds ? 'border-red-500' : 'border-blue-200'}`}>
+                                    {categories.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {categories.map(cat => (
+                                                <label key={cat.category_ID} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formik.values.CategoryIds.includes(cat.category_ID)}
+                                                        onChange={(e) => {
+                                                            const currentCategories = formik.values.CategoryIds;
+                                                            if (e.target.checked) {
+                                                                // Thêm category vào array
+                                                                formik.setFieldValue('CategoryIds', [...currentCategories, cat.category_ID]);
+                                                            } else {
+                                                                // Xóa category khỏi array
+                                                                formik.setFieldValue('CategoryIds', currentCategories.filter(id => id !== cat.category_ID));
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                    />
+                                                    <span className="text-gray-700">{cat.category_Name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500">Loading categories...</p>
+                                    )}
+                                </div>
+                                {formik.values.CategoryIds.length > 0 && (
+                                    <div className="mt-2">
+                                        <p className="text-sm text-gray-600">Selected categories:</p>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            {formik.values.CategoryIds.map(categoryId => {
+                                                const category = categories.find(cat => cat.category_ID === categoryId);
+                                                return category ? (
+                                                    <span key={categoryId} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        {category.category_Name}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                formik.setFieldValue('CategoryIds', formik.values.CategoryIds.filter(id => id !== categoryId));
+                                                            }}
+                                                            className="ml-1 text-blue-600 hover:text-blue-800"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
+                                                        </button>
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                                 {formik.touched.CategoryIds && formik.errors.CategoryIds && (
                                     <p className="text-red-500 text-sm mt-1">{formik.errors.CategoryIds}</p>
                                 )}

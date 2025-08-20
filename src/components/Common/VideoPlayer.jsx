@@ -47,7 +47,7 @@ const VideoPlayer = ({ videoUrl, onClose }) => {
                         onError={() => setLoading(false)}
                     >
                         <source src={videoUrl} type="video/mp4" />
-                        Trình duyệt của bạn không hỗ trợ thẻ video.
+                        Your browser does not support the video tag.
                     </video>
                 </div>
             </div>

@@ -72,7 +72,7 @@ export default function useVideoCall(currentUserId) {
         const callerName = caller.fullName || data.from?.fullName || "Người gọi";
 
         // Hiển thị thông báo có cuộc gọi đến
-        toast.info(`${callerName} đang gọi cho bạn`, {
+        toast.info(`${callerName} calling...`, {
             autoClose: 10000,
             position: "top-right"
         });
@@ -125,7 +125,7 @@ export default function useVideoCall(currentUserId) {
                 // console.log("Xử lý offer ngay lập tức với peer hiện tại");
                 peerRef.current.signal(offer);
             } catch (error) {
-                console.error("Lỗi khi xử lý offer:", error);
+                console.error("Error processing offer:", error);
             }
         } else {
             // Lưu offer để xử lý sau khi peer được tạo
@@ -145,7 +145,7 @@ export default function useVideoCall(currentUserId) {
             try {
                 peerRef.current.signal(answer);
             } catch (error) {
-                console.error("Lỗi khi xử lý answer:", error);
+                console.error("Error processing answer:", error);
             }
         }
     };
@@ -159,7 +159,7 @@ export default function useVideoCall(currentUserId) {
             try {
                 peerRef.current.signal({ candidate: candidate });
             } catch (error) {
-                console.error("Lỗi khi xử lý ICE candidate:", error);
+                console.error("Error processing ICE candidate:", error);
             }
         }
     };
@@ -167,36 +167,56 @@ export default function useVideoCall(currentUserId) {
     // Xử lý khi cuộc gọi kết thúc
     const handleCallEnded = (data) => {
         // console.log("Nhận thông báo cuộc gọi kết thúc:", data);
-        toast.info("Cuộc gọi đã kết thúc");
+        // toast.info("Cuộc gọi đã kết thúc");
         endCall();
     };
 
     // Hàm bắt đầu cuộc gọi video
     const startVideoCall = async (chatRoomId, targetName, targetInfo = null) => {
         try {
+            // Reset trạng thái audio/video về mặc định khi bắt đầu cuộc gọi mới
+            setIsMuted(false);
+            setIsVideoOff(false);
+
             // Hiển thị modal cuộc gọi
             setIsCallModalOpen(true);
 
             // Đảm bảo kết nối CallHub đã được thiết lập
             const connectionId = await callHubService.initConnection();
             if (!connectionId) {
-                throw new Error("Không thể kết nối đến CallHub");
+                throw new Error("Unable to connect to CallHub");
             }
             // console.log("Kết nối CallHub thành công, connectionId:", connectionId);
 
             // Mở stream video và âm thanh
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
             });
 
             // Lưu stream để có thể đóng sau này
             streamRef.current = stream;
 
-            // Hiển thị video local
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-            }
+            // Hiển thị video local với retry logic
+            const assignLocalStreamWithRetry = (stream, maxRetries = 5, delay = 200) => {
+                const tryAssign = (attempt) => {
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = stream;
+                    } else if (attempt < maxRetries) {
+                        setTimeout(() => tryAssign(attempt + 1), delay);
+                    }
+                };
+                tryAssign(1);
+            };
+
+            assignLocalStreamWithRetry(stream);
 
             // Gọi API để bắt đầu cuộc gọi và gửi connectionId của mình
             const callResponse = await startCallApi(chatRoomId, getUserId(), connectionId);
@@ -314,30 +334,20 @@ export default function useVideoCall(currentUserId) {
                         await callHubService.sendIceCandidate(target, data.candidate);
                     }
                 } catch (error) {
-                    console.error("Lỗi khi gửi tín hiệu WebRTC:", error);
+                    console.error("Error sending WebRTC signal:", error);
                 }
             });
 
             // Xử lý khi nhận được stream từ người khác
             peer.on('stream', remoteStream => {
-                // console.log("=== NHẬN ĐƯỢC STREAM TỪ ĐỐI PHƯƠNG ===");
-                // console.log('Remote stream:', remoteStream);
-                // console.log('Remote stream tracks:', remoteStream.getTracks());
-                console.log('remoteVideoRef.current:', remoteVideoRef.current);
-
                 // Hàm retry để đợi video element được render
                 const assignStreamWithRetry = (stream, maxRetries = 10, delay = 100) => {
                     const tryAssign = (attempt) => {
                         if (remoteVideoRef.current) {
                             remoteVideoRef.current.srcObject = stream;
-                            // console.log('✅ Đã gán stream cho remoteVideoRef (attempt:', attempt, ')');
-                            // console.log('🟢 SETTING connectionEstablished = true (từ stream event - initiator)');
                             setConnectionEstablished(true);
                         } else if (attempt < maxRetries) {
-                            // console.log(`⏳ remoteVideoRef.current is null, retry ${attempt}/${maxRetries} sau ${delay}ms...`);
                             setTimeout(() => tryAssign(attempt + 1), delay);
-                        } else {
-                            console.error('❌ remoteVideoRef.current vẫn null sau', maxRetries, 'lần thử!');
                         }
                     };
                     tryAssign(1);
@@ -362,8 +372,8 @@ export default function useVideoCall(currentUserId) {
 
             // Xử lý khi có lỗi
             peer.on('error', (err) => {
-                console.error("Lỗi kết nối peer:", err);
-                toast.error("Lỗi kết nối cuộc gọi");
+                console.error("Peer connection error:", err);
+                toast.error("Call connection error");
                 endCall();
             });
 
@@ -372,14 +382,14 @@ export default function useVideoCall(currentUserId) {
             // console.log('Đã lưu peer vào peerRef (initiator):', peerRef.current);
 
             // Hiển thị thông báo đang gọi
-            toast.info(`Đang gọi cho ${targetName}...`);
+            toast.info(`Calling ${targetName}...`);
 
             // Đánh dấu đang gọi ngay lập tức (chưa kết nối)
             setIsCallActive(true);
 
         } catch (error) {
-            console.error("Lỗi khi bắt đầu cuộc gọi video:", error);
-            toast.error("Không thể bắt đầu cuộc gọi video: " + error.message);
+            console.error("Error starting video call:", error);
+            toast.error("Unable to start video call: " + error.message);
             endCall();
         }
     };
@@ -412,6 +422,10 @@ export default function useVideoCall(currentUserId) {
         setIsCallIncoming(false);
         setConnectionEstablished(false);
 
+        // Reset trạng thái audio/video về mặc định
+        setIsMuted(false);
+        setIsVideoOff(false);
+
         // Reset refs
         targetConnectionIdRef.current = null;
         roomTokenRef.current = null;
@@ -421,7 +435,7 @@ export default function useVideoCall(currentUserId) {
             try {
                 await endCallApi(callSession, roomToken);
             } catch (error) {
-                console.error("Lỗi khi kết thúc cuộc gọi:", error);
+                console.error("Error ending call:", error);
             } finally {
                 setCallerInfo(null);
                 setCallSession(null);
@@ -447,16 +461,20 @@ export default function useVideoCall(currentUserId) {
         // console.log("targetConnectionIdRef.current:", targetConnectionIdRef.current);
 
         try {
+            // Reset trạng thái audio/video về mặc định khi trả lời cuộc gọi
+            setIsMuted(false);
+            setIsVideoOff(false);
+
             // Kiểm tra nếu không có callSessionId
             if (!callSession) {
-                toast.error("Không tìm thấy thông tin cuộc gọi");
+                toast.error("Call information not found");
                 return;
             }
 
             // Đảm bảo kết nối CallHub đã được thiết lập
             const connectionId = await callHubService.initConnection();
             if (!connectionId) {
-                toast.error("Không thể kết nối đến CallHub");
+                toast.error("Unable to connect to CallHub");
                 return;
             }
             // console.log("Kết nối CallHub thành công khi trả lời, connectionId:", connectionId);
@@ -467,15 +485,32 @@ export default function useVideoCall(currentUserId) {
 
             // Mở stream video và âm thanh
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
             });
 
             streamRef.current = stream;
 
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-            }
+            // Hiển thị video local với retry logic
+            const assignLocalStreamWithRetry = (stream, maxRetries = 5, delay = 200) => {
+                const tryAssign = (attempt) => {
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = stream;
+                    } else if (attempt < maxRetries) {
+                        setTimeout(() => tryAssign(attempt + 1), delay);
+                    }
+                };
+                tryAssign(1);
+            };
+
+            assignLocalStreamWithRetry(stream);
 
             // Gọi API để chấp nhận cuộc gọi và gửi connectionId hiện tại
             await acceptCallApi(callSession, roomToken, connectionId);
@@ -525,30 +560,20 @@ export default function useVideoCall(currentUserId) {
                         await callHubService.sendIceCandidate(target, data.candidate);
                     }
                 } catch (error) {
-                    console.error("Lỗi khi gửi tín hiệu WebRTC:", error);
+                    console.error("Error sending WebRTC signal:", error);
                 }
             });
 
             // Xử lý khi nhận được stream từ người gọi
             peer.on('stream', remoteStream => {
-                // console.log("=== NHẬN ĐƯỢC STREAM TỪ NGƯỜI GỌI (ANSWER CALL) ===");
-                // console.log('Remote stream:', remoteStream);
-                // console.log('Remote stream tracks:', remoteStream.getTracks());
-                console.log('remoteVideoRef.current:', remoteVideoRef.current);
-
                 // Hàm retry để đợi video element được render
                 const assignStreamWithRetry = (stream, maxRetries = 10, delay = 100) => {
                     const tryAssign = (attempt) => {
                         if (remoteVideoRef.current) {
                             remoteVideoRef.current.srcObject = stream;
-                            console.log('✅ Đã gán stream cho remoteVideoRef trong answerCall (attempt:', attempt, ')');
-                            // console.log('🟢 SETTING connectionEstablished = true (từ stream event - answerer)');
                             setConnectionEstablished(true);
                         } else if (attempt < maxRetries) {
-                            console.log(`⏳ remoteVideoRef.current is null trong answerCall, retry ${attempt}/${maxRetries} sau ${delay}ms...`);
                             setTimeout(() => tryAssign(attempt + 1), delay);
-                        } else {
-                            console.error('❌ remoteVideoRef.current vẫn null trong answerCall sau', maxRetries, 'lần thử!');
                         }
                     };
                     tryAssign(1);
@@ -573,8 +598,8 @@ export default function useVideoCall(currentUserId) {
 
             // Xử lý khi có lỗi
             peer.on('error', (err) => {
-                console.error("Lỗi kết nối peer:", err);
-                toast.error("Lỗi kết nối cuộc gọi");
+                console.error("Peer connection error:", err);
+                toast.error("Call connection error");
                 endCall();
             });
 
@@ -591,7 +616,7 @@ export default function useVideoCall(currentUserId) {
                     pendingOfferRef.current = null;
                     // console.log("Đã xử lý pending offer thành công");
                 } catch (error) {
-                    console.error("Lỗi khi xử lý pending offer:", error);
+                    console.error("Error processing pending offer:", error);
                 }
             } else {
                 // console.log("Không có pending offer để xử lý");
@@ -602,11 +627,11 @@ export default function useVideoCall(currentUserId) {
             setIsCallIncoming(false);
 
             // Hiển thị thông báo đang kết nối (không phải đã kết nối)
-            toast.info(`Đang kết nối với ${callerInfo?.name || 'người gọi'}...`);
+            toast.info(`Connecting to ${callerInfo?.name || 'caller'}...`);
 
         } catch (error) {
-            console.error("Lỗi khi trả lời cuộc gọi:", error);
-            toast.error("Không thể trả lời cuộc gọi: " + error.message);
+            console.error("Error answering call:", error);
+            toast.error("Unable to answer call: " + error.message);
             endCall();
         }
     };
@@ -615,7 +640,7 @@ export default function useVideoCall(currentUserId) {
     const rejectCall = async () => {
         try {
             // Hiển thị thông báo từ chối
-            toast.info("Đã từ chối cuộc gọi");
+            toast.info("Call rejected");
 
             // Kiểm tra nếu không có callSessionId
             if (!callSession) {
@@ -632,7 +657,7 @@ export default function useVideoCall(currentUserId) {
             await endCallApi(callSession, roomToken);
 
         } catch (error) {
-            console.error("Lỗi khi từ chối cuộc gọi:", error);
+            console.error("Error rejecting call:", error);
         } finally {
             // Reset tất cả state liên quan đến cuộc gọi
             setIsCallIncoming(false);

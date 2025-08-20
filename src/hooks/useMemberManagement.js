@@ -120,7 +120,7 @@ export default function useMemberManagement(startupId) {
     // Tạo vai trò mới
     const createRole = async () => {
         if (!newRole.roleName?.trim()) {
-            toast.warning("Vui lòng nhập tên vai trò");
+            toast.warning("Please enter role name");
             return;
         }
 
@@ -131,12 +131,12 @@ export default function useMemberManagement(startupId) {
                 roleName: newRole.roleName
             });
 
-            toast.success("Đã tạo vai trò mới thành công");
+            toast.success("Role created successfully");
             setShowAddRoleModal(false);
             setNewRole({ roleName: '' });
             fetchRoles(); // Cập nhật danh sách vai trò
         } catch (err) {
-            toast.error("Không thể tạo vai trò mới");
+            toast.error("Unable to create new role");
             console.error(err);
         } finally {
             setLoading(false);
@@ -354,7 +354,7 @@ export default function useMemberManagement(startupId) {
     // Cập nhật vai trò
     const updateRole = async (roleData) => {
         if (!roleData.roleName?.trim()) {
-            toast.warning("Vui lòng nhập tên vai trò");
+            toast.warning("Please enter role name");
             return;
         }
 
@@ -365,10 +365,10 @@ export default function useMemberManagement(startupId) {
                 roleName: roleData.roleName
             });
 
-            toast.success("Đã cập nhật vai trò thành công");
+            toast.success("Role updated successfully");
             fetchRoles(); // Cập nhật danh sách vai trò
         } catch (err) {
-            toast.error("Không thể cập nhật vai trò");
+            toast.error("Unable to update role");
             console.error(err);
         } finally {
             setLoading(false);

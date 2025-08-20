@@ -20,11 +20,11 @@ const Startups = () => {
 
     // Pagination states for Featured Startups
     const [featuredCurrentPage, setFeaturedCurrentPage] = useState(1);
-    const [featuredItemsPerPage] = useState(1); // 1 item per page để test phân trang
+    const [featuredItemsPerPage] = useState(2); // 2 items per page cho Featured Startups
 
     // Arrow navigation states for All Startups
     const [allCurrentIndex, setAllCurrentIndex] = useState(0);
-    const [allItemsPerView] = useState(9); // Hiển thị tối đa 9 startups (3 rows x 3 cols)
+    const [allItemsPerView] = useState(3); // Hiển thị 3 startups per page cho All Startups
 
     useEffect(() => {
         const fetchData = async () => {
@@ -121,8 +121,7 @@ const Startups = () => {
     };
 
     // Chia startups thành featured và all (sử dụng status verified làm tiêu chí)
-    const allStartupsFiltered = filteredStartups.filter(startup => startup && startup.status == "verified");
-
+    const allStartupsFiltered = filteredStartups;
     // Featured Startups - Pagination
     const featuredTotalItems = allStartupsFiltered.length;
     const featuredTotalPages = Math.ceil(featuredTotalItems / featuredItemsPerPage);
@@ -337,11 +336,16 @@ const Startups = () => {
                                 >
                                     <div className="relative h-48">
                                         {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
-                                            <span
-                                                className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
-                                            >
-                                                {startup.categories[0]}
-                                            </span>
+                                            <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                                                {startup.categories.map((category, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`text-white px-2 py-1 rounded text-xs ${categoryColors[category] || 'bg-blue-500'}`}
+                                                    >
+                                                        {category}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         )}
                                         <img
                                             src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
@@ -364,7 +368,7 @@ const Startups = () => {
                                             </div>
                                             <div className="text-center">
                                                 <div className="font-bold text-blue-600">{startup.abbreviationName || 'N/A'}</div>
-                                                <div className="text-gray-600 text-sm">hehehe</div>
+                                                <div className="text-gray-600 text-sm">Short Name</div>
                                             </div>
                                             <div className="text-center">
                                                 <div className="font-bold text-blue-600">{startup.stage || 'N/A'}</div>
@@ -434,11 +438,16 @@ const Startups = () => {
                                 >
                                     <div className="relative h-48">
                                         {startup.categories && Array.isArray(startup.categories) && startup.categories.length > 0 && (
-                                            <span
-                                                className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${categoryColors[startup.categories[0]] || 'bg-gray-500'}`}
-                                            >
-                                                {startup.categories[0]}
-                                            </span>
+                                            <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                                                {startup.categories.map((category, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`text-white px-2 py-1 rounded text-xs ${categoryColors[category] || 'bg-blue-500'}`}
+                                                    >
+                                                        {category}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         )}
                                         <img
                                             src={startup.backgroundUrl || startup.logo || 'https://via.placeholder.com/300x150?text=No+Image'}
@@ -504,18 +513,10 @@ const Startups = () => {
                     </div>
                 )}
 
-                {/* Debug Info - Remove this after checking */}
-                <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
-                    <p><strong>Debug Info:</strong></p>
-                    <p>Total Featured Startups: {featuredTotalItems}</p>
-                    <p>Items Per Page: {featuredItemsPerPage}</p>
-                    <p>Total Pages: {featuredTotalPages}</p>
-                    <p>Current Page: {featuredCurrentPage}</p>
-                    <p>All Startups Filtered Count: {allStartupsFiltered.length}</p>
-                </div>
 
-                {/* Featured Startups Pagination - Always show if there are startups */}
-                {featuredTotalItems > 0 && (
+
+                {/* Featured Startups Pagination - Show only if there are more than 2 startups */}
+                {featuredTotalItems > featuredItemsPerPage && (
                     <nav className="mt-8">
                         <div className="flex justify-center items-center space-x-2">
                             {/* Previous Button */}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEllipsisV, faPencilAlt, faTrashAlt, faChartLine, faUserPlus, faStar, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
@@ -45,7 +45,6 @@ const MilestoneBoards = () => {
         handleCloseAddMemberForm,
         handleAddMember,
         toggleFavorite,
-        getFilteredMilestones,
         navigateToMilestoneDetail,
         searchMembers,
 
@@ -90,14 +89,15 @@ const MilestoneBoards = () => {
     };
 
     // Điều hướng đến trang chi tiết của bảng (chỉ nếu user là member của milestone)
-    const navigateToBoard = async (boardId) => {
+    const navigateToBoard = useCallback(async (boardId) => {
         try {
             const userId = user?.id;
             if (!userId) return;
 
-            // Gọi API kiểm tra thành viên trong milestone
+            // Luôn gọi API để kiểm tra thành viên trong milestone
             const members = await getMembersInMilestone(boardId);
             const isMember = Array.isArray(members) && members.some(m => String(m.accountId) === String(userId));
+
             if (!isMember) {
                 return; // Không cho vào nếu không phải member
             }
@@ -107,32 +107,86 @@ const MilestoneBoards = () => {
         } catch (e) {
             console.error('Error checking milestone membership:', e);
         }
-    };
+    }, [user?.id, navigateToMilestoneDetail, navigate]);
 
-    // Lấy danh sách boards đã được lọc
-    const filteredBoards = getFilteredMilestones();
+    // Lấy danh sách boards đã được lọc với memoization
+    const filteredBoards = useMemo(() => {
+        return milestones.filter(board => {
+            const title = board.milestoneName || board.title || '';
+            const description = board.milestoneDescription || board.description || '';
+
+            // Apply search filter
+            const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                description.toLowerCase().includes(searchQuery.toLowerCase());
+
+            // Apply favorite filter (nếu API hỗ trợ)
+            if (filterFavorites) {
+                return matchesSearch && (board.isFavorite === true);
+            }
+
+            return matchesSearch;
+        });
+    }, [milestones, searchQuery, filterFavorites]);
 
     // Set các milestone mà user là member (để hiển thị View Details)
     const [memberMilestoneIds, setMemberMilestoneIds] = React.useState(new Set());
+    const [loadingMembership, setLoadingMembership] = React.useState(false);
+    const loadingRef = React.useRef(false);
+    const lastLoadedBoardsRef = React.useRef('');
 
-    React.useEffect(() => {
-        const loadMembership = async () => {
-            if (!user?.id) return;
-            const ids = new Set();
-            await Promise.all((filteredBoards || []).map(async (board) => {
+    const loadMembership = useCallback(async () => {
+        if (!user?.id || !filteredBoards?.length || loadingRef.current) return;
+
+        // Tạo key để so sánh xem danh sách boards có thay đổi không
+        const boardsKey = filteredBoards.map(b => b.milestoneId || b.id).sort().join(',');
+        if (lastLoadedBoardsRef.current === boardsKey) {
+            return; // Không load lại nếu danh sách boards không thay đổi
+        }
+
+        loadingRef.current = true;
+        setLoadingMembership(true);
+        const ids = new Set();
+
+        try {
+            // Gọi API song song cho tất cả milestone
+            const membershipPromises = filteredBoards.map(async (board) => {
                 const id = board.milestoneId || board.id;
                 try {
                     const members = await getMembersInMilestone(id);
                     const isMember = Array.isArray(members) && members.some(m => String(m.accountId) === String(user.id));
-                    if (isMember) ids.add(String(id));
+                    return { id: String(id), isMember };
                 } catch (e) {
                     console.error('Không tải được members cho milestone', id, e);
+                    return { id: String(id), isMember: false };
                 }
-            }));
+            });
+
+            const results = await Promise.all(membershipPromises);
+
+            // Cập nhật danh sách member milestone IDs
+            results.forEach(({ id, isMember }) => {
+                if (isMember) {
+                    ids.add(id);
+                }
+            });
             setMemberMilestoneIds(ids);
-        };
-        loadMembership();
-    }, [filteredBoards, user]);
+            lastLoadedBoardsRef.current = boardsKey; // Lưu lại key đã load
+        } catch (error) {
+            console.error('Lỗi khi tải membership:', error);
+        } finally {
+            loadingRef.current = false;
+            setLoadingMembership(false);
+        }
+    }, [filteredBoards, user?.id]);
+
+    // Debounce để tránh gọi API quá nhiều lần
+    React.useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            loadMembership();
+        }, 300); // Đợi 300ms sau khi filteredBoards thay đổi
+
+        return () => clearTimeout(timeoutId);
+    }, [loadMembership]);
 
     // Thêm hàm xác định màu dựa trên ID
     const getBoardColor = () => {
@@ -575,7 +629,12 @@ const MilestoneBoards = () => {
 
                             <div className="mt-4">
                                 {/* Chỉ hiện nút View Details nếu user là member của milestone */}
-                                {memberMilestoneIds.has(String(board.milestoneId || board.id)) && (
+                                {loadingMembership ? (
+                                    <div className="w-full bg-gray-100 text-gray-500 font-medium py-2.5 rounded-lg flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-r-2 border-gray-400 mr-2"></div>
+                                        Checking access...
+                                    </div>
+                                ) : memberMilestoneIds.has(String(board.milestoneId || board.id)) && (
                                     <button
                                         onClick={() => navigateToBoard(board.milestoneId || board.id)}
                                         className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-md"

@@ -66,7 +66,7 @@ const AdminNavbar = () => {
                     {notificationOpen && (
                         <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20">
                             <div className="py-2 px-3 bg-purple-700 text-white font-semibold">
-                                Thông báo ({notifications.filter(n => !n.isRead).length} chưa đọc)
+                                Notifications ({notifications.filter(n => !n.isRead).length} unread)
                             </div>
                             <div className="max-h-64 overflow-y-auto">
                                 {notifications.length > 0 ? (

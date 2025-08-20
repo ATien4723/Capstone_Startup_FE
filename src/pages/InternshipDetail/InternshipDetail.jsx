@@ -219,26 +219,26 @@ const InternshipDetail = () => {
 
     // Dữ liệu mẫu khi chưa có API hoặc API chưa trả về đủ thông tin
     const jobData = post || {
-        title: "Đang tải...",
-        company: "Đang tải...",
+        title: "Loading...",
+        company: "Loading...",
         logo: "https://via.placeholder.com/100",
-        location: "Đang tải...",
-        salary: "Đang tải...",
-        experience: "Không yêu cầu",
-        deadline: "Đang tải...",
+        location: "Loading...",
+        salary: "Loading...",
+        experience: "No requirements",
+        deadline: "Loading...",
         type: "Internship",
-        description: "Đang tải...",
-        requirements: ["Đang tải..."],
-        responsibilities: ["Đang tải..."],
-        benefits: ["Đang tải..."],
-        workLocations: ["Đang tải..."],
+        description: "Loading...",
+        requirements: ["Loading..."],
+        responsibilities: ["Loading..."],
+        benefits: ["Loading..."],
+        workLocations: ["Loading..."],
         createdAt: new Date().toISOString(),
         views: 0,
         applications: 0
     };
 
     const formatRequirementAsList = (requirementText) => {
-        if (!requirementText) return ["Không có yêu cầu cụ thể"];
+        if (!requirementText) return ["No specific requirements"];
         return requirementText.split('\n').filter(item => item.trim() !== '');
     };
 

@@ -38,6 +38,7 @@ const StartupInfo = () => {
         formatDate,
         handleInputChange,
         handleLogoChange,
+        stages,
         handleBackgroundChange,
         handleSave,
         handleCancel,
@@ -259,12 +260,12 @@ const StartupInfo = () => {
                                     </div>
                                 )}
                             </div>
-                            <div>
+                            {/* <div>
                                 <span className={`px-2 py-1 rounded-full text-sm ${statusClass}`}>
                                     {status === 'verified' && <FontAwesomeIcon icon={faCheck} className="mr-1" />}
                                     {status || 'N/A'}
                                 </span>
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* Detailed information */}
@@ -341,19 +342,24 @@ const StartupInfo = () => {
                                         <div className="ml-3 flex-1">
                                             <h3 className="font-semibold text-gray-800 text-lg">Stage</h3>
                                             {!isEditing ? (
-                                                <p className="text-gray-700 mt-1">Stage {startup.stageId || "N/A"}</p>
+                                                <p className="text-gray-700 mt-1">
+                                                    {stages.find(stage => stage.stageId == startup.stageId)?.stageName || "N/A"}
+                                                </p>
                                             ) : (
                                                 <div className="mt-1">
-                                                    <input
-                                                        type="number"
+                                                    <select
                                                         name="stageId"
-                                                        value={formData.stageId}
+                                                        value={formData.stageId || ''}
                                                         onChange={handleInputChange}
                                                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="Enter stage (1-5)"
-                                                        min="1"
-                                                        max="5"
-                                                    />
+                                                    >
+                                                        <option value="">Select a stage</option>
+                                                        {stages.map((stage) => (
+                                                            <option key={stage.stageId} value={stage.stageId}>
+                                                                {stage.stageName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                             )}
                                         </div>
@@ -366,9 +372,9 @@ const StartupInfo = () => {
                                         <div className="ml-3 flex-1">
                                             <h3 className="font-semibold text-gray-800 text-lg">Website</h3>
                                             {!isEditing ? (
-                                                startup.website ? (
-                                                    <a href={startup.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-1 block">
-                                                        {startup.website}
+                                                startup.websiteURL ? (
+                                                    <a href={startup.websiteURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-1 block">
+                                                        {startup.websiteURL}
                                                     </a>
                                                 ) : (
                                                     <p className="text-gray-600 mt-1">No website available</p>
@@ -377,8 +383,8 @@ const StartupInfo = () => {
                                                 <div className="mt-1">
                                                     <input
                                                         type="url"
-                                                        name="website"
-                                                        value={formData.website}
+                                                        name="websiteURL"
+                                                        value={formData.websiteURL}
                                                         onChange={handleInputChange}
                                                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                         placeholder="https://example.com"

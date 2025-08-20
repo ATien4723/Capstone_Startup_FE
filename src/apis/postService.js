@@ -276,7 +276,7 @@ export const sharePost = async (shareData) => {
 // Lấy bài viết theo ID
 export const getPostById = async (postId) => {
     try {
-        const response = await axiosClient.get(`api/post/sharepost/${postId}`);
+        const response = await axiosClient.get(`api/post/post/${postId}`);
         return response;
     } catch (error) {
         console.error('Lỗi khi lấy bài viết theo ID:', error);
@@ -470,7 +470,7 @@ export const getAllInternshipPosts = async (startupId, pageNumber = 1, pageSize 
         const response = await axiosClient.get(`api/post/GetAllInternshipPosts?startupid=${startupId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi lấy tất cả bài đăng tuyển dụng:', error);
+        console.error('Error fetching all internship posts:', error);
         throw error;
     }
 };
@@ -481,7 +481,7 @@ export const getInternshipPostDetail = async (internshipPostId) => {
         const response = await axiosClient.get(`api/post/internshippost/${internshipPostId}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi lấy chi tiết bài đăng tuyển dụng:', error);
+        console.error('Error fetching internship post details:', error);
         throw error;
     }
 };
@@ -503,7 +503,7 @@ export const searchStartupPosts = async (startupId, keyword = '', pageNumber = 1
         const response = await axiosClient.get(`api/post/search-startup-posts?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm bài viết của startup:', error);
+        console.error('Error searching startup posts:', error);
         throw error;
     }
 };
@@ -514,7 +514,35 @@ export const searchStartupInternshipPosts = async (startupId, keyword = '', page
         const response = await axiosClient.get(`api/post/search-startup-internship-post?startupId=${startupId}&keyword=${encodeURIComponent(keyword)}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
         return response;
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm bài tuyển dụng của startup:', error);
+        console.error('Error searching startup internship posts:', error);
         throw error;
     }
 };
+
+// Lấy bài viết đã ẩn theo account ID
+export const getPostHideByAccountId = async (accountId, pageNumber = 1, pageSize = 5) => {
+    try {
+        const response = await axiosClient.get(`api/Post/GetPostHideByAccountId?accountId=${accountId}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi lấy bài viết đã ẩn:', error);
+        throw error;
+    }
+};
+
+// Bỏ ẩn bài viết
+export const unhidePost = async (postId, accountId) => {
+    try {
+        const response = await axiosClient.delete('api/Post/unhide', {
+            data: {
+                postId: postId,
+                accountId: accountId
+            }
+        });
+        return response;
+    } catch (error) {
+        console.error('Lỗi khi bỏ ẩn bài viết:', error);
+        throw error;
+    }
+};
+

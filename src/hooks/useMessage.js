@@ -784,11 +784,11 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
             // Hiển thị tin nhắn tạm thời ngay lập tức trên UI
             setMessages(prevMessages => [tempMessage, ...prevMessages]);
 
-            console.log("Đang gửi tin nhắn với vai trò startup:", messageContent);
+            console.log("Sending message as startup:", messageContent);
 
             // Gửi tin nhắn tới server
             const response = await chatService.sendMessage(messageData);
-            console.log("Gửi tin nhắn thành công:", response);
+            console.log("Message sent successfully:", response);
 
             // Xóa các file đính kèm sau khi gửi
             setSelectedFile(null);
@@ -799,8 +799,8 @@ export default function useMessage(currentUserId, initialChatRoomId = null) {
 
             return response;
         } catch (err) {
-            console.error("Lỗi khi gửi tin nhắn:", err);
-            toast.error('Gửi tin nhắn thất bại!');
+            console.error("Error sending message:", err);
+            toast.error('Failed to send message!');
         }
     };
 

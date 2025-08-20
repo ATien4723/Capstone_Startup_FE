@@ -33,3 +33,11 @@ input::-webkit-clear-button,
 input::-webkit-caps-lock-indicator {
   display: none !important;
 }
+
+/* Line clamp utility for text truncation */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
